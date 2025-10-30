@@ -41,6 +41,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Footer } from "@/components/footer";
+import { API_URL } from "@/lib/api-config";
 import { ShieldCheck, User, Package, Truck, Building, Loader2, Lock } from "lucide-react";
 import logoProgresso from "/favicon2.png";
 import fazendaBg from "/fazenda.jpeg";
@@ -145,7 +146,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       // Call backend auth API
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { API_URL } from '@/lib/api-config';
 
 export function useRealtime(isAuthenticated: boolean) {
   const queryClient = useQueryClient();
@@ -12,9 +13,9 @@ export function useRealtime(isAuthenticated: boolean) {
     }
 
     console.log('🚀 Initializing SSE connection...');
-    
+
     // Connect to Server-Sent Events
-    const eventSource = new EventSource('/api/events');
+    const eventSource = new EventSource(`${API_URL}/events`);
 
     eventSource.onopen = () => {
       console.log('✅ SSE connection opened');

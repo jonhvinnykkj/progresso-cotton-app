@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { API_URL } from "@/lib/api-config";
 
 const STORAGE_KEY = "app_version";
 
@@ -18,7 +19,7 @@ export function useVersionCheck() {
     async function initVersionCheck() {
       try {
         // Get initial version
-        const response = await fetch("/api/version");
+        const response = await fetch(`${API_URL}/version`);
         if (!response.ok) return;
 
         const data: VersionResponse = await response.json();
@@ -26,7 +27,7 @@ export function useVersionCheck() {
         localStorage.setItem(STORAGE_KEY, data.version);
 
         // Connect to SSE for real-time version updates
-        const eventSource = new EventSource("/api/events");
+        const eventSource = new EventSource(`${API_URL}/events`);
         eventSourceRef.current = eventSource;
 
         // Listen for version-update events

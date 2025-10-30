@@ -146,6 +146,10 @@ export default function Login() {
     setIsLoading(true);
     try {
       // Call backend auth API
+      console.log("🔐 Attempting login...");
+      console.log("📍 API URL:", API_URL);
+      console.log("🌐 Full URL:", `${API_URL}/auth/login`);
+
       const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
@@ -157,11 +161,16 @@ export default function Login() {
         }),
       });
 
+      console.log("✅ Response received:", response.status);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Login failed:", response.status, errorText);
         throw new Error("Credenciais inválidas");
       }
 
       const userData = await response.json();
+      console.log("✅ Login successful:", userData.username);
 
       // Sempre mostrar dialog de seleção de papel
       if (userData.availableRoles && userData.availableRoles.length > 0) {
@@ -181,13 +190,22 @@ export default function Login() {
       setIsLoading(false);
       
     } catch (error) {
+      console.error("❌ Login error:", error);
+
+      let errorMessage = "Verifique suas credenciais e tente novamente.";
+
+      if (error instanceof TypeError && error.message.includes("fetch")) {
+        errorMessage = "Erro de conexão. Verifique sua internet e tente novamente.";
+        console.error("🌐 Network error - check internet connection");
+        console.error("🌐 Trying to reach:", `${API_URL}/auth/login`);
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
       toast({
         variant: "destructive",
         title: "Erro ao fazer login",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Verifique suas credenciais e tente novamente.",
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);
@@ -372,6 +390,11 @@ export default function Login() {
                     </span>
                   )}
                 </Button>
+
+                {/* Debug info - mostra URL da API */}
+                <div className="mt-4 text-xs text-center text-gray-500">
+                  <p className="font-mono">API: {API_URL}</p>
+                </div>
               </form>
             </Form>
           </CardContent>

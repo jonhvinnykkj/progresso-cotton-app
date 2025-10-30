@@ -15,6 +15,7 @@
     "db:push": "drizzle-kit push",
     "db:init": "tsx --env-file=.env server/init-db.ts",
     "db:migrate-passwords": "tsx --env-file=.env server/migrate-passwords.ts",
+    "db:create-test-user": "tsx --env-file=.env server/create-test-user.ts",
     "android": "npx cap open android"
   },
   "dependencies": {

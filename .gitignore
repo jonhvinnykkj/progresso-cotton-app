@@ -90,5 +90,7 @@ jspm_packages/
 
 # Capacitor
 android/
+!android/app/src/main/AndroidManifest.xml
+!android/app/src/main/res/xml/network_security_config.xml
 ios/
 .capacitor/

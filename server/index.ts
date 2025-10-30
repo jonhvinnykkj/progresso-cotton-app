@@ -38,7 +38,7 @@ app.use(helmet({
       ],
       connectSrc: [
         "'self'",
-        "https://progresso-cottonv2-production.up.railway.app", // API in production
+        "https://progresso-cotton-app-production.up.railway.app", // API in production
       ],
       fontSrc: [
         "'self'",

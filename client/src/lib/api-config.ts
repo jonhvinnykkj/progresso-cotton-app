@@ -6,7 +6,7 @@ export const getApiUrl = (): string => {
 
   if (isNative) {
     // PRODUCTION: Railway server URL
-    return 'https://progresso-cottonv2-production.up.railway.app/api';
+    return 'https://progresso-cotton-app-production.up.railway.app/api';
 
     // DEVELOPMENT: Local development server
     // Uncomment this line and comment the production URL above to test locally

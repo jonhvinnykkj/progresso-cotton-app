@@ -56,8 +56,40 @@ app.use(helmet({
 }));
 
 // CORS configuration
+// Allow requests from Capacitor mobile apps and web
+const allowedOrigins = [
+  'https://localhost', // Capacitor Android
+  'http://localhost', // Capacitor Android (HTTP)
+  'capacitor://localhost', // Capacitor iOS
+  'ionic://localhost', // Ionic
+  'http://localhost:3000', // Development web
+  'http://localhost:5000', // Development web
+  'https://progresso-cotton-app-production.up.railway.app', // Production web
+];
+
+// If CORS_ORIGIN is set in env, use it; otherwise use allowedOrigins
+if (process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== '*') {
+  allowedOrigins.push(process.env.CORS_ORIGIN);
+}
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "*",
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+
+    // Allow all origins in development
+    if (process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+
+    // Check if origin is in allowed list or if CORS_ORIGIN is *
+    if (process.env.CORS_ORIGIN === '*' || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('❌ CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 

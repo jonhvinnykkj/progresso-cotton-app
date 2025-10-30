@@ -1,0 +1,32 @@
+{
+  "name": "Rastreabilidade de Fardos - Grupo Progresso",
+  "short_name": "Fardos GP",
+  "description": "Sistema de rastreabilidade de fardos de algodão do campo ao beneficiamento",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#FFED00",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon-512.png?v=3-progresso",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon-512.png?v=3-progresso",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon-512.png?v=3-progresso",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["productivity", "business"],
+  "lang": "pt-BR"
+}

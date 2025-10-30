@@ -1,0 +1,697 @@
+@import 'leaflet/dist/leaflet.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* LIGHT MODE - Grupo Progresso Theme */
+:root {
+  --button-outline: rgba(46, 171, 91, 0.15);
+  --badge-outline: rgba(46, 171, 91, 0.08);
+
+  /* Automatic computation of border around primary / danger buttons */
+  --opaque-button-border-intensity: -8; /* In terms of percentages */
+
+  /* Backgrounds applied on top of other backgrounds when hovered/active */
+  --elevate-1: rgba(46, 171, 91, 0.04);
+  --elevate-2: rgba(46, 171, 91, 0.1);
+
+  --background: 143 25% 98%;
+
+  --foreground: 120deg 9.52% 8.24%;
+
+  --border: 143 15% 88%;
+
+  --card: 60deg 51.52% 93.53%;
+
+  --card-foreground: 120deg 6.67% 2.94%;
+
+  --card-border: 143 12% 90%;
+
+  --sidebar: 143 18% 96%;
+
+  --sidebar-foreground: 143 15% 15%;
+
+  --sidebar-border: 143 12% 88%;
+
+  --sidebar-primary: 143 58% 43%;
+
+  --sidebar-primary-foreground: 0 0% 100%;
+
+  --sidebar-accent: 143 25% 92%;
+
+  --sidebar-accent-foreground: 143 15% 15%;
+
+  --sidebar-ring: 143 58% 43%;
+
+  --popover: 0deg 0% 100%;
+
+  --popover-foreground: 0deg 14.29% 2.75%;
+
+  --popover-border: 143 12% 88%;
+
+  --primary: 143.68deg 86.36% 17.25%;
+
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 143 12% 90%;
+
+  --secondary-foreground: 143 15% 15%;
+
+  --muted: 143 10% 95%;
+
+  --muted-foreground: 143 8% 45%;
+
+  --accent: 54.78deg 100% 27.06%;
+
+  --accent-foreground: 143 60% 20%;
+
+  --destructive: 0 75% 45%;
+
+  --destructive-foreground: 0 0% 100%;
+
+  --input: 200 12% 68%;
+  --ring: 200 65% 35%;
+  --chart-1: 122.76deg 95.6% 17.84%;
+  --chart-2: 46.8deg 92.59% 31.76%;
+  --chart-3: 209.58deg 88.89% 31.76%;
+  --chart-4: 200 60% 40%;
+  --chart-5: 280 50% 42%;
+
+  /* Status dos Fardos - Cores do Grupo Progresso */
+  --bale-campo: 143 55% 50%;
+  --bale-patio: 45 95% 55%;
+  --bale-beneficiado: 143 60% 35%;
+
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: 'Roboto Mono', monospace;
+  --font-mono: "SF Mono", Menlo, Monaco, Consolas, monospace;
+  --radius: .5rem; /* 8px */
+  --shadow-2xs: 0px 1px 2px 0px hsl(200 20% 20% / 0.05);
+  --shadow-xs: 0px 1px 3px 0px hsl(200 20% 20% / 0.08);
+  --shadow-sm: 0px 2px 4px -1px hsl(200 20% 20% / 0.06), 0px 1px 2px -1px hsl(200 20% 20% / 0.10);
+  --shadow: 0px 4px 6px -1px hsl(200 20% 20% / 0.08), 0px 2px 4px -2px hsl(200 20% 20% / 0.06);
+  --shadow-md: 0px 6px 12px -2px hsl(200 20% 20% / 0.10), 0px 3px 6px -3px hsl(200 20% 20% / 0.08);
+  --shadow-lg: 0px 10px 20px -4px hsl(200 20% 20% / 0.12), 0px 4px 8px -4px hsl(200 20% 20% / 0.08);
+  --shadow-xl: 0px 20px 30px -6px hsl(200 20% 20% / 0.15), 0px 8px 12px -6px hsl(200 20% 20% / 0.10);
+  --shadow-2xl: 0px 25px 50px -12px hsl(200 20% 20% / 0.20);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+
+  /* Border colors (static values for mobile compatibility) */
+  --sidebar-primary-border: 143 58% 35%;
+  --sidebar-accent-border: 143 25% 84%;
+  --primary-border: 143.68 86.36% 9.25%;
+  --secondary-border: 143 12% 82%;
+  --muted-border: 143 10% 87%;
+  --accent-border: 54.78 100% 19.06%;
+  --destructive-border: 0 75% 37%;
+}
+
+.dark {
+  --button-outline: rgba(94, 234, 142, 0.12);
+  --badge-outline: rgba(94, 234, 142, 0.06);
+
+  --opaque-button-border-intensity: 9;  /* In terms of percentages */
+
+  /* Backgrounds applied on top of other backgrounds when hovered/active */
+  --elevate-1: rgba(94, 234, 142, 0.05);
+  --elevate-2: rgba(94, 234, 142, 0.12);
+
+  --background: 143 20% 10%;
+
+  --foreground: 143 10% 95%;
+
+  --border: 143 15% 20%;
+
+  --card: 143 18% 14%;
+
+  --card-foreground: 143 10% 95%;
+
+  --card-border: 143 12% 18%;
+
+  --sidebar: 143 20% 12%;
+
+  --sidebar-foreground: 143 10% 95%;
+
+  --sidebar-border: 143 12% 16%;
+
+  --sidebar-primary: 143 55% 50%;
+
+  --sidebar-primary-foreground: 143 60% 10%;
+
+  --sidebar-accent: 143 15% 18%;
+
+  --sidebar-accent-foreground: 143 10% 95%;
+
+  --sidebar-ring: 143 55% 50%;
+
+  --popover: 143 18% 15%;
+
+  --popover-foreground: 143 10% 95%;
+
+  --popover-border: 143 12% 22%;
+
+  --primary: 143 55% 50%;
+
+  --primary-foreground: 143 60% 10%;
+
+  --secondary: 143 12% 22%;
+
+  --secondary-foreground: 143 10% 95%;
+
+  --muted: 143 15% 20%;
+
+  --muted-foreground: 143 8% 65%;
+
+  --accent: 54 100% 55%;
+
+  --accent-foreground: 143 60% 15%;
+
+  --destructive: 0 70% 45%;
+
+  --destructive-foreground: 0 0% 100%;
+
+  --input: 200 10% 35%;
+  --ring: 200 60% 42%;
+  --chart-1: 140 55% 55%;
+  --chart-2: 35 85% 60%;
+  --chart-3: 210 70% 58%;
+  --chart-4: 200 55% 52%;
+  --chart-5: 280 50% 58%;
+
+  /* Status dos Fardos - Cores do Grupo Progresso (dark mode) */
+  --bale-campo: 143 55% 55%;
+  --bale-patio: 45 95% 60%;
+  --bale-beneficiado: 143 55% 45%;
+
+  --shadow-2xs: 0px 1px 2px 0px hsl(200 20% 5% / 0.20);
+  --shadow-xs: 0px 1px 3px 0px hsl(200 20% 5% / 0.30);
+  --shadow-sm: 0px 2px 4px -1px hsl(200 20% 5% / 0.25), 0px 1px 2px -1px hsl(200 20% 5% / 0.35);
+  --shadow: 0px 4px 6px -1px hsl(200 20% 5% / 0.30), 0px 2px 4px -2px hsl(200 20% 5% / 0.25);
+  --shadow-md: 0px 6px 12px -2px hsl(200 20% 5% / 0.35), 0px 3px 6px -3px hsl(200 20% 5% / 0.30);
+  --shadow-lg: 0px 10px 20px -4px hsl(200 20% 5% / 0.40), 0px 4px 8px -4px hsl(200 20% 5% / 0.30);
+  --shadow-xl: 0px 20px 30px -6px hsl(200 20% 5% / 0.45), 0px 8px 12px -6px hsl(200 20% 5% / 0.35);
+  --shadow-2xl: 0px 25px 50px -12px hsl(200 20% 5% / 0.50);
+
+  /* Border colors (static values for mobile compatibility) */
+  --sidebar-primary-border: 143 55% 59%;
+  --sidebar-accent-border: 143 15% 27%;
+  --primary-border: 143 55% 59%;
+  --secondary-border: 143 12% 31%;
+  --muted-border: 143 15% 29%;
+  --accent-border: 54 100% 64%;
+  --destructive-border: 0 70% 54%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    /* Mobile-first: garantir viewport completo com safe areas para iOS */
+    @apply min-h-dvh;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    @apply min-h-dvh;
+    /* Safe area insets para iOS (notch, home indicator) */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    /* Tipografia mobile-first: 16px base para legibilidade */
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  /* Headings mobile-first */
+  h1 {
+    @apply text-xl font-semibold leading-tight;
+  }
+
+  h2 {
+    @apply text-lg font-semibold leading-snug;
+  }
+
+  h3 {
+    @apply text-base font-semibold leading-snug;
+  }
+
+  /* Mobile: aumentar tamanho de fontes em telas maiores */
+  @media (min-width: 640px) {
+    h1 {
+      @apply text-2xl;
+    }
+    h2 {
+      @apply text-xl;
+    }
+  }
+}
+
+/**
+ * Using the elevate system.
+ * Automatic contrast adjustment.
+ *
+ * <element className="hover-elevate" />
+ * <element className="active-elevate-2" />
+ *
+ * // Using the tailwind utility when a data attribute is "on"
+ * <element className="toggle-elevate data-[state=on]:toggle-elevated" />
+ * // Or manually controlling the toggle state
+ * <element className="toggle-elevate toggle-elevated" />
+ *
+ * Elevation systems have to handle many states.
+ * - not-hovered, vs. hovered vs. active  (three mutually exclusive states)
+ * - toggled or not
+ * - focused or not (this is not handled with these utilities)
+ *
+ * Even without handling focused or not, this is six possible combinations that
+ * need to be distinguished from eachother visually.
+ */
+@layer utilities {
+
+  /* Hide ugly search cancel button in Chrome until we can style it properly */
+  input[type="search"]::-webkit-search-cancel-button {
+    @apply hidden;
+  }
+
+  /* Placeholder styling for contentEditable div */
+  [contenteditable][data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
+  }
+
+  /* .no-default-hover-elevate/no-default-active-elevate is an escape hatch so consumers of
+   * buttons/badges can remove the automatic brightness adjustment on interactions
+   * and program their own. */
+  .no-default-hover-elevate {
+    all: unset;
+  }
+
+  .no-default-active-elevate {
+    all: unset;
+  }
+
+
+  /**
+   * Toggleable backgrounds go behind the content. Hoverable/active goes on top.
+   * This way they can stack/compound. Both will overlap the parent's borders!
+   * So borders will be automatically adjusted both on toggle, and hover/active,
+   * and they will be compounded.
+   */
+  .toggle-elevate::before,
+  .toggle-elevate-2::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    /*border-radius: inherit;   match rounded corners */
+    border-radius: inherit;
+    z-index: -1;
+    /* sits behind content but above backdrop */
+  }
+
+  .toggle-elevate.toggle-elevated::before {
+    background-color: var(--elevate-2);
+  }
+
+  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
+  .border.toggle-elevate::before {
+    inset: -1px;
+  }
+
+  /* Does not work on elements with overflow:hidden! */
+  .hover-elevate:not(.no-default-hover-elevate),
+  .active-elevate:not(.no-default-active-elevate),
+  .hover-elevate-2:not(.no-default-hover-elevate),
+  .active-elevate-2:not(.no-default-active-elevate) {
+    position: relative;
+    z-index: 0;
+  }
+
+  .hover-elevate:not(.no-default-hover-elevate)::after,
+  .active-elevate:not(.no-default-active-elevate)::after,
+  .hover-elevate-2:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:not(.no-default-active-elevate)::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    /*border-radius: inherit;   match rounded corners */
+    border-radius: inherit;
+    z-index: 999;
+    /* sits in front of content */
+  }
+
+  .hover-elevate:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-1);
+  }
+
+  .hover-elevate-2:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-2);
+  }
+
+  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
+    inset: -1px;
+  }
+
+  /* Utility classes responsivas */
+  .mobile-page {
+    @apply min-h-dvh flex flex-col bg-background;
+  }
+
+  .mobile-header {
+    @apply sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b;
+  }
+
+  .mobile-content {
+    @apply flex-1 overflow-y-auto;
+  }
+
+  /* Safe area para iOS (notch, home indicator) */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Gradientes da marca Grupo Progresso */
+  .brand-gradient {
+    background: linear-gradient(135deg, #2EAB5B 0%, #248a4a 100%);
+  }
+
+  .brand-gradient-vibrant {
+    background: linear-gradient(135deg, #2EAB5B 0%, #FFED00 100%);
+  }
+
+  .brand-gradient-subtle {
+    background: linear-gradient(to bottom, rgba(46, 171, 91, 0.08) 0%, transparent 100%);
+  }
+
+  .accent-gradient {
+    background: linear-gradient(135deg, #FFED00 0%, #ffd700 100%);
+  }
+  
+  .hero-gradient {
+    background: linear-gradient(135deg, #2EAB5B 0%, #1e8b47 50%, #FFED00 100%);
+  }
+
+  /* Microinterações suaves */
+  .smooth-transition {
+    @apply transition-all duration-150 ease-in-out;
+  }
+
+  /* Status badges com cores da marca */
+  .status-campo {
+    @apply bg-[hsl(var(--bale-campo))] text-white font-medium;
+  }
+
+  .status-patio {
+    @apply bg-[hsl(var(--bale-patio))] text-[hsl(var(--accent-foreground))] font-medium;
+  }
+
+  .status-beneficiado {
+    @apply bg-[hsl(var(--bale-beneficiado))] text-white font-medium;
+  }
+  
+  /* Efeitos visuais da marca */
+  .shine-effect {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .shine-effect::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 237, 0, 0.2), transparent);
+    animation: shine 3s infinite;
+  }
+  
+  @keyframes shine {
+    to {
+      left: 100%;
+    }
+  }
+  
+  /* Sombras coloridas da marca */
+  .shadow-primary {
+    box-shadow: 0 4px 14px 0 rgba(46, 171, 91, 0.15);
+  }
+  
+  .shadow-accent {
+    box-shadow: 0 4px 14px 0 rgba(255, 237, 0, 0.2);
+  }
+  
+  .hover-shadow-primary {
+    transition: box-shadow 0.2s ease-in-out;
+  }
+  
+  .hover-shadow-primary:hover {
+    box-shadow: 0 6px 20px 0 rgba(46, 171, 91, 0.25);
+  }
+
+  /* Animações de entrada */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px) translateX(0px);
+    }
+    25% {
+      transform: translateY(-20px) translateX(10px);
+    }
+    50% {
+      transform: translateY(-10px) translateX(-10px);
+    }
+    75% {
+      transform: translateY(-15px) translateX(5px);
+    }
+  }
+
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes spin-reverse {
+    from {
+      transform: rotate(360deg);
+    }
+    to {
+      transform: rotate(0deg);
+    }
+  }
+
+  @keyframes float-slow {
+    0%, 100% {
+      transform: translateY(0px) translateX(0px);
+    }
+    25% {
+      transform: translateY(-30px) translateX(15px);
+    }
+    50% {
+      transform: translateY(-15px) translateX(-15px);
+    }
+    75% {
+      transform: translateY(-25px) translateX(10px);
+    }
+  }
+
+  @keyframes bounce-slow {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  @keyframes bounce-gentle {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+  }
+
+  @keyframes float-gentle {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+  }
+
+  @keyframes shimmer-horizontal {
+    0% {
+      background-position: -200% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
+  }
+
+  @keyframes gradient-shift {
+    0%, 100% {
+      opacity: 0.3;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  @keyframes text-shimmer {
+    0% {
+      background-position: -200% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-up-bounce {
+    0% {
+      opacity: 0;
+      transform: translateY(50px);
+    }
+    70% {
+      transform: translateY(-10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.6s ease-out forwards;
+    opacity: 0;
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.8s ease-out forwards;
+    opacity: 0;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-float-slow {
+    animation: float-slow 8s ease-in-out infinite;
+  }
+
+  .animate-float-gentle {
+    animation: float-gentle 3s ease-in-out infinite;
+  }
+
+  .animate-spin-slow {
+    animation: spin-slow 20s linear infinite;
+  }
+
+  .animate-spin-reverse {
+    animation: spin-reverse 15s linear infinite;
+  }
+
+  .animate-bounce-slow {
+    animation: bounce-slow 3s ease-in-out infinite;
+  }
+
+  .animate-bounce-gentle {
+    animation: bounce-gentle 2s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 3s ease-in-out infinite;
+  }
+
+  .animate-shimmer-horizontal {
+    background-size: 200% auto;
+    animation: shimmer-horizontal 3s linear infinite;
+  }
+
+  .animate-gradient-shift {
+    animation: gradient-shift 5s ease-in-out infinite;
+  }
+
+  .animate-text-shimmer {
+    background-size: 200% auto;
+    animation: text-shimmer 4s linear infinite;
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.8s ease-out forwards;
+    opacity: 0;
+  }
+
+  .animate-slide-up-bounce {
+    animation: slide-up-bounce 1s ease-out forwards;
+    opacity: 0;
+  }
+}

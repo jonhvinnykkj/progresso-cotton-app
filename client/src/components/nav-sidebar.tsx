@@ -3,6 +3,12 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 // Create context for sidebar state
 const SidebarContext = createContext<{ collapsed: boolean }>({ collapsed: false });
@@ -44,6 +50,7 @@ export function NavSidebar() {
   const { toast } = useToast();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Fechar menu mobile ao mudar de rota
   useEffect(() => {
@@ -77,16 +84,19 @@ export function NavSidebar() {
       title: "Campo",
       href: "/campo",
       icon: Wheat,
+      roles: ["campo", "admin", "superadmin"],
     },
     {
       title: "Transporte",
       href: "/transporte",
       icon: Truck,
+      roles: ["transporte", "admin", "superadmin"],
     },
     {
       title: "Algodoeira",
       href: "/algodoeira",
       icon: FileBarChart,
+      roles: ["algodoeira", "admin", "superadmin"],
     },
     {
       title: "Estatísticas",
@@ -268,15 +278,9 @@ export function NavSidebar() {
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-green-500 via-yellow-500 to-green-500"></div>
 
         <div className="flex items-center justify-around h-16 px-1">
-          {/* Apenas os itens administrativos/gerenciais */}
-          {[
-            { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-            { title: "Estatísticas", href: "/talhao-stats", icon: BarChart3, roles: ["admin", "superadmin"] },
-            { title: "Relatórios", href: "/reports", icon: FileText, roles: ["admin", "superadmin"] },
-            { title: "Usuários", href: "/users", icon: Users, roles: ["superadmin"] },
-            { title: "Configurações", href: "/settings", icon: Settings, roles: ["superadmin"] },
-          ]
-            .filter((item) => !item.roles || (selectedRole && item.roles.includes(selectedRole)))
+          {/* Mostrar os primeiros 4 itens */}
+          {filteredNavItems
+            .slice(0, 4)
             .map((item, index) => {
               const Icon = item.icon;
               const isActive = location === item.href;
@@ -319,8 +323,85 @@ export function NavSidebar() {
                 </button>
               );
             })}
+
+          {/* Botão hambúrguer se houver mais de 4 itens */}
+          {filteredNavItems.length > 4 && (
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="relative flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-2xl transition-all duration-300 active:scale-95 text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400"
+            >
+              <Menu className="h-5 w-5 transition-all" strokeWidth={2} />
+              <span className="text-[9px] font-medium transition-all">
+                Mais
+              </span>
+            </button>
+          )}
         </div>
       </nav>
+
+      {/* Sheet com todos os itens de navegação */}
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent side="bottom" className="h-[80vh] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="text-left">Menu de Navegação</SheetTitle>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-2">
+            {filteredNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location === item.href;
+
+              return (
+                <Button
+                  key={item.href}
+                  variant={isActive ? "default" : "ghost"}
+                  className={cn(
+                    "w-full justify-start transition-all duration-300",
+                    isActive && "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md",
+                    !isActive && "hover:bg-green-100 dark:hover:bg-gray-800"
+                  )}
+                  onClick={() => {
+                    setLocation(item.href);
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  <Icon className="h-5 w-5 mr-3" />
+                  <span className="flex-1 text-left">{item.title}</span>
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* Footer com ações */}
+          <div className="mt-6 pt-6 border-t space-y-2">
+            {selectedRole === "superadmin" && (
+              <Button
+                variant="ghost"
+                className="w-full justify-start hover:bg-green-100 dark:hover:bg-gray-800"
+                onClick={() => {
+                  handleClearCache();
+                  setMobileMenuOpen(false);
+                }}
+              >
+                <RefreshCw className="h-5 w-5 mr-3" />
+                Limpar Cache
+              </Button>
+            )}
+
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+              onClick={() => {
+                handleLogout();
+                setMobileMenuOpen(false);
+              }}
+            >
+              <LogOut className="h-5 w-5 mr-3" />
+              Sair
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </SidebarContext.Provider>
   );
 }

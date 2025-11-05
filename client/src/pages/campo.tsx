@@ -477,8 +477,15 @@ export default function Campo() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || error.message || "Erro ao criar fardo");
+        let errorMessage = "Erro ao criar fardo";
+        try {
+          const error = await response.json();
+          errorMessage = error.error || error.message || errorMessage;
+        } catch {
+          // Se não for JSON, usar status text
+          errorMessage = `Erro ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const bale = await response.json();
@@ -540,8 +547,15 @@ export default function Campo() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || error.message || "Erro ao criar fardos");
+        let errorMessage = "Erro ao criar fardos";
+        try {
+          const error = await response.json();
+          errorMessage = error.error || error.message || errorMessage;
+        } catch {
+          // Se não for JSON, usar status text
+          errorMessage = `Erro ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();

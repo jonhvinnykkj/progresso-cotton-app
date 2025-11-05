@@ -32,6 +32,8 @@ import { TALHOES_INFO } from "@shared/talhoes";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Footer } from "@/components/footer";
 import { getAuthHeaders } from "@/lib/api-client";
+import { NavSidebar, useSidebar } from "@/components/nav-sidebar";
+import { cn } from "@/lib/utils";
 
 // Componente para buscar etiquetas
 function EtiquetasTab({ defaultSafra }: { defaultSafra: string }) {
@@ -414,6 +416,7 @@ export default function Campo() {
   const queryClient = useQueryClient();
   const [isCreating, setIsCreating] = useState(false);
   const [createdBales, setCreatedBales] = useState<Bale[]>([]);
+  const { collapsed } = useSidebar();
 
   // Buscar safra padrão das configurações
   const { data: defaultSafraData } = useQuery<{ value: string }>({
@@ -597,55 +600,35 @@ export default function Campo() {
   };
 
   return (
-    <div className="mobile-page pb-20 lg:pb-0">
-      {/* Header */}
-      <header className="mobile-header backdrop-blur-md bg-background/95 border-b">
-        <div className="container mx-auto px-4 max-w-7xl">
-          <div className="flex items-center justify-between gap-3 py-3">
-            <div className="flex items-center gap-3 flex-1 min-w-0 animate-fade-in-up">
-              <div className="p-2 bg-gradient-to-br from-green-500 to-yellow-500 rounded-2xl shadow-lg shrink-0">
-                <img
-                  src={logoProgresso}
-                  alt="Grupo Progresso"
-                  className="h-6 w-6 sm:h-8 sm:w-8 transition-transform hover:scale-110 duration-300"
-                />
+    <div className="flex min-h-screen bg-gradient-to-br from-green-50/30 via-yellow-50/20 to-green-50/40 dark:from-gray-900 dark:to-gray-800">
+      <NavSidebar />
+
+      <div className={cn("flex-1 flex flex-col transition-all duration-300", collapsed ? "lg:ml-20" : "lg:ml-64")}>
+        {/* Header Mobile apenas */}
+        <header className="lg:hidden mobile-header backdrop-blur-md bg-background/95 border-b">
+          <div className="container mx-auto px-4 max-w-7xl">
+            <div className="flex items-center justify-between gap-3 py-3">
+              <div className="flex items-center gap-3 flex-1 min-w-0 animate-fade-in-up">
+                <div className="p-2 bg-gradient-to-br from-green-500 to-yellow-500 rounded-2xl shadow-lg shrink-0">
+                  <img
+                    src={logoProgresso}
+                    alt="Grupo Progresso"
+                    className="h-6 w-6 sm:h-8 sm:w-8 transition-transform hover:scale-110 duration-300"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-base sm:text-xl font-semibold truncate">Cadastro de Fardos</h1>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                    Operador: {user?.username}
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-base sm:text-xl font-semibold truncate">Cadastro de Fardos</h1>
-                <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                  Operador: {user?.username}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {(selectedRole === "admin" || selectedRole === "superadmin") && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setLocation("/dashboard")}
-                  className="shrink-0 transition-all hover:scale-105 duration-300 border-2 border-green-300 hover:border-yellow-400 hover:bg-yellow-50 rounded-xl font-semibold"
-                >
-                  <ArrowLeft className="w-4 h-4 sm:mr-1" />
-                  <span className="hidden sm:inline">Voltar</span>
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                data-testid="button-logout"
-                className="shrink-0 transition-all hover:scale-110 duration-300"
-              >
-                <LogOut className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Sair</span>
-              </Button>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Conteúdo principal */}
-      <main className="mobile-content bg-gradient-to-br from-background via-muted/10 to-background">
+        {/* Conteúdo principal */}
+        <main className="flex-1 bg-gradient-to-br from-background via-muted/10 to-background pb-20 lg:pb-8">
         <div className="container mx-auto px-4 py-6 max-w-2xl space-y-5">
           
           {/* Formulário de Cadastro */}
@@ -1034,8 +1017,9 @@ export default function Campo() {
         </div>
       </main>
 
-      {/* Footer */}
-      <Footer />
+        {/* Footer */}
+        <Footer />
+      </div>
     </div>
   );
 }

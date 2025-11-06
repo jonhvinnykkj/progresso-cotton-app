@@ -266,7 +266,7 @@ function EtiquetasTab({ defaultSafra }: { defaultSafra: string }) {
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-semibold mb-3 flex items-center gap-2 text-foreground/80">
                 <Hash className="w-4 h-4 text-green-600" />

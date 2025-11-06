@@ -201,6 +201,17 @@ export function NavSidebar() {
 
   return (
     <SidebarContext.Provider value={{ collapsed, shouldShowNavbar }}>
+      {/* Botão de Logout Fixo no Canto Superior Direito (apenas mobile) */}
+      <Button
+        onClick={handleLogout}
+        variant="ghost"
+        size="icon"
+        className="lg:hidden fixed top-4 right-4 z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-lg hover:bg-red-50 dark:hover:bg-red-950 border border-gray-200 dark:border-gray-700"
+        title="Sair"
+      >
+        <LogOut className="h-5 w-5 text-red-600 dark:text-red-400" />
+      </Button>
+
       {/* Desktop Sidebar */}
       <aside
         className={cn(

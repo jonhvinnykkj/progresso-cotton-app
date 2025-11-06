@@ -1,6 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from './use-toast';
+import { buildApiUrl } from '@/lib/api-config';
+import { getAuthHeaders } from '@/lib/api-client';
 
 interface CreateBaleData {
   id: string;
@@ -18,16 +20,17 @@ interface CreateBatchData {
 export function useOfflineBaleCreation() {
   const { toast } = useToast();
 
-  const createBale = useMutation({
-    mutationFn: async (bale: CreateBaleData) => {
+  const createSingle = useMutation({
+    mutationFn: async (data: CreateBaleData) => {
       // Sempre criar online - sem fallback offline
-      const response = await fetch('/api/bales', {
+      const response = await fetch(buildApiUrl('/api/bales'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getAuthHeaders(),
         },
         credentials: 'include',
-        body: JSON.stringify(bale),
+        body: JSON.stringify(data),
       });
 
       if (!response.ok) {
@@ -59,10 +62,11 @@ export function useOfflineBaleCreation() {
   const createBatch = useMutation({
     mutationFn: async (data: CreateBatchData) => {
       // Sempre criar online - sem fallback offline
-      const response = await fetch('/api/bales/batch', {
+      const response = await fetch(buildApiUrl('/api/bales/batch'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getAuthHeaders(),
         },
         credentials: 'include',
         body: JSON.stringify(data),
@@ -94,7 +98,7 @@ export function useOfflineBaleCreation() {
   });
 
   return {
-    createBale,
+    createBale: createSingle.mutate,
     createBatch,
   };
 }

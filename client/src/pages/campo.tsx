@@ -530,9 +530,15 @@ export default function Campo() {
     }
     
     try {
+      // Converter quantidade para número (garantir que não seja string vazia)
+      const quantidade = data.quantidade === "" || data.quantidade === undefined || data.quantidade === null 
+        ? 1 
+        : Number(data.quantidade);
+
       // Incluir safra automaticamente do settings
       const payload = {
-        ...data,
+        talhao: data.talhao,
+        quantidade: quantidade,
         safra: defaultSafra,
         userId: user?.id ? String(user.id) : undefined,
       };

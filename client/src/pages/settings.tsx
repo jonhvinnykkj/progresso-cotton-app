@@ -162,7 +162,8 @@ export default function SettingsPage() {
         {/* Header modernizado */}
         <header className="mobile-header bg-background/95 backdrop-blur-md border-b shadow-sm lg:sticky top-0 z-50">
         <div className="container mx-auto px-4 max-w-7xl">
-          <div className="flex items-center gap-3 py-3">
+          <div className="flex items-center justify-between gap-3 py-3">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="p-2 bg-gradient-to-br from-green-500 to-yellow-500 rounded-2xl shadow-lg shrink-0">
               <img
                 src={logoProgresso}
@@ -179,6 +180,15 @@ export default function SettingsPage() {
               </p>
             </div>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            className="shrink-0 transition-all hover:scale-105 duration-300 rounded-xl border-2 border-green-300 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-950 font-bold text-green-700 hover:text-red-600"
+          >
+            Sair
+          </Button>
+        </div>
         </div>
       </header>
 

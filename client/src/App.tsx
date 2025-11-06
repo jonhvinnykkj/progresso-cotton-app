@@ -10,6 +10,7 @@ import { useProductivityMonitor } from "./hooks/use-productivity-monitor";
 import { useNotifications } from "./hooks/use-notifications";
 import { useOfflineSync } from "./lib/use-offline-sync";
 import { useCounterSync } from "./hooks/use-counter-sync";
+import { usePushNotifications } from "./hooks/use-push-notifications";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
@@ -72,6 +73,9 @@ function RealtimeProvider() {
 
   // Sync counters from server (hooks must be called unconditionally)
   useCounterSync();
+
+  // Initialize push notifications (Android/iOS)
+  usePushNotifications();
   useProductivityMonitor();
   useNotifications();
 

@@ -78,23 +78,6 @@ export default function UserManagement() {
     }
   };
 
-  // Verificar se é superadmin
-  if (selectedRole !== "superadmin") {
-    return (
-      <div className="container mx-auto py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Acesso Negado</CardTitle>
-            <CardDescription>
-              Apenas Super Administradores podem acessar esta página.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
-
-  // Buscar todos os usuários
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["users"],
     queryFn: async () => {
@@ -278,6 +261,30 @@ export default function UserManagement() {
       return <Badge className="bg-gray-500">Erro</Badge>;
     }
   };
+
+  // Verificar se é superadmin
+  if (selectedRole !== "superadmin") {
+    return (
+      <>
+        <NavSidebar />
+        <div className={cn(
+          "min-h-screen bg-gradient-to-br from-background via-muted/10 to-background transition-all duration-300",
+          shouldShowNavbar && (collapsed ? "lg:ml-20" : "lg:ml-64")
+        )}>
+          <div className="container mx-auto py-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Acesso Negado</CardTitle>
+                <CardDescription>
+                  Apenas Super Administradores podem acessar esta página.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

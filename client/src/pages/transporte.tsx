@@ -211,6 +211,14 @@ export default function Transporte() {
                 </div>
               </div>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="shrink-0 transition-all hover:scale-105 duration-300 rounded-xl border-2 border-green-300 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-950 font-bold text-green-700 hover:text-red-600"
+            >
+              Sair
+            </Button>
           </div>
         </div>
       </header>        {/* Conteúdo principal */}

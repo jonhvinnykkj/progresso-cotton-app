@@ -28,6 +28,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedAccessToken = localStorage.getItem("cotton_access_token");
     const storedRefreshToken = localStorage.getItem("cotton_refresh_token");
 
+    console.log('🔐 Auth Init:', { hasUser: !!storedUser, role: storedRole });
+
     if (storedUser && storedAccessToken) {
       try {
         setUser(JSON.parse(storedUser));
@@ -36,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (storedRole) {
           setSelectedRoleState(storedRole as UserRole);
+          console.log('✅ Role restaurado:', storedRole);
         }
       } catch (error) {
         console.error("Error parsing stored user:", error);

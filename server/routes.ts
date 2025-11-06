@@ -43,6 +43,11 @@ const authLimiter = rateLimit({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint (sem autenticação)
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok", timestamp: Date.now() });
+  });
+
   // Version endpoint for client auto-update detection
   const APP_VERSION = process.env.RAILWAY_DEPLOYMENT_ID || Date.now().toString();
 

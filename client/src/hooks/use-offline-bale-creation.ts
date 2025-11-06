@@ -124,13 +124,13 @@ export function useOfflineBaleCreation() {
         toast({
           variant: 'default',
           title: 'Lote salvo localmente',
-          description: `${variables.quantidade} fardo(s) serão sincronizados quando houver conexão.`,
+          description: `${variables.quantidade} fardo(s) serão sincronizados quando houver conexão. Agora você pode imprimir as etiquetas.`,
         });
       } else {
         toast({
           variant: 'success',
           title: 'Lote criado',
-          description: `${variables.quantidade} fardo(s) criado(s) com sucesso.`,
+          description: `${variables.quantidade} fardo(s) criado(s) com sucesso. Agora você pode imprimir as etiquetas.`,
         });
       }
 
@@ -193,7 +193,7 @@ async function saveBatchOffline(data: CreateBatchData) {
   if (!talhaoExists) throw new Error('Talhão inválido');
   if (data.quantidade < 1 || data.quantidade > 1000) throw new Error('Quantidade inválida');
 
-  const operations: string[] = [];
+  const createdBales: Bale[] = [];
 
   for (let i = 0; i < data.quantidade; i++) {
     // Incrementar contador local para obter próximo número
@@ -218,22 +218,33 @@ async function saveBatchOffline(data: CreateBatchData) {
     });
 
     // Adicionar ao cache local para aparecer na UI
-    const localBale: Partial<Bale> = {
+    const localBale: Bale = {
       id: baleId,
       safra: data.safra,
       talhao: data.talhao,
       numero: nextNumber,
       status: 'campo',
+      statusHistory: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       createdBy: 'offline-user',
+      updatedBy: null,
+      transportedAt: null,
+      transportedBy: null,
+      processedAt: null,
+      processedBy: null,
     };
 
-    await offlineStorage.addBaleLocally(localBale as Bale);
-
-    operations.push(baleId);
+    await offlineStorage.addBaleLocally(localBale);
+    createdBales.push(localBale);
   }
 
   console.log(`✅ ${data.quantidade} fardos criados offline com numeração sequencial`);
-  return { offline: true, operations };
+  
+  // Retornar no mesmo formato que o backend retorna (array de bales)
+  return { 
+    offline: true, 
+    bales: createdBales,
+    count: createdBales.length
+  };
 }

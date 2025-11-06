@@ -45,6 +45,7 @@ interface NavItem {
   icon: any;
   badge?: string;
   roles?: string[];
+  showInMobileBar?: boolean; // Se true, aparece na barra inferior mobile
 }
 
 export function NavSidebar() {
@@ -78,62 +79,116 @@ export function NavSidebar() {
   };
 
   const navItems: NavItem[] = [
+    // Itens prioritários para admin/superadmin (aparecem na barra mobile)
     {
       title: "Dashboard",
       href: "/dashboard",
       icon: LayoutDashboard,
       roles: ["admin", "superadmin"],
-    },
-    {
-      title: "Campo",
-      href: "/campo",
-      icon: Wheat,
-      roles: ["campo", "admin", "superadmin"],
-    },
-    {
-      title: "Transporte",
-      href: "/transporte",
-      icon: Truck,
-      roles: ["transporte", "admin", "superadmin"],
-    },
-    {
-      title: "Algodoeira",
-      href: "/algodoeira",
-      icon: FileBarChart,
-      roles: ["algodoeira", "admin", "superadmin"],
+      showInMobileBar: true,
     },
     {
       title: "Estatísticas",
       href: "/talhao-stats",
       icon: BarChart3,
       roles: ["admin", "superadmin"],
+      showInMobileBar: true,
     },
     {
       title: "Relatórios",
       href: "/reports",
       icon: FileText,
       roles: ["admin", "superadmin"],
+      showInMobileBar: true,
     },
     {
       title: "Usuários",
       href: "/users",
       icon: Users,
       roles: ["superadmin"],
+      showInMobileBar: true,
     },
     {
       title: "Configurações",
       href: "/settings",
       icon: Settings,
       roles: ["superadmin"],
+      showInMobileBar: true,
+    },
+    // Itens operacionais (aparecem na barra para usuários campo/transporte/algodoeira, só no hambúrguer para admin/superadmin)
+    {
+      title: "Campo",
+      href: "/campo",
+      icon: Wheat,
+      roles: ["campo", "admin", "superadmin"],
+      showInMobileBar: true, // Aparece na barra, mas será filtrado dinamicamente
+    },
+    {
+      title: "Transporte",
+      href: "/transporte",
+      icon: Truck,
+      roles: ["transporte", "admin", "superadmin"],
+      showInMobileBar: true,
+    },
+    {
+      title: "Algodoeira",
+      href: "/algodoeira",
+      icon: FileBarChart,
+      roles: ["algodoeira", "admin", "superadmin"],
+      showInMobileBar: true,
     },
   ];
 
-  const filteredNavItems = navItems.filter(
-    (item) => !item.roles || (selectedRole && item.roles.includes(selectedRole))
-  );
+  const filteredNavItems = navItems.filter((item) => {
+    if (!item.roles) return true; // Item sem restrição de roles
+    if (!user) return false; // Sem usuário, não mostra
+    
+    // Parsear roles do usuário (vem como string JSON do banco)
+    let userRoles: string[] = [];
+    try {
+      userRoles = typeof user.roles === 'string' 
+        ? JSON.parse(user.roles) 
+        : user.roles || [];
+    } catch (e) {
+      console.error('Erro ao parsear roles do usuário:', e);
+      userRoles = [];
+    }
+    
+    // Verificar se o usuário tem ALGUMA das roles necessárias para o item
+    return item.roles.some(role => userRoles.includes(role));
+  });
 
-  // Só mostrar navbar se o usuário tiver acesso a 2 ou mais páginas
-  const shouldShowNavbar = filteredNavItems.length >= 2;
+  // Determinar quais itens aparecem na barra mobile baseado nas roles do usuário
+  const isAdminUser = user && (() => {
+    try {
+      const userRoles = typeof user.roles === 'string' ? JSON.parse(user.roles) : user.roles || [];
+      return userRoles.includes('admin') || userRoles.includes('superadmin');
+    } catch (e) {
+      return false;
+    }
+  })();
+
+  // Para admin/superadmin: esconder campo/transporte/algodoeira da barra mobile
+  const mobileBarItems = filteredNavItems.map(item => {
+    if (isAdminUser && ['Campo', 'Transporte', 'Algodoeira'].includes(item.title)) {
+      return { ...item, showInMobileBar: false };
+    }
+    return item;
+  });
+
+  // Debug: log para verificar
+  console.log('🔍 NavSidebar Debug:', { 
+    selectedRole, 
+    user: user?.username,
+    userRoles: user?.roles,
+    isAdminUser,
+    filteredItemsCount: filteredNavItems.length,
+    filteredItems: filteredNavItems.map(i => i.title),
+    mobileBarItemsCount: mobileBarItems.filter(i => i.showInMobileBar !== false).length
+  });
+
+  // Sempre mostrar navbar (mesmo com 1 item, usuário precisa do botão de logout)
+  const shouldShowNavbar = filteredNavItems.length >= 1;
 
   // Se não deve mostrar a navbar, não renderizar nada
   if (!shouldShowNavbar) {
@@ -294,8 +349,9 @@ export function NavSidebar() {
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-green-500 via-yellow-500 to-green-500"></div>
 
         <div className="flex items-center justify-around h-16 px-1">
-          {/* Mostrar os primeiros 4 itens */}
-          {filteredNavItems
+          {/* Mostrar apenas itens marcados para mobile bar (max 4) */}
+          {mobileBarItems
+            .filter(item => item.showInMobileBar !== false) // Se não especificado, assume true (backward compatibility)
             .slice(0, 4)
             .map((item, index) => {
               const Icon = item.icon;
@@ -340,18 +396,26 @@ export function NavSidebar() {
               );
             })}
 
-          {/* Botão hambúrguer se houver mais de 4 itens */}
-          {filteredNavItems.length > 4 && (
-            <button
-              onClick={() => setMobileMenuOpen(true)}
-              className="relative flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-2xl transition-all duration-300 active:scale-95 text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400"
-            >
-              <Menu className="h-5 w-5 transition-all" strokeWidth={2} />
-              <span className="text-[9px] font-medium transition-all">
-                Mais
-              </span>
-            </button>
-          )}
+          {/* Botão hambúrguer - aparece quando há itens não mostrados na barra */}
+          {(() => {
+            const visibleInBar = mobileBarItems.filter(item => item.showInMobileBar !== false);
+            const hasHiddenItems = mobileBarItems.some(item => item.showInMobileBar === false);
+            const needsHamburger = hasHiddenItems || visibleInBar.length > 4;
+            
+            if (!needsHamburger) return null;
+            
+            return (
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="relative flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-2xl transition-all duration-300 active:scale-95 text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400"
+              >
+                <Menu className="h-5 w-5 transition-all" strokeWidth={2} />
+                <span className="text-[9px] font-medium transition-all">
+                  Mais
+                </span>
+              </button>
+            );
+          })()}
         </div>
       </nav>
 

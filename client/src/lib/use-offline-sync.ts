@@ -3,6 +3,32 @@ import { offlineStorage } from './offline-storage';
 import { queryClient } from './queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { getAuthHeaders } from './api-client';
+import { API_URL } from './api-config';
+
+// Função para verificar se realmente está online (testa conectividade com o servidor)
+async function checkRealOnlineStatus(): Promise<boolean> {
+  if (!navigator.onLine) {
+    return false;
+  }
+
+  try {
+    // Tenta fazer um ping no servidor
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // timeout de 3s
+
+    const response = await fetch(`${API_URL}/api/health`, {
+      method: 'GET',
+      credentials: 'include',
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    return response.ok;
+  } catch (error) {
+    console.log('⚠️ Sem conexão real com o servidor');
+    return false;
+  }
+}
 
 export function useOfflineSync() {
   const [isSyncing, setIsSyncing] = useState(false);
@@ -14,10 +40,16 @@ export function useOfflineSync() {
   const syncInProgressRef = useRef(false);
 
   useEffect(() => {
-    const handleOnline = () => {
-      console.log('🌐 Voltou online');
-      setIsOnline(true);
-      syncAllPendingOperations();
+    const handleOnline = async () => {
+      console.log('🌐 Evento online detectado, verificando conexão real...');
+      const reallyOnline = await checkRealOnlineStatus();
+      setIsOnline(reallyOnline);
+      if (reallyOnline) {
+        console.log('✅ Conexão confirmada com servidor');
+        syncAllPendingOperations();
+      } else {
+        console.log('❌ Sem conexão real com servidor');
+      }
     };
 
     const handleOffline = () => {
@@ -28,10 +60,13 @@ export function useOfflineSync() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Tentar sincronizar ao montar se estiver online
-    if (isOnline) {
-      syncAllPendingOperations();
-    }
+    // Verificar conexão real ao montar
+    checkRealOnlineStatus().then((online) => {
+      setIsOnline(online);
+      if (online) {
+        syncAllPendingOperations();
+      }
+    });
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -41,6 +76,14 @@ export function useOfflineSync() {
 
   const syncAllPendingOperations = async () => {
     if (!isOnline || syncInProgressRef.current) return;
+
+    // Verificar conexão real antes de sincronizar
+    const reallyOnline = await checkRealOnlineStatus();
+    if (!reallyOnline) {
+      console.log('⚠️ Sem conexão real, cancelando sincronização');
+      setIsOnline(false);
+      return;
+    }
 
     syncInProgressRef.current = true;
     setIsSyncing(true);

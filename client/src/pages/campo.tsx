@@ -495,11 +495,17 @@ export default function Campo() {
         ? 1 
         : Number(data.quantidade);
 
-      await createBatch.mutateAsync({
+      const result = await createBatch.mutateAsync({
         safra: defaultSafra,
         talhao: data.talhao,
         quantidade: quantidade,
       });
+
+      // Atualizar lista de fardos criados (tanto online quanto offline)
+      if (result?.bales && Array.isArray(result.bales)) {
+        setCreatedBales(result.bales);
+        console.log(`✅ ${result.bales.length} fardos prontos para impressão`);
+      }
 
       // Resetar apenas quantidade (deixar vazio)
       form.setValue("quantidade", "");

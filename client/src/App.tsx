@@ -53,12 +53,10 @@ function RealtimeProvider() {
   // Sync offline operations when online
   const sync = useOfflineSync();
 
-  // Sync counters from server (only when authenticated)
-  if (isAuthenticated) {
-    useCounterSync();
-    useProductivityMonitor();
-    useNotifications();
-  }
+  // Sync counters from server (hooks must be called unconditionally)
+  useCounterSync();
+  useProductivityMonitor();
+  useNotifications();
 
   // Render a small progress bar when syncing
   return (

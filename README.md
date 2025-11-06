@@ -9,12 +9,14 @@ O Progresso Cotton é uma solução completa para gerenciamento e rastreamento d
 ## Funcionalidades Principais
 
 ### Rastreabilidade Completa
+
 - **Geração de etiquetas com QR Code** único por fardo (formato: S25/26-T2B-00001)
 - **Timeline de status**: Campo → Pátio → Beneficiado
 - **Histórico completo** de movimentações com data, hora e responsável
 - **Leitura de QR Code** via câmera do dispositivo
 
 ### Dashboard e Relatórios
+
 - **Dashboard em tempo real** com:
   - Estatísticas de produção por status
   - Gráficos de fardos por talhão
@@ -24,12 +26,14 @@ O Progresso Cotton é uma solução completa para gerenciamento e rastreamento d
 - **Estatísticas por talhão** com visualização em mapas interativos
 
 ### Gestão de Campo
+
 - **Criação de fardos em lote** (até 1000 por operação)
 - **Numeração automática** sequencial por safra/talhão
 - **Mapa interativo** de talhões com dados GeoJSON
 - **Informações de área** em hectares por talhão
 
 ### Controle de Acesso
+
 - **Sistema de autenticação** JWT com refresh tokens
 - **5 níveis de permissão**:
   - `superadmin`: acesso total ao sistema
@@ -40,6 +44,7 @@ O Progresso Cotton é uma solução completa para gerenciamento e rastreamento d
 - **Rate limiting** para proteção contra força bruta (5 tentativas/15min)
 
 ### Modo Offline
+
 - **Service Worker** com cache de recursos estáticos
 - **Armazenamento local** para operações offline
 - **Sincronização automática** ao retornar online
@@ -48,6 +53,7 @@ O Progresso Cotton é uma solução completa para gerenciamento e rastreamento d
 ## Stack Tecnológica
 
 ### Frontend
+
 - **React 18** com TypeScript
 - **Vite** para build e HMR
 - **TanStack Query (React Query)** para cache e sincronização
@@ -61,6 +67,7 @@ O Progresso Cotton é uma solução completa para gerenciamento e rastreamento d
 - **jsPDF** e **xlsx** para geração de relatórios
 
 ### Backend
+
 - **Express.js** com TypeScript
 - **Drizzle ORM** para acesso ao banco
 - **PostgreSQL** para persistência
@@ -82,12 +89,14 @@ O Progresso Cotton é uma solução completa para gerenciamento e rastreamento d
 ### Instalação
 
 1. **Clone o repositório**
+
 ```bash
 git clone https://github.com/jonhvinnykkj/progresso-cotton.git
 cd progresso-cotton
 ```
 
 2. **Instale as dependências**
+
 ```bash
 npm install
 ```
@@ -112,6 +121,7 @@ PORT=5000
 ```
 
 4. **Inicialize o banco de dados**
+
 ```bash
 # Cria as tabelas no banco
 npm run db:push
@@ -123,25 +133,30 @@ npm run db:init
 ### Executando o Projeto
 
 **Desenvolvimento (recomendado):**
+
 ```bash
 npm run dev
 ```
 
 Isso iniciará:
+
 - **Cliente**: http://localhost:3000 (Vite + HMR)
 - **Servidor**: http://localhost:5000 (Express + tsx)
 
 **Apenas o frontend:**
+
 ```bash
 npm run dev:client
 ```
 
 **Apenas o backend:**
+
 ```bash
 npm run dev:server
 ```
 
 **Build para produção:**
+
 ```bash
 npm run build
 npm start
@@ -149,18 +164,18 @@ npm start
 
 ## Scripts Disponíveis
 
-| Script | Descrição |
-|--------|-----------|
-| `npm run dev` | Inicia cliente e servidor simultaneamente |
-| `npm run dev:client` | Apenas frontend (Vite) |
-| `npm run dev:server` | Apenas backend (Express) |
-| `npm run build` | Build do frontend para produção |
-| `npm run preview` | Preview do build de produção |
-| `npm run start` | Inicia servidor em modo produção |
-| `npm run check` | Verificação de tipos TypeScript |
-| `npm run db:push` | Aplica schema ao banco de dados |
-| `npm run db:init` | Inicializa dados iniciais |
-| `npm run db:migrate-passwords` | Migra senhas para bcrypt (uma vez) |
+| Script                         | Descrição                                 |
+| ------------------------------ | ----------------------------------------- |
+| `npm run dev`                  | Inicia cliente e servidor simultaneamente |
+| `npm run dev:client`           | Apenas frontend (Vite)                    |
+| `npm run dev:server`           | Apenas backend (Express)                  |
+| `npm run build`                | Build do frontend para produção           |
+| `npm run preview`              | Preview do build de produção              |
+| `npm run start`                | Inicia servidor em modo produção          |
+| `npm run check`                | Verificação de tipos TypeScript           |
+| `npm run db:push`              | Aplica schema ao banco de dados           |
+| `npm run db:init`              | Inicializa dados iniciais                 |
+| `npm run db:migrate-passwords` | Migra senhas para bcrypt (uma vez)        |
 
 ## Estrutura do Projeto
 
@@ -209,6 +224,7 @@ progresso-cotton-id/
 ## Fluxo de Uso
 
 ### 1. Criação de Fardos (Campo)
+
 - Usuário com papel `campo` acessa a página "Campo"
 - Seleciona safra e talhão
 - Define quantidade de fardos a criar
@@ -216,18 +232,21 @@ progresso-cotton-id/
 - Fardos iniciam no status "campo"
 
 ### 2. Transporte (Pátio)
+
 - Usuário com papel `transporte` acessa "Transporte"
 - Escaneia QR Code do fardo
 - Sistema move fardo para status "patio"
 - Registra data, hora e responsável
 
 ### 3. Beneficiamento (Algodoeira)
+
 - Usuário com papel `algodoeira` acessa "Algodoeira"
 - Escaneia QR Code do fardo
 - Sistema move fardo para status "beneficiado"
 - Registra processamento completo
 
 ### 4. Acompanhamento
+
 - Dashboard mostra estatísticas em tempo real
 - Relatórios podem ser gerados por período, status ou talhão
 - Mapas mostram distribuição geográfica da produção
@@ -307,6 +326,7 @@ O servidor serve os arquivos estáticos da pasta `dist/` e as rotas da API em `/
 ### Hot Reload
 
 O projeto está configurado com hot reload automático:
+
 - **Frontend**: Vite HMR para mudanças instantâneas
 - **Backend**: tsx watch para reload do servidor
 - **Proxy**: Vite proxy redireciona `/api` para `http://localhost:5000`
@@ -324,11 +344,13 @@ Verifica tipos TypeScript em todo o projeto sem fazer build.
 **Formato do ID de Fardo:** `S{safra}-{talhao}-{numero}`
 
 Exemplo: `S25/26-T2B-00042`
+
 - `S25/26`: Safra 2025/2026
 - `T2B`: Talhão 2B
 - `00042`: Fardo número 42
 
 **Status de Fardo:**
+
 1. `campo`: Fardo criado no campo
 2. `patio`: Transportado para o pátio
 3. `beneficiado`: Processado na algodoeira

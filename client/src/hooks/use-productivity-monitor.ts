@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNotifications } from './use-notifications';
+import { useAuth } from '@/lib/auth-context';
 import type { Bale } from '@shared/schema';
 import { TALHOES_INFO } from '@shared/talhoes';
 
@@ -11,6 +12,7 @@ interface TalhaoStats {
 }
 
 export function useProductivityMonitor() {
+  const { isAuthenticated } = useAuth();
   const { notifyMilestone, notifyLowProductivity } = useNotifications();
   const lastTotalRef = useRef<number>(0);
   const notifiedTalhoesRef = useRef<Set<string>>(new Set());
@@ -18,6 +20,7 @@ export function useProductivityMonitor() {
   const { data: bales = [] } = useQuery<Bale[]>({
     queryKey: ["/api/bales"],
     staleTime: 30000,
+    enabled: isAuthenticated, // Only fetch when authenticated
   });
 
   useEffect(() => {

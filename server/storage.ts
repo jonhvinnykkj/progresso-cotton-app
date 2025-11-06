@@ -588,32 +588,48 @@ export class PostgresStorage implements IStorage {
 
   // Notification methods
   async getActiveNotifications(): Promise<Notification[]> {
-    const now = new Date();
-    const result = await db
-      .select()
-      .from(notificationsTable)
-      .where(
-        sql`${notificationsTable.isActive} = 1 AND (${notificationsTable.expiresAt} IS NULL OR ${notificationsTable.expiresAt} > ${now})`
-      )
-      .orderBy(sql`${notificationsTable.createdAt} DESC`);
-    return result;
+    try {
+      const now = new Date();
+      const result = await db
+        .select()
+        .from(notificationsTable)
+        .where(
+          sql`${notificationsTable.isActive} = 1 AND (${notificationsTable.expiresAt} IS NULL OR ${notificationsTable.expiresAt} > ${now})`
+        )
+        .orderBy(sql`${notificationsTable.createdAt} DESC`);
+      return result;
+    } catch (error) {
+      // Tabela pode não existir ainda, retorna array vazio
+      console.warn('⚠️ Notifications table may not exist:', error);
+      return [];
+    }
   }
 
   async createNotification(data: CreateNotification & { createdBy: string }): Promise<Notification> {
-    const result = await db.insert(notificationsTable).values({
-      title: data.title,
-      message: data.message,
-      type: data.type || "info",
-      createdBy: data.createdBy,
-      expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
-      isActive: 1,
-    }).returning();
+    try {
+      const result = await db.insert(notificationsTable).values({
+        title: data.title,
+        message: data.message,
+        type: data.type || "info",
+        createdBy: data.createdBy,
+        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+        isActive: 1,
+      }).returning();
 
-    return result[0];
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error creating notification:', error);
+      throw new Error('Tabela de notificações não existe. Execute as migrações primeiro.');
+    }
   }
 
   async deleteNotification(id: string): Promise<void> {
-    await db.delete(notificationsTable).where(eq(notificationsTable.id, id));
+    try {
+      await db.delete(notificationsTable).where(eq(notificationsTable.id, id));
+    } catch (error) {
+      console.error('❌ Error deleting notification:', error);
+      throw new Error('Erro ao deletar notificação');
+    }
   }
 }
 

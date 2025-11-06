@@ -45,7 +45,7 @@ type SafraSettingsForm = z.infer<typeof safraSettingsSchema>;
 export default function SettingsPage() {
   const [, setLocation] = useLocation();
   const { logout, user, selectedRole } = useAuth();
-  const { collapsed } = useSidebar();
+  const { collapsed, shouldShowNavbar } = useSidebar();
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -151,7 +151,10 @@ export default function SettingsPage() {
   return (
     <>
       <NavSidebar />
-      <div className={cn("mobile-page transition-all duration-300", collapsed ? "lg:ml-20" : "lg:ml-64")}>
+      <div className={cn(
+        "mobile-page transition-all duration-300",
+        shouldShowNavbar && (collapsed ? "lg:ml-20" : "lg:ml-64")
+      )}>
         {/* Header modernizado */}
         <header className="mobile-header bg-background/95 backdrop-blur-md border-b shadow-sm lg:sticky top-0 z-50">
         <div className="container mx-auto px-4 max-w-7xl">

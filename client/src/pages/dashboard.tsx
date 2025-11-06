@@ -28,7 +28,7 @@ import logoProgresso from "/favicon.png";
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { logout, isAuthenticated } = useAuth();
-  const { collapsed } = useSidebar();
+  const { collapsed, shouldShowNavbar } = useSidebar();
 
   // Habilita atualizações em tempo real via SSE
   useRealtime(isAuthenticated);
@@ -119,7 +119,10 @@ export default function Dashboard() {
     <div className="flex min-h-screen bg-gradient-to-br from-green-50/30 via-yellow-50/20 to-green-50/40 dark:from-gray-900 dark:to-gray-800">
       <NavSidebar />
 
-      <div className={cn("flex-1 flex flex-col transition-all duration-300", collapsed ? "lg:ml-20" : "lg:ml-64")}>
+      <div className={cn(
+        "flex-1 flex flex-col transition-all duration-300",
+        shouldShowNavbar && (collapsed ? "lg:ml-20" : "lg:ml-64")
+      )}>
         {/* Conteúdo principal */}
         <main className="flex-1 container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-7xl pb-20 lg:pb-8">
           {/* Header com título e estatísticas rápidas - Design moderno */}

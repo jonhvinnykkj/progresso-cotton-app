@@ -45,7 +45,7 @@ export default function Transporte() {
   const [, setLocation] = useLocation();
   const { logout, user, selectedRole } = useAuth();
   const { toast } = useToast();
-  const { collapsed } = useSidebar();
+  const { collapsed, shouldShowNavbar } = useSidebar();
   const [showScanner, setShowScanner] = useState(false);
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualBaleId, setManualBaleId] = useState("");
@@ -178,7 +178,10 @@ export default function Transporte() {
     <div className="flex min-h-screen bg-gradient-to-br from-green-50/30 via-yellow-50/20 to-green-50/40 dark:from-gray-900 dark:to-gray-800">
       <NavSidebar />
 
-      <div className={cn("flex-1 flex flex-col transition-all duration-300", collapsed ? "lg:ml-20" : "lg:ml-64")}>
+      <div className={cn(
+        "flex-1 flex flex-col transition-all duration-300",
+        shouldShowNavbar && (collapsed ? "lg:ml-20" : "lg:ml-64")
+      )}>
         {/* Header Mobile apenas */}
         <header className="lg:hidden mobile-header bg-background/95 backdrop-blur-md border-b shadow-sm sticky top-0 z-50">
           <div className="container mx-auto px-4 max-w-7xl">

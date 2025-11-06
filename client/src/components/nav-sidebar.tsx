@@ -11,7 +11,10 @@ import {
 } from "@/components/ui/sheet";
 
 // Create context for sidebar state
-const SidebarContext = createContext<{ collapsed: boolean }>({ collapsed: false });
+const SidebarContext = createContext<{ collapsed: boolean; shouldShowNavbar: boolean }>({ 
+  collapsed: false,
+  shouldShowNavbar: true
+});
 
 export function useSidebar() {
   return useContext(SidebarContext);
@@ -79,6 +82,7 @@ export function NavSidebar() {
       title: "Dashboard",
       href: "/dashboard",
       icon: LayoutDashboard,
+      roles: ["admin", "superadmin"],
     },
     {
       title: "Campo",
@@ -128,8 +132,20 @@ export function NavSidebar() {
     (item) => !item.roles || (selectedRole && item.roles.includes(selectedRole))
   );
 
+  // Só mostrar navbar se o usuário tiver acesso a 2 ou mais páginas
+  const shouldShowNavbar = filteredNavItems.length >= 2;
+
+  // Se não deve mostrar a navbar, não renderizar nada
+  if (!shouldShowNavbar) {
+    return (
+      <SidebarContext.Provider value={{ collapsed, shouldShowNavbar }}>
+        {null}
+      </SidebarContext.Provider>
+    );
+  }
+
   return (
-    <SidebarContext.Provider value={{ collapsed }}>
+    <SidebarContext.Provider value={{ collapsed, shouldShowNavbar }}>
       {/* Desktop Sidebar */}
       <aside
         className={cn(

@@ -21,7 +21,7 @@ export default function BaleDetails() {
   const [, params] = useRoute("/bale/:id");
   const [, setLocation] = useLocation();
   const { selectedRole } = useAuth();
-  const { collapsed } = useSidebar();
+  const { collapsed, shouldShowNavbar } = useSidebar();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -97,7 +97,10 @@ export default function BaleDetails() {
     return (
       <>
         <NavSidebar />
-        <div className={cn("min-h-screen bg-gradient-to-br from-green-50/30 via-yellow-50/20 to-green-50/40 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center transition-all duration-300", collapsed ? "lg:ml-20" : "lg:ml-64")}>
+        <div className={cn(
+          "min-h-screen bg-gradient-to-br from-green-50/30 via-yellow-50/20 to-green-50/40 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center transition-all duration-300",
+          shouldShowNavbar && (collapsed ? "lg:ml-20" : "lg:ml-64")
+        )}>
           <div className="text-center space-y-4">
             <Loader2 className="w-12 h-12 animate-spin mx-auto text-green-600" />
             <p className="text-green-700 font-semibold">Carregando detalhes do fardo...</p>
@@ -111,7 +114,10 @@ export default function BaleDetails() {
     return (
       <>
         <NavSidebar />
-        <div className={cn("min-h-screen bg-gradient-to-br from-green-50/30 via-yellow-50/20 to-green-50/40 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4 transition-all duration-300", collapsed ? "lg:ml-20" : "lg:ml-64")}>
+        <div className={cn(
+          "min-h-screen bg-gradient-to-br from-green-50/30 via-yellow-50/20 to-green-50/40 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4 transition-all duration-300",
+          shouldShowNavbar && (collapsed ? "lg:ml-20" : "lg:ml-64")
+        )}>
           <Card className="max-w-md shadow-xl border-2 rounded-2xl overflow-hidden animate-fade-in-up">
             <div className="bg-gradient-to-r from-red-500 to-orange-500 p-6 relative overflow-hidden">
               <div className="absolute inset-0 opacity-10">
@@ -145,7 +151,10 @@ export default function BaleDetails() {
   return (
     <>
       <NavSidebar />
-      <div className={cn("min-h-screen bg-gradient-to-br from-green-50/30 via-yellow-50/20 to-green-50/40 dark:from-gray-900 dark:to-gray-800 transition-all duration-300", collapsed ? "lg:ml-20" : "lg:ml-64")}>
+      <div className={cn(
+        "min-h-screen bg-gradient-to-br from-green-50/30 via-yellow-50/20 to-green-50/40 dark:from-gray-900 dark:to-gray-800 transition-all duration-300",
+        shouldShowNavbar && (collapsed ? "lg:ml-20" : "lg:ml-64")
+      )}>
         <header className="bg-gradient-to-r from-green-50 via-yellow-50/30 to-green-50 dark:from-gray-900 dark:to-gray-800 border-b-2 border-green-200 dark:border-gray-700 shadow-md">
           <div className="container mx-auto px-4 py-6 max-w-3xl">
             <div className="flex flex-col gap-4">

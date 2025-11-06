@@ -92,5 +92,14 @@ jspm_packages/
 android/
 !android/app/src/main/AndroidManifest.xml
 !android/app/src/main/res/xml/network_security_config.xml
+!android/app/build.gradle
 ios/
 .capacitor/
+
+# Android Release Signing
+*.keystore
+*.jks
+keystore.properties
+android/keystore.properties
+android/app/*.keystore
+android/app/*.jks

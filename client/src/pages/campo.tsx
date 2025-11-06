@@ -416,7 +416,7 @@ export default function Campo() {
   const queryClient = useQueryClient();
   const [isCreating, setIsCreating] = useState(false);
   const [createdBales, setCreatedBales] = useState<Bale[]>([]);
-  const { collapsed } = useSidebar();
+  const { collapsed, shouldShowNavbar } = useSidebar();
 
   // Buscar safra padrão das configurações
   const { data: defaultSafraData } = useQuery<{ value: string }>({
@@ -617,7 +617,10 @@ export default function Campo() {
     <div className="flex min-h-screen bg-gradient-to-br from-green-50/30 via-yellow-50/20 to-green-50/40 dark:from-gray-900 dark:to-gray-800">
       <NavSidebar />
 
-      <div className={cn("flex-1 flex flex-col transition-all duration-300", collapsed ? "lg:ml-20" : "lg:ml-64")}>
+      <div className={cn(
+        "flex-1 flex flex-col transition-all duration-300",
+        shouldShowNavbar && (collapsed ? "lg:ml-20" : "lg:ml-64")
+      )}>
         {/* Header Mobile apenas */}
         <header className="lg:hidden mobile-header backdrop-blur-md bg-background/95 border-b">
           <div className="container mx-auto px-4 max-w-7xl">

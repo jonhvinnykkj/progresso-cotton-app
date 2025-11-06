@@ -31,7 +31,7 @@ interface User {
 
 export default function UserManagement() {
   const { user, selectedRole } = useAuth();
-  const { collapsed } = useSidebar();
+  const { collapsed, shouldShowNavbar } = useSidebar();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -277,7 +277,10 @@ export default function UserManagement() {
   return (
     <>
       <NavSidebar />
-      <div className={cn("min-h-screen bg-gradient-to-br from-background via-muted/10 to-background transition-all duration-300", collapsed ? "lg:ml-20" : "lg:ml-64")}>
+      <div className={cn(
+        "min-h-screen bg-gradient-to-br from-background via-muted/10 to-background transition-all duration-300",
+        shouldShowNavbar && (collapsed ? "lg:ml-20" : "lg:ml-64")
+      )}>
         <main className="container mx-auto py-6 px-4 space-y-6">
         {/* Header */}
         <header className="mobile-header bg-background/95 backdrop-blur-md border-b shadow-sm lg:sticky top-0 z-50 -mx-4 px-4 py-4">

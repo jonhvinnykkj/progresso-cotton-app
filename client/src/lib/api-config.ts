@@ -5,7 +5,7 @@ export const getApiUrl = (): string => {
   const isNative = typeof window !== 'undefined' && window.Capacitor !== undefined;
 
   if (isNative) {
-    // PRODUCTION: Railway server URL (sem /api no final pois as rotas já incluem)
+    // PRODUCTION: Railway server URL
     return 'https://progresso-cotton-app-production.up.railway.app';
 
     // DEVELOPMENT: Local development server
@@ -19,16 +19,3 @@ export const getApiUrl = (): string => {
 };
 
 export const API_URL = getApiUrl();
-
-// Helper para construir URLs de API (adiciona /api apenas se não for nativo)
-export const buildApiUrl = (path: string): string => {
-  const isNative = typeof window !== 'undefined' && (window as any).Capacitor !== undefined;
-  
-  if (isNative) {
-    // Mobile: URL completa do servidor
-    return `${API_URL}${path}`;
-  } else {
-    // Desktop: usa proxy do Vite, path já começa com /api
-    return path;
-  }
-};

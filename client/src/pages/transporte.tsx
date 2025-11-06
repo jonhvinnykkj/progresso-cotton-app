@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useOfflineStatusUpdate } from "@/hooks/use-offline-status-update";
 import { Footer } from "@/components/footer";
 import { getAuthHeaders } from "@/lib/api-client";
+import { API_URL } from "@/lib/api-config";
 import { NavSidebar, useSidebar } from "@/components/nav-sidebar";
 import { cn } from "@/lib/utils";
 import {
@@ -85,8 +86,10 @@ export default function Transporte() {
       // Tenta buscar direto na API como fallback
       try {
         const encodedId = encodeURIComponent(normalizedId);
-        const response = await fetch(`/api/bales/${encodedId}`, {
+        const url = API_URL ? `${API_URL}/api/bales/${encodedId}` : `/api/bales/${encodedId}`;
+        const response = await fetch(url, {
           headers: getAuthHeaders(),
+          credentials: "include",
         });
         if (response.ok) {
           const apiBale = await response.json();

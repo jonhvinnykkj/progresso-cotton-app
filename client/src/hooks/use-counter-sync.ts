@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { offlineStorage } from '@/lib/offline-storage';
 import { useAuth } from '@/lib/auth-context';
+import { API_URL } from '@/lib/api-config';
+import { getAuthHeaders } from '@/lib/api-client';
 
 export function useCounterSync() {
   const { isAuthenticated } = useAuth();
@@ -10,8 +12,10 @@ export function useCounterSync() {
   const { data: counters } = useQuery({
     queryKey: ['/api/talhao-counters'],
     queryFn: async () => {
-      const response = await fetch('/api/talhao-counters', {
+      const url = API_URL ? `${API_URL}/api/talhao-counters` : '/api/talhao-counters';
+      const response = await fetch(url, {
         credentials: 'include',
+        headers: getAuthHeaders(),
       });
       if (!response.ok) {
         throw new Error('Failed to fetch counters');

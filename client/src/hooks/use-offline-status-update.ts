@@ -3,6 +3,8 @@ import { offlineStorage } from '@/lib/offline-storage';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from './use-toast';
 import type { BaleStatus } from '@shared/schema';
+import { API_URL } from '@/lib/api-config';
+import { getAuthHeaders } from '@/lib/api-client';
 
 interface UpdateStatusData {
   id: string;
@@ -25,10 +27,12 @@ export function useOfflineStatusUpdate() {
         // Tentar atualizar online primeiro
         try {
           const encodedId = encodeURIComponent(data.id);
-          const response = await fetch(`/api/bales/${encodedId}/status`, {
+          const url = API_URL ? `${API_URL}/api/bales/${encodedId}/status` : `/api/bales/${encodedId}/status`;
+          const response = await fetch(url, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
+              ...getAuthHeaders(),
             },
             credentials: 'include',
             body: JSON.stringify({

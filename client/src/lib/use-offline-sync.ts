@@ -174,12 +174,14 @@ export function useOfflineSync() {
   };
 
   const syncCreateBale = async (operation: any) => {
-    const response = await fetch('/api/bales', {
+    const url = API_URL ? `${API_URL}/api/bales` : '/api/bales';
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...getAuthHeaders(),
       },
+      credentials: 'include',
       body: JSON.stringify(operation.data),
     });
 
@@ -202,7 +204,11 @@ export function useOfflineSync() {
       // Already exists on server: fetch server record and reconcile
       try {
         const encoded = encodeURIComponent(operation.data.id);
-        const getResp = await fetch(`/api/bales/${encoded}`, { headers: getAuthHeaders() });
+        const url = API_URL ? `${API_URL}/api/bales/${encoded}` : `/api/bales/${encoded}`;
+        const getResp = await fetch(url, { 
+          headers: getAuthHeaders(),
+          credentials: 'include',
+        });
         if (getResp.ok) {
           const serverBale = await getResp.json();
           await offlineStorage.addBaleLocally(serverBale);
@@ -220,12 +226,14 @@ export function useOfflineSync() {
 
   const syncUpdateStatus = async (operation: any) => {
     const encodedId = encodeURIComponent(operation.data.id);
-    const response = await fetch(`/api/bales/${encodedId}/status`, {
+    const url = API_URL ? `${API_URL}/api/bales/${encodedId}/status` : `/api/bales/${encodedId}/status`;
+    const response = await fetch(url, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         ...getAuthHeaders(),
       },
+      credentials: 'include',
       body: JSON.stringify({
         status: operation.data.status,
         userId: operation.data.userId,
@@ -252,7 +260,11 @@ export function useOfflineSync() {
     if (response.status === 409) {
       // Conflict — fetch server bale to see state
       try {
-        const getResp = await fetch(`/api/bales/${encodedId}`, { headers: getAuthHeaders() });
+        const getUrl = API_URL ? `${API_URL}/api/bales/${encodedId}` : `/api/bales/${encodedId}`;
+        const getResp = await fetch(getUrl, { 
+          headers: getAuthHeaders(),
+          credentials: 'include',
+        });
         if (getResp.ok) {
           const serverBale = await getResp.json();
           if (serverBale.status === operation.data.status) {

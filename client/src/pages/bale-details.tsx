@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { getAuthHeaders } from "@/lib/api-client";
+import { API_URL } from "@/lib/api-config";
 import { NavSidebar, useSidebar } from "@/components/nav-sidebar";
 import { cn } from "@/lib/utils";
 import logoProgresso from "/favicon.png";
@@ -30,8 +31,10 @@ export default function BaleDetails() {
   const { data: bale, isLoading } = useQuery<Bale>({
     queryKey: ["/api/bales", baleId],
     queryFn: async () => {
-      const response = await fetch(`/api/bales/${encodeURIComponent(baleId!)}`, {
+      const url = API_URL ? `${API_URL}/api/bales/${encodeURIComponent(baleId!)}` : `/api/bales/${encodeURIComponent(baleId!)}`;
+      const response = await fetch(url, {
         headers: getAuthHeaders(),
+        credentials: "include",
       });
       if (!response.ok) {
         throw new Error("Fardo não encontrado");
@@ -45,7 +48,8 @@ export default function BaleDetails() {
   const { data: users = [] } = useQuery<Array<{ id: string; displayName: string }>>({
     queryKey: ["/api/users"],
     queryFn: async () => {
-      const response = await fetch("/api/users", {
+      const url = API_URL ? `${API_URL}/api/users` : "/api/users";
+      const response = await fetch(url, {
         headers: getAuthHeaders(),
         credentials: "include",
       });
@@ -66,7 +70,8 @@ export default function BaleDetails() {
   // Mutation para excluir fardo
   const deleteBaleMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/bales/${encodeURIComponent(id)}`, {
+      const url = API_URL ? `${API_URL}/api/bales/${encodeURIComponent(id)}` : `/api/bales/${encodeURIComponent(id)}`;
+      const response = await fetch(url, {
         method: "DELETE",
         headers: getAuthHeaders(),
         credentials: "include",

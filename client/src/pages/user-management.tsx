@@ -14,6 +14,7 @@ import { Trash2, UserPlus, Users, Edit } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getAuthHeaders } from "@/lib/api-client";
+import { API_URL } from "@/lib/api-config";
 import { NavSidebar, useSidebar } from "@/components/nav-sidebar";
 import { cn } from "@/lib/utils";
 import logoProgresso from "/favicon.png";
@@ -97,7 +98,8 @@ export default function UserManagement() {
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["users"],
     queryFn: async () => {
-      const response = await fetch("/api/users", {
+      const url = API_URL ? `${API_URL}/api/users` : "/api/users";
+      const response = await fetch(url, {
         headers: getAuthHeaders(),
         credentials: "include",
       });
@@ -111,7 +113,8 @@ export default function UserManagement() {
   // Criar usuário
   const createUserMutation = useMutation({
     mutationFn: async (userData: { username: string; displayName: string; password: string; role: UserRole; roles: UserRole[] }) => {
-      const response = await fetch("/api/users", {
+      const url = API_URL ? `${API_URL}/api/users` : "/api/users";
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -151,7 +154,8 @@ export default function UserManagement() {
   // Atualizar papéis do usuário
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, roles }: { userId: string; roles: UserRole[] }) => {
-      const response = await fetch(`/api/users/${userId}/roles`, {
+      const url = API_URL ? `${API_URL}/api/users/${userId}/roles` : `/api/users/${userId}/roles`;
+      const response = await fetch(url, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -187,7 +191,8 @@ export default function UserManagement() {
   // Deletar usuário
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const response = await fetch(`/api/users/${userId}`, {
+      const url = API_URL ? `${API_URL}/api/users/${userId}` : `/api/users/${userId}`;
+      const response = await fetch(url, {
         method: "DELETE",
         headers: getAuthHeaders(),
         credentials: "include",

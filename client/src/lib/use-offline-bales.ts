@@ -5,6 +5,7 @@ import { offlineStorage } from "./offline-storage";
 import { queryClient, apiRequest } from "./queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "./api-client";
+import { API_URL } from "./api-config";
 
 export function useOfflineBales() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -53,8 +54,10 @@ export function useOfflineBales() {
       try {
         // Try to fetch from API
         console.log("🌐 Online - buscando dados da API...");
-        const response = await fetch("/api/bales", {
+        const url = API_URL ? `${API_URL}/api/bales` : "/api/bales";
+        const response = await fetch(url, {
           headers: getAuthHeaders(),
+          credentials: "include",
         });
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

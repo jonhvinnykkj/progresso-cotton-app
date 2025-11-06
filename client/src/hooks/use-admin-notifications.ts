@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Notification, CreateNotification } from "@shared/schema";
+import { API_URL } from "@/lib/api-config";
+import { getAuthHeaders } from "@/lib/api-client";
 
 export function useAdminNotifications() {
   const queryClient = useQueryClient();
@@ -11,9 +13,13 @@ export function useAdminNotifications() {
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateNotification) => {
-      const response = await fetch("/api/notifications", {
+      const url = API_URL ? `${API_URL}/api/notifications` : '/api/notifications';
+      const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         credentials: "include",
         body: JSON.stringify(data),
       });
@@ -32,9 +38,11 @@ export function useAdminNotifications() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/notifications/${id}`, {
+      const url = API_URL ? `${API_URL}/api/notifications/${id}` : `/api/notifications/${id}`;
+      const response = await fetch(url, {
         method: "DELETE",
         credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {

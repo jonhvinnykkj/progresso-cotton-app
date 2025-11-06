@@ -29,6 +29,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { getAuthHeaders } from "@/lib/api-client";
+import { API_URL } from "@/lib/api-config";
 import { Footer } from "@/components/footer";
 import { Settings, LogOut, Save, Loader2, Trash2, AlertTriangle, Bell } from "lucide-react";
 import logoProgresso from "/favicon.png";
@@ -71,12 +72,14 @@ export default function SettingsPage() {
   // Mutation para atualizar safra padrão
   const updateSafraMutation = useMutation({
     mutationFn: async (data: SafraSettingsForm) => {
-      const response = await fetch("/api/settings/default-safra", {
+      const url = API_URL ? `${API_URL}/api/settings/default-safra` : "/api/settings/default-safra";
+      const response = await fetch(url, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           ...getAuthHeaders(),
         },
+        credentials: "include",
         body: JSON.stringify({ value: data.safra }),
       });
 

@@ -1,13 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { getAuthHeaders } from '@/lib/api-client';
+import { API_URL } from '@/lib/api-config';
 
 export interface Settings {
   defaultSafra: string;
 }
 
 async function fetchSettings(): Promise<Settings> {
-  const response = await fetch('/api/settings/default-safra', {
+  const url = API_URL ? `${API_URL}/api/settings/default-safra` : '/api/settings/default-safra';
+  const response = await fetch(url, {
     headers: getAuthHeaders(),
+    credentials: 'include',
   });
   if (!response.ok) {
     throw new Error('Failed to fetch settings');

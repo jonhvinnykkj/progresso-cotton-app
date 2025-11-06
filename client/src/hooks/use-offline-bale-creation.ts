@@ -100,7 +100,7 @@ export function useOfflineBaleCreation() {
   });
 
   return {
-    createBale: createSingle.mutate,
+    createBale: createSingle,
     createBatch,
   };
 }

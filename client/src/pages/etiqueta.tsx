@@ -155,39 +155,98 @@ export default function Etiqueta() {
     if (Capacitor.isNativePlatform()) {
       toast({
         title: "Gerando PDF...",
-        description: "Aguarde enquanto preparamos suas etiquetas",
+        description: `Processando ${bales.length} etiqueta(s)...`,
       });
 
       try {
-        // Capturar a área de impressão como imagem
-        const printElement = printAreaRef.current;
-        if (!printElement) {
-          throw new Error("Elemento de impressão não encontrado");
-        }
-
-        // Gerar canvas da área de impressão
-        const canvas = await html2canvas(printElement, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff'
-        });
-
+        console.log('[PDF] Iniciando geração de PDF com múltiplas páginas...');
+        
         // Criar PDF
         const pdf = new jsPDF({
           orientation: 'portrait',
           unit: 'mm',
-          format: 'a4'
+          format: 'a4',
+          compress: true
         });
 
-        const imgData = canvas.toDataURL('image/png');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
 
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        // Renderizar cada fardo em uma página separada
+        for (let i = 0; i < bales.length; i++) {
+          const bale = bales[i];
+          console.log(`[PDF] Processando etiqueta ${i + 1}/${bales.length} - Fardo #${bale.numero_fardo}`);
+
+          // Criar elemento temporário para renderizar uma etiqueta
+          const tempDiv = document.createElement('div');
+          tempDiv.style.position = 'absolute';
+          tempDiv.style.left = '-9999px';
+          tempDiv.style.width = '210mm'; // A4 width
+          tempDiv.style.padding = '20mm';
+          tempDiv.style.backgroundColor = '#ffffff';
+          
+          // Gerar QR Code se não existir
+          let qrUrl = qrDataUrls.get(bale.id);
+          if (!qrUrl) {
+            qrUrl = await QRCode.toDataURL(bale.id.toString(), {
+              width: 256,
+              margin: 2,
+              color: { dark: '#000000', light: '#FFFFFF' }
+            });
+          }
+
+          // HTML da etiqueta individual
+          tempDiv.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250mm; font-family: Arial, sans-serif;">
+              <img src="${logoProgresso}" alt="Logo" style="width: 120px; margin-bottom: 20px;" />
+              <h1 style="font-size: 48px; font-weight: bold; margin: 20px 0; color: #1a1a1a;">FARDO #${bale.numero_fardo}</h1>
+              <img src="${qrUrl}" alt="QR Code" style="width: 200px; height: 200px; margin: 30px 0;" />
+              <div style="text-align: center; font-size: 20px; color: #666; margin-top: 20px;">
+                <p style="margin: 8px 0;"><strong>Talhão:</strong> ${bale.talhao}</p>
+                <p style="margin: 8px 0;"><strong>Peso:</strong> ${bale.peso_kg} kg</p>
+                <p style="margin: 8px 0;"><strong>Data:</strong> ${new Date(bale.created_at).toLocaleDateString('pt-BR')}</p>
+              </div>
+            </div>
+          `;
+
+          document.body.appendChild(tempDiv);
+
+          // Capturar etiqueta como imagem
+          const canvas = await html2canvas(tempDiv, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff',
+            width: tempDiv.offsetWidth,
+            height: tempDiv.offsetHeight
+          });
+
+          document.body.removeChild(tempDiv);
+
+          // Adicionar página (exceto na primeira iteração)
+          if (i > 0) {
+            pdf.addPage();
+          }
+
+          // Converter canvas para imagem
+          const imgData = canvas.toDataURL('image/png');
+          
+          // Calcular dimensões para caber na página
+          const imgWidth = pageWidth;
+          const imgHeight = (canvas.height * pageWidth) / canvas.width;
+          
+          // Centralizar verticalmente se necessário
+          const yPosition = imgHeight < pageHeight ? (pageHeight - imgHeight) / 2 : 0;
+          
+          pdf.addImage(imgData, 'PNG', 0, yPosition, imgWidth, imgHeight);
+        }
+
+        console.log('[PDF] Todas as páginas adicionadas, gerando blob...');
         
         // Gerar blob do PDF
         const pdfBlob = pdf.output('blob');
+        console.log(`[PDF] PDF gerado: ${(pdfBlob.size / 1024 / 1024).toFixed(2)} MB`);
+        
         const reader = new FileReader();
         
         reader.onloadend = async () => {
@@ -195,12 +254,16 @@ export default function Etiqueta() {
           const fileName = `etiquetas_${new Date().getTime()}.pdf`;
 
           try {
+            console.log('[PDF] Salvando arquivo no dispositivo...');
+            
             // Salvar arquivo
             const result = await Filesystem.writeFile({
               path: fileName,
               data: base64data,
               directory: Directory.Documents
             });
+
+            console.log('[PDF] Arquivo salvo:', result.uri);
 
             // Compartilhar arquivo
             await Share.share({
@@ -210,27 +273,40 @@ export default function Etiqueta() {
               dialogTitle: 'Compartilhar ou Salvar PDF'
             });
 
+            console.log('[PDF] Compartilhamento concluído!');
+
             toast({
               title: "PDF gerado com sucesso!",
-              description: "Arquivo salvo em Documentos",
+              description: `${bales.length} etiqueta(s) salva(s) em Documentos`,
             });
           } catch (error) {
-            console.error("Erro ao salvar/compartilhar:", error);
+            console.error("[PDF] Erro ao salvar/compartilhar:", error);
             toast({
               variant: "destructive",
               title: "Erro ao salvar PDF",
-              description: "Tente novamente",
+              description: error instanceof Error ? error.message : "Tente novamente",
             });
           }
         };
 
+        reader.onerror = (error) => {
+          console.error("[PDF] Erro ao ler blob:", error);
+          toast({
+            variant: "destructive",
+            title: "Erro ao processar PDF",
+            description: "Falha ao converter arquivo",
+          });
+        };
+
+        console.log('[PDF] Lendo blob como base64...');
         reader.readAsDataURL(pdfBlob);
       } catch (error) {
-        console.error("Erro ao gerar PDF:", error);
+        console.error("[PDF] Erro ao gerar PDF:", error);
+        const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
         toast({
           variant: "destructive",
           title: "Erro ao gerar PDF",
-          description: "Tente usar a opção de impressão do navegador",
+          description: errorMessage,
         });
       }
     } else {

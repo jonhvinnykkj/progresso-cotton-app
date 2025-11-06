@@ -8,15 +8,16 @@ export const getApiUrl = (): string => {
   const isRailwayWeb = typeof window !== 'undefined' && 
     window.location.hostname === 'progresso-cotton-app-production.up.railway.app';
 
+  // SEMPRE use Railway em produção (mobile ou web hospedado)
   if (isNative || isRailwayWeb) {
-    // PRODUCTION: Railway server URL (para mobile e web em produção)
     return 'https://progresso-cotton-app-production.up.railway.app';
   }
 
-  // DEVELOPMENT: For local web browser (Vite proxy handles /api, /auth, /version, /events)
-  // Make sure your backend is running with: npm run dev:server
-  return '';
+  // Para localhost: usa Railway também (para não precisar de backend local)
+  // Se quiser testar com backend local, mude para: return '';
+  return 'https://progresso-cotton-app-production.up.railway.app';
 };
 
 export const API_URL = getApiUrl();
+
 

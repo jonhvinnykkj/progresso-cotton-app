@@ -197,14 +197,34 @@ export default function Etiqueta() {
 
           // HTML da etiqueta individual
           tempDiv.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250mm; font-family: Arial, sans-serif;">
-              <img src="${logoProgresso}" alt="Logo" style="width: 120px; margin-bottom: 20px;" />
-              <h1 style="font-size: 48px; font-weight: bold; margin: 20px 0; color: #1a1a1a;">FARDO #${bale.numero_fardo}</h1>
-              <img src="${qrUrl}" alt="QR Code" style="width: 200px; height: 200px; margin: 30px 0;" />
-              <div style="text-align: center; font-size: 20px; color: #666; margin-top: 20px;">
-                <p style="margin: 8px 0;"><strong>Talhão:</strong> ${bale.talhao}</p>
-                <p style="margin: 8px 0;"><strong>Peso:</strong> ${bale.peso_kg} kg</p>
-                <p style="margin: 8px 0;"><strong>Data:</strong> ${new Date(bale.created_at).toLocaleDateString('pt-BR')}</p>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250mm; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px;">
+              <div style="text-align: center; margin-bottom: 24px;">
+                <p style="font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 12px 0; font-weight: 500;">ID DO FARDO</p>
+                <p style="font-size: 28px; font-weight: 700; color: #000; margin: 0; font-family: 'Courier New', monospace; letter-spacing: 0.02em;">${bale.id}</p>
+              </div>
+              
+              <div style="margin: 32px 0;">
+                <img src="${qrUrl}" alt="QR Code" style="width: 280px; height: 280px; display: block;" />
+              </div>
+              
+              <div style="text-align: center; margin-top: 24px;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 24px; margin-bottom: 16px;">
+                  <div style="font-size: 18px; font-weight: 600;">
+                    <span style="color: #666;">Talhão:</span>
+                    <span style="color: #000; margin-left: 8px;">${bale.talhao}</span>
+                  </div>
+                  <span style="color: #ccc; font-size: 20px;">|</span>
+                  <div style="font-size: 18px; font-weight: 600;">
+                    <span style="color: #666;">Número:</span>
+                    <span style="color: #000; margin-left: 8px;">${bale.numero}</span>
+                  </div>
+                </div>
+                ${bale.safra ? `
+                  <div style="font-size: 18px; font-weight: 600; margin-top: 16px;">
+                    <span style="color: #666;">Safra:</span>
+                    <span style="color: #000; margin-left: 8px;">${bale.safra}</span>
+                  </div>
+                ` : ''}
               </div>
             </div>
           `;
@@ -560,16 +580,39 @@ export default function Etiqueta() {
             return (
               <div 
                 key={bale.id} 
-                className={`w-full h-full bg-white flex items-start justify-center p-6 ${
+                className={`w-full h-full bg-white flex items-center justify-center p-8 ${
                   index < bales.length - 1 ? 'print-page-break' : ''
                 }`}
               >
-                <div className="flex flex-col items-center w-full max-w-md" style={{ gap: '24px' }}>
+                <div className="flex flex-col items-center justify-center w-full max-w-md" style={{ gap: '24px' }}>
+                  {/* ID do Fardo */}
+                  <div className="text-center" style={{ marginBottom: '8px' }}>
+                    <p style={{ 
+                      fontSize: '14px', 
+                      color: '#666',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                      fontWeight: '500',
+                      marginBottom: '12px'
+                    }}>
+                      ID DO FARDO
+                    </p>
+                    <p style={{ 
+                      fontSize: '28px', 
+                      fontFamily: '"Courier New", monospace',
+                      fontWeight: '700',
+                      color: '#000',
+                      letterSpacing: '0.02em'
+                    }}>
+                      {bale.id}
+                    </p>
+                  </div>
+                  
                   {/* QR Code */}
-                  <div className="flex items-center justify-center w-full">
+                  <div className="flex items-center justify-center" style={{ margin: '32px 0' }}>
                     <img 
                       src={qrUrl} 
-                      alt={`QR Code ${bale.numero}`}
+                      alt={`QR Code ${bale.id}`}
                       style={{ 
                         width: '280px', 
                         height: '280px',
@@ -579,59 +622,35 @@ export default function Etiqueta() {
                   </div>
                   
                   {/* Informações */}
-                  <div className="text-center w-full" style={{ marginTop: '16px' }}>
-                    <div style={{ marginBottom: '20px' }}>
-                      <p style={{ 
-                        fontSize: '12px', 
-                        color: '#666',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        fontWeight: '500',
-                        marginBottom: '8px'
-                      }}>
-                        ID do Fardo
-                      </p>
-                      <p style={{ 
-                        fontSize: '20px', 
-                        fontFamily: 'monospace',
-                        fontWeight: 'bold',
-                        color: '#000',
-                        wordBreak: 'break-all'
-                      }}>
-                        {bale.id}
-                      </p>
+                  <div className="text-center w-full" style={{ marginTop: '24px' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      gap: '24px',
+                      marginBottom: '16px'
+                    }}>
+                      <div style={{ fontWeight: '600', fontSize: '18px' }}>
+                        <span style={{ color: '#666' }}>Talhão: </span>
+                        <span style={{ color: '#000' }}>{bale.talhao}</span>
+                      </div>
+                      <span style={{ color: '#ccc', fontSize: '20px' }}>|</span>
+                      <div style={{ fontWeight: '600', fontSize: '18px' }}>
+                        <span style={{ color: '#666' }}>Número: </span>
+                        <span style={{ color: '#000' }}>{bale.numero}</span>
+                      </div>
                     </div>
                     
-                    <div style={{ marginTop: '20px' }}>
+                    {bale.safra && (
                       <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        gap: '16px',
-                        marginBottom: '12px'
+                        fontWeight: '600', 
+                        fontSize: '18px',
+                        marginTop: '16px'
                       }}>
-                        <div style={{ fontWeight: '600', fontSize: '16px' }}>
-                          <span style={{ color: '#666' }}>Talhão: </span>
-                          <span style={{ color: '#000' }}>{bale.talhao}</span>
-                        </div>
-                        <span style={{ color: '#ccc' }}>|</span>
-                        <div style={{ fontWeight: '600', fontSize: '16px' }}>
-                          <span style={{ color: '#666' }}>Número: </span>
-                          <span style={{ color: '#000' }}>{bale.numero}</span>
-                        </div>
+                        <span style={{ color: '#666' }}>Safra: </span>
+                        <span style={{ color: '#000' }}>{bale.safra}</span>
                       </div>
-                      
-                      {bale.safra && (
-                        <div style={{ 
-                          fontWeight: '600', 
-                          fontSize: '16px',
-                          marginTop: '12px'
-                        }}>
-                          <span style={{ color: '#666' }}>Safra: </span>
-                          <span style={{ color: '#000' }}>{bale.safra}</span>
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -11,6 +11,19 @@ export function usePushNotifications() {
 
     const initNotifications = async () => {
       try {
+        // Criar canal de notificação personalizado (Android 8+)
+        await LocalNotifications.createChannel({
+          id: 'cotton-app-notifications',
+          name: 'Notificações do Sistema',
+          description: 'Avisos importantes do sistema Cotton App',
+          importance: 5,
+          visibility: 1,
+          sound: 'default',
+          vibration: true,
+          lights: true,
+          lightColor: '#10b981'
+        });
+
         // Solicitar permissão para notificações locais
         const permission = await LocalNotifications.requestPermissions();
         
@@ -42,7 +55,15 @@ export function usePushNotifications() {
             body,
             id: Math.floor(Math.random() * 100000),
             schedule: { at: new Date(Date.now() + 100) },
-            extra: data
+            extra: data,
+            smallIcon: 'ic_notification',
+            largeIcon: 'ic_notification',
+            iconColor: '#10b981',
+            channelId: 'cotton-app-notifications',
+            sound: 'default',
+            attachments: undefined,
+            actionTypeId: '',
+            group: 'cotton-notifications'
           }
         ]
       });

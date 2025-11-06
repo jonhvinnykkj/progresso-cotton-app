@@ -11,6 +11,7 @@ import { useNotifications } from "./hooks/use-notifications";
 import { useOfflineSync } from "./lib/use-offline-sync";
 import { useCounterSync } from "./hooks/use-counter-sync";
 import { usePushNotifications } from "./hooks/use-push-notifications";
+import { useNotificationListener } from "./hooks/use-notification-listener";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
@@ -76,6 +77,10 @@ function RealtimeProvider() {
 
   // Initialize push notifications (Android/iOS)
   usePushNotifications();
+  
+  // Monitor notifications and trigger native notifications instantly
+  useNotificationListener();
+  
   useProductivityMonitor();
   useNotifications();
 

@@ -31,14 +31,6 @@ export default function Etiqueta() {
 
   const bales = allBales.filter(b => baleIds.includes(b.id));
 
-  // Debug: log para verificar se os fardos foram encontrados
-  useEffect(() => {
-    console.log("Etiqueta - IDs procurados:", baleIds);
-    console.log("Etiqueta - Total fardos no sistema:", allBales.length);
-    console.log("Etiqueta - Fardos encontrados:", bales.length);
-    console.log("Etiqueta - Fardos encontrados (detalhes):", bales.map(b => ({ id: b.id })));
-  }, [baleIds, allBales, bales]);
-
   // Gerar QR Codes quando os fardos forem carregados
   useEffect(() => {
     if (bales.length > 0) {

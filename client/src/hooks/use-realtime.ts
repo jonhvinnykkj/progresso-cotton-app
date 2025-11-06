@@ -15,7 +15,7 @@ export function useRealtime(isAuthenticated: boolean) {
     console.log('🚀 Initializing SSE connection...');
 
     // Connect to Server-Sent Events
-    const url = API_URL ? `${API_URL}/events` : '/events';
+    const url = API_URL ? `${API_URL}/api/events` : '/api/events';
     const eventSource = new EventSource(url);
 
     eventSource.onopen = () => {

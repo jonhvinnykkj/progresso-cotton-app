@@ -146,7 +146,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       // Call backend auth API
-      const url = API_URL ? `${API_URL}/auth/login` : '/auth/login';
+      const url = API_URL ? `${API_URL}/api/auth/login` : '/api/auth/login';
       console.log("🔐 Attempting login...");
       console.log("📍 API URL:", API_URL);
       console.log("🌐 Full URL:", url);

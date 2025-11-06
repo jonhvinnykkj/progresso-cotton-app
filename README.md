@@ -333,12 +333,19 @@ Exemplo: `S25/26-T2B-00042`
 2. `patio`: Transportado para o pátio
 3. `beneficiado`: Processado na algodoeira
 
-## Documentação Adicional
+## 📚 Documentação
 
-- [SECURITY.md](SECURITY.md) - Detalhes sobre segurança e boas práticas
-- [DEPLOY_GUIDE.md](DEPLOY_GUIDE.md) - Guia completo de deploy
-- [CHANGELOG_SECURITY.md](CHANGELOG_SECURITY.md) - Histórico de mudanças de segurança
-- [SETUP_SECURITY.md](SETUP_SECURITY.md) - Configuração inicial de segurança
+Toda a documentação técnica foi organizada na pasta [`docs/`](./docs/):
+
+- **[Build e APK](./docs/BUILD_APK_GUIDE.md)** - Como gerar APK para Android
+- **[Deploy](./docs/DEPLOY_GUIDE.md)** - Guia de deployment em produção
+- **[Play Store](./docs/PLAY_STORE_GUIDE.md)** - Publicação na Google Play Store
+- **[Modo Offline](./docs/OFFLINE_GUIDE.md)** - Sistema offline completo
+- **[Segurança](./docs/SECURITY.md)** - Políticas e práticas de segurança
+- **[Setup de Segurança](./docs/SETUP_SECURITY.md)** - Configuração inicial
+- **[Changelog de Segurança](./docs/CHANGELOG_SECURITY.md)** - Histórico de alterações
+
+📖 **[Ver índice completo da documentação →](./docs/README.md)**
 
 ## Suporte e Contribuição
 

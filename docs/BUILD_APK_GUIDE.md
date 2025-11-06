@@ -18,6 +18,7 @@ Use o script PowerShell `build-apk.ps1`:
 ```
 
 O script automaticamente:
+
 - ✅ Compila o frontend
 - ✅ Sincroniza com Capacitor
 - ✅ Gera o APK/AAB
@@ -94,6 +95,7 @@ cd ..
 ```
 
 **Preencha:**
+
 - Nome e sobrenome
 - Organização: Progresso Cotton
 - Cidade, Estado, País
@@ -135,6 +137,7 @@ defaultConfig {
 ```
 
 **Regra:**
+
 - `versionCode`: número inteiro sequencial (1, 2, 3...)
 - `versionName`: versão semântica (1.0.0, 1.0.1, 1.1.0, 2.0.0)
 
@@ -197,11 +200,13 @@ org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m
 ## 📊 Tamanho do APK
 
 **Tamanhos esperados:**
+
 - Debug: ~15-25 MB
 - Release: ~8-15 MB (com minify)
 - AAB: ~6-10 MB (Google otimiza por dispositivo)
 
 Para reduzir tamanho:
+
 - Habilitar `minifyEnabled true` em `build.gradle`
 - Habilitar `shrinkResources true`
 - Usar AAB ao invés de APK

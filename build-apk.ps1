@@ -2,7 +2,7 @@
 # Uso: .\build-apk.ps1 [debug|release|bundle]
 
 param(
-    [Parameter(Position=0)]
+    [Parameter(Position = 0)]
     [ValidateSet('debug', 'release', 'bundle')]
     [string]$BuildType = 'debug'
 )
@@ -87,7 +87,8 @@ if (Test-Path $fullApkPath) {
     Write-Host "📂 Abrindo pasta do APK..." -ForegroundColor Yellow
     $apkDir = Split-Path $fullApkPath -Parent
     Start-Process explorer.exe $apkDir
-} else {
+}
+else {
     Write-Host "❌ APK não foi gerado!" -ForegroundColor Red
     exit 1
 }

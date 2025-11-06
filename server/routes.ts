@@ -7,6 +7,7 @@ import {
   batchCreateBalesSchema,
   updateBaleStatusSchema,
   updateDefaultSafraSchema,
+  createNotificationSchema,
 } from "@shared/schema";
 import { addClient, notifyBaleChange, notifyVersionUpdate } from "./events";
 import {
@@ -523,6 +524,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating default safra:", error);
       res.status(500).json({
         error: "Erro ao atualizar safra padrão",
+      });
+    }
+  });
+
+  // Notifications endpoints
+  app.get("/api/notifications", authenticateToken, async (req, res) => {
+    try {
+      const notifications = await storage.getActiveNotifications();
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({
+        error: "Erro ao buscar notificações",
+      });
+    }
+  });
+
+  app.post("/api/notifications", authenticateToken, authorizeRoles("superadmin"), async (req, res) => {
+    try {
+      const data = createNotificationSchema.parse(req.body);
+      const notification = await storage.createNotification({
+        ...data,
+        createdBy: req.user!.userId,
+      });
+
+      res.status(201).json(notification);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+
+      console.error("Error creating notification:", error);
+      res.status(500).json({
+        error: "Erro ao criar notificação",
+      });
+    }
+  });
+
+  app.delete("/api/notifications/:id", authenticateToken, authorizeRoles("superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteNotification(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      res.status(500).json({
+        error: "Erro ao deletar notificação",
       });
     }
   });

@@ -8,6 +8,7 @@ import { BaleCard } from "@/components/bale-card";
 import { NavSidebar, useSidebar } from "@/components/nav-sidebar";
 import { Footer } from "@/components/footer";
 import { AnimatedCounter } from "@/components/animated-counter";
+import { NotificationBanner } from "@/components/notification-banner";
 import { useAuth } from "@/lib/auth-context";
 import { useRealtime } from "@/hooks/use-realtime";
 import type { Bale, BaleStatus } from "@shared/schema";
@@ -125,6 +126,9 @@ export default function Dashboard() {
       )}>
         {/* Conteúdo principal */}
         <main className="flex-1 container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-7xl pb-20 lg:pb-8">
+          {/* Banner de notificações */}
+          <NotificationBanner />
+
           {/* Header com título e estatísticas rápidas - Design moderno */}
           <div className="mb-6 sm:mb-8 animate-fade-in-up">
             <div className="flex items-center justify-between mb-3">

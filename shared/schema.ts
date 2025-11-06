@@ -64,6 +64,18 @@ export const talhoesInfo = pgTable("talhoes_info", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Notifications table (admin broadcast messages)
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  type: text("type").notNull().$type<"info" | "warning" | "success" | "error">().default("info"),
+  createdBy: text("created_by").notNull(), // Admin que criou
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at"), // Notificação expira após essa data
+  isActive: integer("is_active").notNull().default(1), // 1 = ativa, 0 = inativa
+});
+
 // Insert schemas with validation
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -107,6 +119,14 @@ export const updateBaleStatusSchema = z.object({
   userId: z.string().optional(), // ID do usuário que está fazendo a atualização
 });
 
+// Notification schemas
+export const createNotificationSchema = z.object({
+  title: z.string().min(1, "Título é obrigatório").max(100, "Título muito longo"),
+  message: z.string().min(1, "Mensagem é obrigatória").max(500, "Mensagem muito longa"),
+  type: z.enum(["info", "warning", "success", "error"]).default("info"),
+  expiresAt: z.string().optional(), // ISO date string
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type CreateUser = z.infer<typeof createUserSchema>;
@@ -119,6 +139,9 @@ export type Bale = typeof bales.$inferSelect;
 export type TalhaoCounter = typeof talhaoCounters.$inferSelect;
 
 export type UpdateBaleStatus = z.infer<typeof updateBaleStatusSchema>;
+
+export type CreateNotification = z.infer<typeof createNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
 
 // Login schema
 export const loginSchema = z.object({

@@ -8,10 +8,12 @@ import {
   type BatchCreateBales,
   type Setting,
   type TalhaoCounter,
+  type Notification,
+  type CreateNotification,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
-import { users as usersTable, bales as balesTable, settings as settingsTable, talhaoCounters as talhaoCountersTable } from "@shared/schema";
+import { users as usersTable, bales as balesTable, settings as settingsTable, talhaoCounters as talhaoCountersTable, notifications as notificationsTable } from "@shared/schema";
 import { eq, sql, inArray } from "drizzle-orm";
 import { hashPassword } from "./auth";
 
@@ -61,6 +63,11 @@ export interface IStorage {
   // Settings methods
   getSetting(key: string): Promise<Setting | undefined>;
   updateSetting(key: string, value: string): Promise<Setting>;
+
+  // Notification methods
+  getActiveNotifications(): Promise<Notification[]>;
+  createNotification(data: CreateNotification & { createdBy: string }): Promise<Notification>;
+  deleteNotification(id: string): Promise<void>;
 }
 
 export class PostgresStorage implements IStorage {
@@ -575,7 +582,38 @@ export class PostgresStorage implements IStorage {
       value,
       updatedAt: now,
     }).returning();
+
     return result[0];
+  }
+
+  // Notification methods
+  async getActiveNotifications(): Promise<Notification[]> {
+    const now = new Date();
+    const result = await db
+      .select()
+      .from(notificationsTable)
+      .where(
+        sql`${notificationsTable.isActive} = 1 AND (${notificationsTable.expiresAt} IS NULL OR ${notificationsTable.expiresAt} > ${now})`
+      )
+      .orderBy(sql`${notificationsTable.createdAt} DESC`);
+    return result;
+  }
+
+  async createNotification(data: CreateNotification & { createdBy: string }): Promise<Notification> {
+    const result = await db.insert(notificationsTable).values({
+      title: data.title,
+      message: data.message,
+      type: data.type || "info",
+      createdBy: data.createdBy,
+      expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+      isActive: 1,
+    }).returning();
+
+    return result[0];
+  }
+
+  async deleteNotification(id: string): Promise<void> {
+    await db.delete(notificationsTable).where(eq(notificationsTable.id, id));
   }
 }
 

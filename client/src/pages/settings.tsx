@@ -30,11 +30,12 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { getAuthHeaders } from "@/lib/api-client";
 import { Footer } from "@/components/footer";
-import { Settings, LogOut, Save, Loader2, Trash2, AlertTriangle } from "lucide-react";
+import { Settings, LogOut, Save, Loader2, Trash2, AlertTriangle, Bell } from "lucide-react";
 import logoProgresso from "/favicon.png";
 import { z } from "zod";
 import { NavSidebar, useSidebar } from "@/components/nav-sidebar";
 import { cn } from "@/lib/utils";
+import { NotificationManager } from "@/components/notification-manager";
 
 const safraSettingsSchema = z.object({
   safra: z.string().min(1, "Safra é obrigatória"),
@@ -285,6 +286,34 @@ export default function SettingsPage() {
               </p>
             </CardContent>
           </Card>
+
+          {/* Notificações do Sistema (apenas superadmin) */}
+          {user?.roles && JSON.parse(user.roles).includes("superadmin") && (
+            <Card className="shadow-lg border-2 rounded-2xl animate-fade-in-up" style={{ animationDelay: "0.15s" }}>
+              <div className="bg-gradient-to-r from-blue-500 to-cyan-500 p-6 pb-8 relative overflow-hidden">
+                <div className="absolute inset-0 opacity-10">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
+                </div>
+                
+                <div className="relative">
+                  <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl w-fit mb-3">
+                    <Bell className="w-6 h-6 text-white" />
+                  </div>
+                  <CardTitle className="text-xl text-white font-bold">
+                    Notificações do Sistema
+                  </CardTitle>
+                  <CardDescription className="text-white/90 text-sm mt-1">
+                    Envie avisos personalizados para todos os usuários
+                  </CardDescription>
+                </div>
+              </div>
+              
+              <CardContent className="p-6">
+                <NotificationManager />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Danger Zone */}
           <Card className="border-2 border-destructive shadow-xl rounded-2xl animate-fade-in-up overflow-hidden" style={{ animationDelay: "0.2s" }}>

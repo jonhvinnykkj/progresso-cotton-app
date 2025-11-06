@@ -91,6 +91,18 @@ ON CONFLICT (username) DO UPDATE SET display_name = 'Operador de Algodoeira';
 -- Insert default safra setting
 INSERT INTO settings (key, value) VALUES ('default-safra', '25/26') ON CONFLICT (key) DO UPDATE SET value = '25/26';
 
+-- Create notifications table
+CREATE TABLE IF NOT EXISTS notifications (
+  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'info',
+  created_by TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  expires_at TIMESTAMP,
+  is_active INTEGER NOT NULL DEFAULT 1
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_bales_talhao ON bales(talhao);
 CREATE INDEX IF NOT EXISTS idx_bales_safra ON bales(safra);
@@ -100,3 +112,6 @@ CREATE INDEX IF NOT EXISTS idx_bales_transported_by ON bales(transported_by);
 CREATE INDEX IF NOT EXISTS idx_bales_processed_by ON bales(processed_by);
 CREATE INDEX IF NOT EXISTS idx_talhao_counters_safra ON talhao_counters(safra);
 CREATE INDEX IF NOT EXISTS idx_users_created_by ON users(created_by);
+CREATE INDEX IF NOT EXISTS idx_notifications_active ON notifications(is_active);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_expires_at ON notifications(expires_at);

@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { Printer, QrCode, ArrowLeft, Loader2 } from "lucide-react";
+import { Printer, QrCode, ArrowLeft, Loader2, Share2 } from "lucide-react";
 import QRCode from "qrcode";
+import { Capacitor } from "@capacitor/core";
 import logoProgresso from "/favicon.png";
 import type { Bale } from "@shared/schema";
 import { Footer } from "@/components/footer";
@@ -136,7 +137,7 @@ export default function Etiqueta() {
     setQrDataUrls(newQrDataUrls);
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (qrDataUrls.size === 0) {
       toast({
         variant: "destructive",
@@ -146,7 +147,37 @@ export default function Etiqueta() {
       return;
     }
 
-    window.print();
+    // Detectar se está no Android
+    if (Capacitor.isNativePlatform()) {
+      toast({
+        title: "Preparando etiquetas...",
+        description: "Gerando visualização para impressão",
+      });
+
+      // Aguardar um momento para o toast aparecer
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // No Android, usar a janela de impressão do sistema
+      try {
+        // Abrir janela de impressão do Android
+        window.print();
+        
+        toast({
+          title: "Janela de impressão aberta",
+          description: "Selecione 'Salvar como PDF' ou uma impressora conectada",
+        });
+      } catch (error) {
+        console.error("Erro ao imprimir:", error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao imprimir",
+          description: "Tente usar o menu Compartilhar > Imprimir do navegador",
+        });
+      }
+    } else {
+      // Na web, usar window.print() normal
+      window.print();
+    }
   };
 
   const handleBack = () => {
@@ -266,9 +297,9 @@ export default function Etiqueta() {
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
               </div>
               
-              <div className="relative flex items-center justify-between">
+              <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl">
+                  <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl shrink-0">
                     <QrCode className="w-6 h-6 text-white" />
                   </div>
                   <CardTitle className="text-xl text-white font-bold">
@@ -280,13 +311,25 @@ export default function Etiqueta() {
                   size="lg"
                   data-testid="button-print-labels"
                   disabled={qrDataUrls.size === 0}
-                  className="h-12 rounded-xl shadow-lg bg-white text-green-600 hover:bg-white/90 hover:scale-105 transition-all duration-300 font-bold"
+                  className="w-full lg:w-auto h-12 rounded-xl shadow-lg bg-white text-green-600 hover:bg-white/90 hover:scale-105 transition-all duration-300 font-bold shrink-0"
                 >
                   <Printer className="w-5 h-5 mr-2" />
-                  Imprimir Todas
+                  {Capacitor.isNativePlatform() ? "Imprimir / Salvar PDF" : "Imprimir Todas"}
                 </Button>
               </div>
             </div>
+            
+            {/* Instrução para Android */}
+            {Capacitor.isNativePlatform() && (
+              <div className="px-6 pb-4">
+                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                    <Share2 className="w-4 h-4 shrink-0" />
+                    <span>Clique em "Imprimir / Salvar PDF" e selecione "Salvar como PDF" ou uma impressora</span>
+                  </p>
+                </div>
+              </div>
+            )}
             
             <CardContent className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">

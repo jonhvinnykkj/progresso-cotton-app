@@ -1,8 +1,16 @@
 import type { Bale } from "@shared/schema";
 
 const DB_NAME = "BaleTrackerOfflineDB";
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incrementado para adicionar nova store
 const STORE_NAME = "bales";
+const PENDING_OPERATIONS_STORE = "pending_operations";
+
+interface PendingOperation {
+  id: string;
+  type: 'create' | 'update_status';
+  data: any;
+  createdAt: string;
+}
 
 class OfflineStorage {
   private db: IDBDatabase | null = null;
@@ -20,11 +28,18 @@ class OfflineStorage {
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
         
-        // Create object store if it doesn't exist
+        // Create bales object store if it doesn't exist
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           const objectStore = db.createObjectStore(STORE_NAME, { keyPath: "id" });
           objectStore.createIndex("status", "status", { unique: false });
           objectStore.createIndex("talhao", "talhao", { unique: false });
+        }
+
+        // Create pending operations store if it doesn't exist
+        if (!db.objectStoreNames.contains(PENDING_OPERATIONS_STORE)) {
+          const pendingStore = db.createObjectStore(PENDING_OPERATIONS_STORE, { keyPath: "id" });
+          pendingStore.createIndex("type", "type", { unique: false });
+          pendingStore.createIndex("createdAt", "createdAt", { unique: false });
         }
       };
     });
@@ -229,6 +244,86 @@ class OfflineStorage {
 
       request.onsuccess = () => {
         console.log("🗑️ Cache offline limpo");
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Novos métodos para operações offline
+
+  async savePendingOperation(operation: Omit<PendingOperation, 'id' | 'createdAt'>): Promise<string> {
+    if (!this.db) await this.init();
+    if (!this.db) throw new Error("Database not initialized");
+
+    const id = `${operation.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const pendingOp: PendingOperation = {
+      ...operation,
+      id,
+      createdAt: new Date().toISOString(),
+    };
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([PENDING_OPERATIONS_STORE], "readwrite");
+      const store = transaction.objectStore(PENDING_OPERATIONS_STORE);
+      const request = store.add(pendingOp);
+
+      request.onsuccess = () => {
+        console.log(`✅ Operação pendente salva: ${operation.type}`, pendingOp.data);
+        resolve(id);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getAllPendingOperations(): Promise<PendingOperation[]> {
+    if (!this.db) await this.init();
+    if (!this.db) throw new Error("Database not initialized");
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([PENDING_OPERATIONS_STORE], "readonly");
+      const store = transaction.objectStore(PENDING_OPERATIONS_STORE);
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        resolve(request.result || []);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async removePendingOperation(id: string): Promise<void> {
+    if (!this.db) await this.init();
+    if (!this.db) throw new Error("Database not initialized");
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([PENDING_OPERATIONS_STORE], "readwrite");
+      const store = transaction.objectStore(PENDING_OPERATIONS_STORE);
+      const request = store.delete(id);
+
+      request.onsuccess = () => {
+        console.log(`✅ Operação pendente removida: ${id}`);
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async addBaleLocally(bale: Bale): Promise<void> {
+    if (!this.db) await this.init();
+    if (!this.db) throw new Error("Database not initialized");
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([STORE_NAME], "readwrite");
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.add({
+        ...bale,
+        _createdOffline: true,
+        _cachedAt: new Date().toISOString(),
+      });
+
+      request.onsuccess = () => {
+        console.log(`✅ Fardo adicionado localmente: ${bale.id}`);
         resolve();
       };
       request.onerror = () => reject(request.error);

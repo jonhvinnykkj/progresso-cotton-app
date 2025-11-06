@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { useOfflineBaleCreation } from "@/hooks/use-offline-bale-creation";
 import { Package, LogOut, QrCode, Loader2, CheckCircle, Plus, Wheat, Hash, Calendar, Zap, Lightbulb, Tag, MapPin, Printer, Search, Filter, ArrowLeft } from "lucide-react";
 import logoProgresso from "/favicon.png";
 import { z } from "zod";
@@ -417,6 +418,7 @@ export default function Campo() {
   const [isCreating, setIsCreating] = useState(false);
   const [createdBales, setCreatedBales] = useState<Bale[]>([]);
   const { collapsed, shouldShowNavbar } = useSidebar();
+  const { createBale, createBatch } = useOfflineBaleCreation();
 
   // Buscar safra padrão das configurações
   const { data: defaultSafraData } = useQuery<{ value: string }>({
@@ -442,92 +444,50 @@ export default function Campo() {
   });
 
   const handleCreateSingle = async (data: SingleCreateForm) => {
-    setIsCreating(true);
-    setCreatedBales([]);
-    
     if (!defaultSafra) {
       toast({
         variant: "destructive",
         title: "Safra não configurada",
         description: "O administrador precisa configurar a safra padrão nas configurações.",
       });
-      setIsCreating(false);
       return;
     }
     
+    setIsCreating(true);
+    setCreatedBales([]);
+    
     try {
-      const baleId = `S${defaultSafra}-T${data.talhao}-${data.numero}`;
+      const baleId = `${defaultSafra}-${data.talhao}-${data.numero}`;
       
-      const payload = {
+      await createBale.mutateAsync({
         id: baleId,
-        qrCode: baleId,
         safra: defaultSafra,
         talhao: data.talhao,
-        numero: data.numero,
-        userId: user?.id ? String(user.id) : undefined,
-      };
-
-      const response = await fetch("/api/bales", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        let errorMessage = "Erro ao criar fardo";
-        try {
-          const error = await response.json();
-          errorMessage = error.error || error.message || errorMessage;
-        } catch {
-          // Se não for JSON, usar status text
-          errorMessage = `Erro ${response.status}: ${response.statusText}`;
-        }
-        throw new Error(errorMessage);
-      }
-
-      const bale = await response.json();
-      setCreatedBales([bale]);
-
-      await queryClient.invalidateQueries({ queryKey: ["/api/bales"] });
-
-      toast({
-        variant: "success",
-        title: "Fardo criado com sucesso",
-        description: `Fardo ${baleId} criado no talhão ${data.talhao}`,
+        numero: parseInt(data.numero, 10),
       });
 
       // Resetar form
       singleForm.reset();
-
     } catch (error) {
+      // Erro já tratado pelo hook
       console.error("Erro ao criar fardo:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar fardo",
-        description: error instanceof Error ? error.message : "Tente novamente.",
-      });
     } finally {
       setIsCreating(false);
     }
   };
 
   const handleCreateBatch = async (data: BatchCreateForm) => {
-    setIsCreating(true);
-    setCreatedBales([]);
-    
-    // Validar se há safra configurada
     if (!defaultSafra) {
       toast({
         variant: "destructive",
         title: "Safra não configurada",
         description: "O administrador precisa configurar a safra padrão nas configurações.",
       });
-      setIsCreating(false);
       return;
     }
+    
+    setIsCreating(true);
+    setCreatedBales([]);
     
     try {
       // Converter quantidade para número (garantir que não seja string vazia)
@@ -535,72 +495,17 @@ export default function Campo() {
         ? 1 
         : Number(data.quantidade);
 
-      // Incluir safra automaticamente do settings
-      const payload = {
+      await createBatch.mutateAsync({
+        safra: defaultSafra,
         talhao: data.talhao,
         quantidade: quantidade,
-        safra: defaultSafra,
-        userId: user?.id ? String(user.id) : undefined,
-      };
-
-      const response = await fetch("/api/bales/batch", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify(payload),
       });
-
-      if (!response.ok) {
-        let errorMessage = "Erro ao criar fardos";
-        try {
-          const error = await response.json();
-          errorMessage = error.error || error.message || errorMessage;
-        } catch {
-          // Se não for JSON, usar status text
-          errorMessage = `Erro ${response.status}: ${response.statusText}`;
-        }
-        throw new Error(errorMessage);
-      }
-
-      const result = await response.json();
-      
-      // A resposta agora contém: { created, requested, skipped, bales }
-      const bales = result.bales || result; // Compatibilidade com resposta antiga
-      const created = result.created || bales.length;
-      const skipped = result.skipped || 0;
-      
-      setCreatedBales(bales);
-
-      // Invalidar cache para garantir que a página de etiquetas veja os novos fardos
-      await queryClient.invalidateQueries({ queryKey: ["/api/bales"] });
-
-      // Mensagem diferenciada se houver fardos pulados
-      if (skipped > 0) {
-        toast({
-          variant: "warning",
-          title: "Fardos criados com avisos",
-          description: `${created} fardo(s) criado(s), ${skipped} pulado(s) (já existiam) no talhão ${data.talhao}`,
-        });
-      } else {
-        toast({
-          variant: "success",
-          title: "Fardos criados com sucesso",
-          description: `${created} fardo(s) criado(s) no talhão ${data.talhao}`,
-        });
-      }
 
       // Resetar apenas quantidade (deixar vazio)
       form.setValue("quantidade", "");
-
     } catch (error) {
+      // Erro já tratado pelo hook
       console.error("Erro ao criar fardos:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar fardos",
-        description: error instanceof Error ? error.message : "Tente novamente.",
-      });
     } finally {
       setIsCreating(false);
     }
@@ -794,7 +699,11 @@ export default function Campo() {
                             placeholder="Digite a quantidade (Ex: 50)"
                             {...field}
                             value={field.value === "" ? "" : (field.value || "")}
-                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : "")}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              // Se vazio, mantém vazio; se não, converte para número
+                              field.onChange(value === "" ? "" : parseInt(value) || "");
+                            }}
                             disabled={isCreating}
                             data-testid="input-quantidade"
                             className="h-12 rounded-xl border-2 hover:border-primary/50 transition-all focus:scale-[1.01] duration-300 text-base"

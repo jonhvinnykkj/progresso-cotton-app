@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { X, ScanLine } from "lucide-react";
+import { X, ScanLine, AlertCircle, Camera } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface QRScannerProps {
   onScan: (qrCode: string) => void;
@@ -11,6 +12,7 @@ interface QRScannerProps {
 
 export function QRScanner({ onScan, onClose }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const elementId = "qr-reader";
 
@@ -24,6 +26,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
 
   const startScanning = async () => {
     try {
+      setError(null);
       const scanner = new Html5Qrcode(elementId);
       scannerRef.current = scanner;
 
@@ -50,8 +53,23 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       );
 
       setIsScanning(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error starting scanner:", err);
+      
+      // Identificar o tipo de erro
+      let errorMessage = "Erro ao acessar a câmera";
+      
+      if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
+        errorMessage = "Permissão da câmera negada. Por favor, permita o acesso à câmera nas configurações do seu navegador.";
+      } else if (err.name === "NotFoundError" || err.message?.includes("not found")) {
+        errorMessage = "Nenhuma câmera encontrada no dispositivo.";
+      } else if (err.name === "NotReadableError") {
+        errorMessage = "A câmera está sendo usada por outro aplicativo. Feche outros apps que possam estar usando a câmera.";
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     }
   };
 
@@ -95,7 +113,37 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         <Card className="w-full max-w-md bg-card/50 backdrop-blur-sm border-white/20 p-6">
           <div id={elementId} className="w-full rounded-lg overflow-hidden" />
           
-          {isScanning && (
+          {error && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Erro ao acessar câmera</AlertTitle>
+              <AlertDescription className="mt-2">
+                {error}
+              </AlertDescription>
+              <div className="mt-4 flex flex-col gap-2 text-sm">
+                <p className="font-medium">Para permitir o acesso:</p>
+                <ol className="list-decimal list-inside space-y-1 text-xs">
+                  <li>Toque no ícone de cadeado ou informações na barra de endereço</li>
+                  <li>Procure por "Câmera" ou "Permissões"</li>
+                  <li>Altere a permissão para "Permitir"</li>
+                  <li>Recarregue a página e tente novamente</li>
+                </ol>
+              </div>
+              <Button
+                onClick={() => {
+                  setError(null);
+                  startScanning();
+                }}
+                className="mt-4 w-full"
+                variant="outline"
+              >
+                <Camera className="w-4 h-4 mr-2" />
+                Tentar Novamente
+              </Button>
+            </Alert>
+          )}
+          
+          {isScanning && !error && (
             <div className="mt-4 text-center">
               <p className="text-sm text-muted-foreground">
                 Aponte a câmera para o QR Code do fardo

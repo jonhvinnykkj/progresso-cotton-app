@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import type { Bale } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { useOfflineBales } from "@/lib/use-offline-bales";
+import { useOfflineStatusUpdate } from "@/hooks/use-offline-status-update";
 import { Footer } from "@/components/footer";
 import { getAuthHeaders } from "@/lib/api-client";
 import { NavSidebar, useSidebar } from "@/components/nav-sidebar";
@@ -50,16 +51,14 @@ export default function Transporte() {
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualBaleId, setManualBaleId] = useState("");
   const [scannedBale, setScannedBale] = useState<Bale | null>(null);
+  
+  const { updateStatus } = useOfflineStatusUpdate();
+  const isOnline = navigator.onLine;
 
-  const {
-    bales,
-    isLoading,
-    isOnline,
-    syncInProgress,
-    updateStatus,
-    isUpdating,
-    syncPendingUpdates,
-  } = useOfflineBales();
+  // Fetch bales
+  const { data: bales = [], isLoading } = useQuery<Bale[]>({
+    queryKey: ["/api/bales"],
+  });
 
   const processBaleId = async (baleId: string) => {
     // Remove espaços em branco e normaliza o ID
@@ -150,15 +149,13 @@ export default function Transporte() {
   };
 
   const handleConfirmTransport = () => {
-    if (!scannedBale) return;
+    if (!scannedBale || !user?.id) return;
 
-    updateStatus(
+    updateStatus.mutate(
       {
         id: scannedBale.id,
-        data: {
-          status: "patio",
-          userId: user?.id ? String(user.id) : undefined,
-        },
+        status: "patio",
+        userId: String(user.id),
       },
       {
         onSuccess: () => {
@@ -200,28 +197,20 @@ export default function Transporte() {
                   </h1>
                   <div className="flex items-center gap-2">
                     <p className="text-xs text-muted-foreground truncate">
-                      {user?.username}
-                    </p>
-                    {!isOnline && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 animate-pulse">
-                        <WifiOff className="w-3 h-3 mr-1" />
-                        Offline
-                      </Badge>
-                    )}
-                    {syncInProgress && (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                        <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                        Sync
-                      </Badge>
-                    )}
-                  </div>
+                    {user?.username}
+                  </p>
+                  {!isOnline && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 animate-pulse">
+                      <WifiOff className="w-3 h-3 mr-1" />
+                      Offline
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
           </div>
-        </header>
-
-        {/* Conteúdo principal */}
+        </div>
+      </header>        {/* Conteúdo principal */}
         <main className="flex-1 bg-gradient-to-br from-background via-muted/10 to-background pb-20 lg:pb-8">
         <div className="container mx-auto px-4 py-6 max-w-2xl space-y-5">
           
@@ -366,11 +355,11 @@ export default function Transporte() {
                   </Button>
                   <Button
                     onClick={handleConfirmTransport}
-                    disabled={isUpdating}
+                    disabled={updateStatus.isPending}
                     className="flex-1 h-12 rounded-xl shadow-lg bg-gradient-to-r from-green-500 to-yellow-500 hover:from-green-600 hover:to-yellow-600 hover:scale-[1.02] transition-all duration-300 font-bold"
                     data-testid="button-confirm-transport"
                   >
-                    {isUpdating ? (
+                    {updateStatus.isPending ? (
                       <>
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                         {isOnline ? "Atualizando..." : "Salvando..."}

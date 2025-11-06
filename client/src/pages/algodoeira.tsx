@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import type { Bale, UpdateBaleStatus } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import type { Bale } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { useOfflineStatusUpdate } from "@/hooks/use-offline-status-update";
 import { Footer } from "@/components/footer";
-import { queryClient, apiRequest } from "@/lib/queryClient";
 import { NavSidebar, useSidebar } from "@/components/nav-sidebar";
 import { cn } from "@/lib/utils";
 import {
@@ -46,34 +46,11 @@ export default function Algodoeira() {
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualBaleId, setManualBaleId] = useState("");
   const [scannedBale, setScannedBale] = useState<Bale | null>(null);
+  
+  const { updateStatus } = useOfflineStatusUpdate();
 
   const { data: bales = [] } = useQuery<Bale[]>({
     queryKey: ["/api/bales"],
-  });
-
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateBaleStatus }) => {
-      // Encode ID para URL (IDs têm barras como S25/26-T2B-00001)
-      const encodedId = encodeURIComponent(id);
-      return apiRequest("PATCH", `/api/bales/${encodedId}/status`, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bales"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/bales/stats"] });
-      toast({
-        variant: "success",
-        title: "Status atualizado",
-        description: "Fardo marcado como beneficiado com sucesso.",
-      });
-      setScannedBale(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Erro ao atualizar status",
-        description: error.message || "Tente novamente.",
-      });
-    },
   });
 
   const processBaleId = async (baleId: string) => {
@@ -132,15 +109,20 @@ export default function Algodoeira() {
   };
 
   const handleConfirmBeneficiamento = () => {
-    if (!scannedBale) return;
+    if (!scannedBale || !user?.id) return;
 
-    updateStatusMutation.mutate({
-      id: scannedBale.id,
-      data: {
+    updateStatus.mutate(
+      {
+        id: scannedBale.id,
         status: "beneficiado",
-        userId: user?.id ? String(user.id) : undefined,
+        userId: String(user.id),
       },
-    });
+      {
+        onSuccess: () => {
+          setScannedBale(null);
+        },
+      }
+    );
   };
 
   const handleLogout = () => {
@@ -314,11 +296,11 @@ export default function Algodoeira() {
                   </Button>
                   <Button
                     onClick={handleConfirmBeneficiamento}
-                    disabled={updateStatusMutation.isPending}
+                    disabled={updateStatus.isPending}
                     className="flex-1 h-12 rounded-xl shadow-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 hover:scale-[1.02] transition-all duration-300 font-bold"
                     data-testid="button-confirm-beneficiamento"
                   >
-                    {updateStatusMutation.isPending ? (
+                    {updateStatus.isPending ? (
                       <>
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                         Atualizando...

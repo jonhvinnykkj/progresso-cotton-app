@@ -6,6 +6,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./lib/auth-context";
 import { useRealtime } from "./hooks/use-realtime";
 import { useVersionCheck } from "./hooks/use-version-check";
+import { useProductivityMonitor } from "./hooks/use-productivity-monitor";
+import { useNotifications } from "./hooks/use-notifications";
+import { useOfflineSync } from "./lib/use-offline-sync";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
@@ -45,6 +48,15 @@ function RealtimeProvider() {
 
   // Check for new versions periodically
   useVersionCheck();
+
+  // Sync offline operations when online
+  useOfflineSync();
+
+  // Monitor productivity and send notifications (only when authenticated)
+  if (isAuthenticated) {
+    useProductivityMonitor();
+    useNotifications();
+  }
 
   return null;
 }

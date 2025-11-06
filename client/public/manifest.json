@@ -1,7 +1,7 @@
 {
-  "name": "Rastreabilidade de Fardos - Grupo Progresso",
-  "short_name": "Fardos GP",
-  "description": "Sistema de rastreabilidade de fardos de algodão do campo ao beneficiamento",
+  "name": "Progresso Cotton - Rastreabilidade de Fardos",
+  "short_name": "Progresso Cotton",
+  "description": "Sistema de rastreabilidade de fardos de algodão do campo ao beneficiamento - Grupo Progresso",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

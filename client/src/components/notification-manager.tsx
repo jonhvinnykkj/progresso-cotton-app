@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { NavSidebar } from "@/components/nav-sidebar";
 import { Bell, Trash2, AlertCircle, Info, CheckCircle, AlertTriangle, Send, Clock, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -91,30 +90,26 @@ export function NotificationManager() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F0]">
-      <NavSidebar />
-      
-      <div className="lg:pl-64">
-        <div className="p-8 space-y-8">
-          {/* Header azul gradiente */}
-          <div className="bg-gradient-to-r from-blue-500 to-cyan-400 text-white rounded-2xl p-8 shadow-lg">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                <Bell className="h-8 w-8" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">
-                  Notificações do Sistema
-                </h1>
-                <p className="text-blue-50 text-base mt-1">
-                  Gerencie as notificações enviadas para todos os usuários
-                </p>
-              </div>
-            </div>
+    <div className="space-y-8">
+      {/* Header azul gradiente */}
+      <div className="bg-gradient-to-r from-blue-500 to-cyan-400 text-white rounded-2xl p-8 shadow-lg">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+            <Bell className="h-8 w-8" />
           </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Notificações do Sistema
+            </h1>
+            <p className="text-blue-50 text-base mt-1">
+              Gerencie as notificações enviadas para todos os usuários
+            </p>
+          </div>
+        </div>
+      </div>
 
-          {/* Grid com cards */}
-          <div className="grid lg:grid-cols-2 gap-8">
+      {/* Grid com cards */}
+      <div className="grid lg:grid-cols-2 gap-8">
             {/* Card: Nova Notificação */}
             <Card className="bg-white shadow-sm rounded-xl border-0">
               <CardHeader className="pb-6 pt-8 px-8">
@@ -337,8 +332,6 @@ export function NotificationManager() {
               </CardContent>
             </Card>
           </div>
-        </div>
-      </div>
     </div>
   );
 }

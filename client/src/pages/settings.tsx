@@ -156,7 +156,7 @@ export default function SettingsPage() {
     <>
       <NavSidebar />
       <div className={cn(
-        "mobile-page transition-all duration-300",
+        "mobile-page transition-all duration-300 min-h-screen bg-[#F5F5F0]",
         shouldShowNavbar && (collapsed ? "lg:ml-20" : "lg:ml-64")
       )}>
         {/* Header modernizado */}

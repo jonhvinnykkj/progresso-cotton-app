@@ -19,7 +19,10 @@ export function useVersionCheck() {
     async function initVersionCheck() {
       try {
         // Get initial version
-        const response = await fetch(`${API_URL}/version`);
+        const url = API_URL ? `${API_URL}/version` : '/version';
+        const response = await fetch(url, {
+          credentials: 'include',
+        });
         if (!response.ok) return;
 
         const data: VersionResponse = await response.json();
@@ -27,7 +30,8 @@ export function useVersionCheck() {
         localStorage.setItem(STORAGE_KEY, data.version);
 
         // Connect to SSE for real-time version updates
-        const eventSource = new EventSource(`${API_URL}/events`);
+        const eventsUrl = API_URL ? `${API_URL}/events` : '/events';
+        const eventSource = new EventSource(eventsUrl);
         eventSourceRef.current = eventSource;
 
         // Listen for version-update events

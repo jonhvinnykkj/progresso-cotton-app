@@ -146,15 +146,17 @@ export default function Login() {
     setIsLoading(true);
     try {
       // Call backend auth API
+      const url = API_URL ? `${API_URL}/auth/login` : '/auth/login';
       console.log("🔐 Attempting login...");
       console.log("📍 API URL:", API_URL);
-      console.log("🌐 Full URL:", `${API_URL}/auth/login`);
+      console.log("🌐 Full URL:", url);
 
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: 'include',
         body: JSON.stringify({
           username: data.username,
           password: data.password,

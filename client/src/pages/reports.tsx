@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { API_URL } from "@/lib/api-config";
 import {
   Select,
   SelectContent,
@@ -163,7 +164,11 @@ export default function ReportsPage() {
       const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
 
       const endpoint = type === "pdf" ? "/api/reports/pdf" : "/api/reports/excel";
-      const response = await fetch(`${endpoint}?${params.toString()}`, { headers });
+      const fullUrl = API_URL ? `${API_URL}${endpoint}?${params.toString()}` : `${endpoint}?${params.toString()}`;
+      const response = await fetch(fullUrl, { 
+        headers,
+        credentials: 'include',
+      });
       
       if (!response.ok) {
         throw new Error("Erro ao gerar relatório");

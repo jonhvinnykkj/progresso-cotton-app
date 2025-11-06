@@ -16,7 +16,8 @@ async function checkRealOnlineStatus(): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000); // timeout de 3s
 
-    const response = await fetch(`${API_URL}/api/health`, {
+    const url = API_URL ? `${API_URL}/api/health` : '/api/health';
+    const response = await fetch(url, {
       method: 'GET',
       credentials: 'include',
       signal: controller.signal,

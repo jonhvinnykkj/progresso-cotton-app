@@ -5,7 +5,7 @@ import { API_URL } from "./api-config";
 function resolveUrl(path: string): string {
   // If path already starts with /api, use API_URL as base
   if (path.startsWith("/api")) {
-    return API_URL + path.replace("/api", "");
+    return API_URL ? `${API_URL}${path}` : path;
   }
   return path;
 }

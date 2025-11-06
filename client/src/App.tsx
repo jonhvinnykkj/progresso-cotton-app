@@ -27,14 +27,31 @@ function ProtectedRoute({ component: Component, allowedRoles }: {
   component: () => JSX.Element; 
   allowedRoles?: string[] 
 }) {
-  const { isAuthenticated, selectedRole } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   if (!isAuthenticated) {
     return <Redirect to="/" />;
   }
 
-  if (allowedRoles && selectedRole && !allowedRoles.includes(selectedRole)) {
-    return <Redirect to="/" />;
+  if (allowedRoles && user) {
+    // Parsear roles do usuário (vem como string JSON do banco)
+    let userRoles: string[] = [];
+    try {
+      userRoles = typeof user.roles === 'string' 
+        ? JSON.parse(user.roles) 
+        : user.roles || [];
+    } catch (e) {
+      console.error('Erro ao parsear roles do usuário:', e);
+      userRoles = [];
+    }
+    
+    // Verificar se o usuário tem ALGUMA das roles permitidas
+    const hasAccess = allowedRoles.some(role => userRoles.includes(role));
+    
+    if (!hasAccess) {
+      console.log('❌ Acesso negado. Roles do usuário:', userRoles, 'Roles necessárias:', allowedRoles);
+      return <Redirect to="/" />;
+    }
   }
 
   return <Component />;

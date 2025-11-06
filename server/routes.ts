@@ -259,6 +259,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get talhao counters (for offline sync)
+  app.get("/api/talhao-counters", authenticateToken, async (req, res) => {
+    try {
+      const counters = await storage.getAllTalhaoCounters();
+      res.json(counters);
+    } catch (error) {
+      console.error("Error fetching talhao counters:", error);
+      res.status(500).json({
+        error: "Erro ao buscar contadores",
+      });
+    }
+  });
+
   // Get all bales
   app.get("/api/bales", authenticateToken, async (req, res) => {
     try {

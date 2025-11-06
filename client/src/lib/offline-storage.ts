@@ -1,15 +1,29 @@
 import type { Bale } from "@shared/schema";
 
 const DB_NAME = "BaleTrackerOfflineDB";
-const DB_VERSION = 2; // Incrementado para adicionar nova store
+const DB_VERSION = 3; // Incrementado para adicionar store de contadores
 const STORE_NAME = "bales";
 const PENDING_OPERATIONS_STORE = "pending_operations";
+const COUNTERS_STORE = "talhao_counters";
 
 interface PendingOperation {
   id: string;
   type: 'create' | 'update_status';
   data: any;
   createdAt: string;
+  attemptCount?: number; // number of sync attempts
+  lastAttempt?: string; // ISO timestamp of last attempt
+  status?: 'pending' | 'failed' | 'done';
+  // optional field to track server-assigned id when resolving conflicts
+  resolvedServerId?: string;
+}
+
+interface TalhaoCounter {
+  id: string; // safra-talhao (ex: "25/26-T1A")
+  safra: string;
+  talhao: string;
+  lastNumber: number;
+  updatedAt: string;
 }
 
 class OfflineStorage {
@@ -22,6 +36,8 @@ class OfflineStorage {
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         this.db = request.result;
+        // perform background cleanup of old pending operations
+        this.cleanupOldPendingOperations().catch((e) => console.warn('Erro ao limpar operações antigas:', e));
         resolve();
       };
 
@@ -40,6 +56,13 @@ class OfflineStorage {
           const pendingStore = db.createObjectStore(PENDING_OPERATIONS_STORE, { keyPath: "id" });
           pendingStore.createIndex("type", "type", { unique: false });
           pendingStore.createIndex("createdAt", "createdAt", { unique: false });
+        }
+
+        // Create counters store if it doesn't exist
+        if (!db.objectStoreNames.contains(COUNTERS_STORE)) {
+          const countersStore = db.createObjectStore(COUNTERS_STORE, { keyPath: "id" });
+          countersStore.createIndex("safra", "safra", { unique: false });
+          countersStore.createIndex("talhao", "talhao", { unique: false });
         }
       };
     });
@@ -256,11 +279,21 @@ class OfflineStorage {
     if (!this.db) await this.init();
     if (!this.db) throw new Error("Database not initialized");
 
+    // Simple quota check: avoid unbounded growth
+    const pendingCount = await this.getPendingCount();
+    const MAX_PENDING = 1000;
+    if (pendingCount >= MAX_PENDING) {
+      console.warn('❗ Pending operations quota exceeded');
+      throw new Error('Capacidade offline cheia. Sincronize antes de adicionar mais operações.');
+    }
+
     const id = `${operation.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const pendingOp: PendingOperation = {
       ...operation,
       id,
       createdAt: new Date().toISOString(),
+      attemptCount: 0,
+      status: 'pending',
     };
 
     return new Promise((resolve, reject) => {
@@ -276,6 +309,21 @@ class OfflineStorage {
     });
   }
 
+  // Count pending operations
+  async getPendingCount(): Promise<number> {
+    if (!this.db) await this.init();
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([PENDING_OPERATIONS_STORE], 'readonly');
+      const store = transaction.objectStore(PENDING_OPERATIONS_STORE);
+      const request = store.count();
+
+      request.onsuccess = () => resolve(request.result || 0);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   async getAllPendingOperations(): Promise<PendingOperation[]> {
     if (!this.db) await this.init();
     if (!this.db) throw new Error("Database not initialized");
@@ -287,6 +335,37 @@ class OfflineStorage {
 
       request.onsuccess = () => {
         resolve(request.result || []);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Remove pending operations older than `days` (default 7)
+  async cleanupOldPendingOperations(days = 7): Promise<number> {
+    if (!this.db) await this.init();
+    if (!this.db) throw new Error('Database not initialized');
+
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    let removed = 0;
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([PENDING_OPERATIONS_STORE], 'readwrite');
+      const store = transaction.objectStore(PENDING_OPERATIONS_STORE);
+      const request = store.openCursor();
+
+      request.onsuccess = (evt) => {
+        const cursor = (evt.target as IDBRequest).result as IDBCursorWithValue | null;
+        if (cursor) {
+          const value = cursor.value as PendingOperation;
+          const created = new Date(value.createdAt).getTime();
+          if (created < cutoff) {
+            cursor.delete();
+            removed++;
+          }
+          cursor.continue();
+        } else {
+          resolve(removed);
+        }
       };
       request.onerror = () => reject(request.error);
     });
@@ -309,6 +388,27 @@ class OfflineStorage {
     });
   }
 
+  async updatePendingOperation(id: string, patch: Partial<PendingOperation>): Promise<void> {
+    if (!this.db) await this.init();
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([PENDING_OPERATIONS_STORE], 'readwrite');
+      const store = transaction.objectStore(PENDING_OPERATIONS_STORE);
+      const getRequest = store.get(id);
+
+      getRequest.onsuccess = () => {
+        const existing = getRequest.result as PendingOperation | undefined;
+        if (!existing) return resolve();
+        const updated: PendingOperation = { ...existing, ...patch };
+        const putReq = store.put(updated);
+        putReq.onsuccess = () => resolve();
+        putReq.onerror = () => reject(putReq.error);
+      };
+      getRequest.onerror = () => reject(getRequest.error);
+    });
+  }
+
   async addBaleLocally(bale: Bale): Promise<void> {
     if (!this.db) await this.init();
     if (!this.db) throw new Error("Database not initialized");
@@ -316,7 +416,8 @@ class OfflineStorage {
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([STORE_NAME], "readwrite");
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.add({
+      // use put to allow upsert (replace temporary IDs when resolving conflicts)
+      const request = store.put({
         ...bale,
         _createdOffline: true,
         _cachedAt: new Date().toISOString(),
@@ -329,6 +430,111 @@ class OfflineStorage {
       request.onerror = () => reject(request.error);
     });
   }
+
+  // Métodos para gerenciar contadores de talhão
+
+  async syncCountersFromServer(counters: any[]): Promise<void> {
+    if (!this.db) await this.init();
+    if (!this.db) throw new Error("Database not initialized");
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([COUNTERS_STORE], "readwrite");
+      const store = transaction.objectStore(COUNTERS_STORE);
+
+      // Limpar contadores antigos
+      const clearRequest = store.clear();
+
+      clearRequest.onsuccess = () => {
+        // Adicionar novos contadores
+        counters.forEach((counter) => {
+          const talhaoCounter: TalhaoCounter = {
+            id: `${counter.safra}-${counter.talhao}`,
+            safra: counter.safra,
+            talhao: counter.talhao,
+            lastNumber: counter.lastNumber,
+            updatedAt: new Date().toISOString(),
+          };
+          store.add(talhaoCounter);
+        });
+
+        console.log(`📊 ${counters.length} contadores sincronizados do servidor`);
+      };
+
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  async getCounter(safra: string, talhao: string): Promise<number> {
+    if (!this.db) await this.init();
+    if (!this.db) throw new Error("Database not initialized");
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([COUNTERS_STORE], "readonly");
+      const store = transaction.objectStore(COUNTERS_STORE);
+      const id = `${safra}-${talhao}`;
+      const request = store.get(id);
+
+      request.onsuccess = () => {
+        const counter = request.result as TalhaoCounter | undefined;
+        const lastNumber = counter?.lastNumber || 0;
+        console.log(`📊 Contador para ${id}: ${lastNumber}`);
+        resolve(lastNumber);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async incrementCounter(safra: string, talhao: string): Promise<number> {
+    if (!this.db) await this.init();
+    if (!this.db) throw new Error("Database not initialized");
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([COUNTERS_STORE], "readwrite");
+      const store = transaction.objectStore(COUNTERS_STORE);
+      const id = `${safra}-${talhao}`;
+      const getRequest = store.get(id);
+
+      getRequest.onsuccess = () => {
+        const counter = getRequest.result as TalhaoCounter | undefined;
+        const newNumber = (counter?.lastNumber || 0) + 1;
+
+        const updatedCounter: TalhaoCounter = {
+          id,
+          safra,
+          talhao,
+          lastNumber: newNumber,
+          updatedAt: new Date().toISOString(),
+        };
+
+        const putRequest = store.put(updatedCounter);
+
+        putRequest.onsuccess = () => {
+          console.log(`📊 Contador incrementado para ${id}: ${newNumber}`);
+          resolve(newNumber);
+        };
+        putRequest.onerror = () => reject(putRequest.error);
+      };
+      getRequest.onerror = () => reject(getRequest.error);
+    });
+  }
+
+  async getAllCounters(): Promise<TalhaoCounter[]> {
+    if (!this.db) await this.init();
+    if (!this.db) throw new Error("Database not initialized");
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([COUNTERS_STORE], "readonly");
+      const store = transaction.objectStore(COUNTERS_STORE);
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        resolve(request.result || []);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
 }
 
 export const offlineStorage = new OfflineStorage();
+export type { TalhaoCounter };

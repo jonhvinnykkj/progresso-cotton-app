@@ -547,6 +547,11 @@ export class PostgresStorage implements IStorage {
     return { deletedCount: result.length };
   }
 
+  // Talhao counters methods
+  async getAllTalhaoCounters(): Promise<TalhaoCounter[]> {
+    return await db.select().from(talhaoCountersTable);
+  }
+
   // Settings methods
   async getSetting(key: string): Promise<Setting | undefined> {
     const result = await db.select().from(settingsTable).where(eq(settingsTable.key, key)).limit(1);

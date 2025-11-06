@@ -3,6 +3,7 @@ import { offlineStorage } from '@/lib/offline-storage';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from './use-toast';
 import type { Bale } from '@shared/schema';
+import { TALHOES_INFO } from '@shared/talhoes';
 
 interface CreateBaleData {
   id: string;
@@ -23,6 +24,15 @@ export function useOfflineBaleCreation() {
   const createBale = useMutation({
     mutationFn: async (bale: CreateBaleData) => {
       const isOnline = navigator.onLine;
+
+      // Basic offline validation
+      if (!bale.safra || !bale.talhao) {
+        throw new Error('Safra e talhão são obrigatórios');
+      }
+      const talhaoExists = TALHOES_INFO.some(t => t.nome === bale.talhao);
+      if (!talhaoExists) {
+        throw new Error('Talhão inválido');
+      }
 
       if (isOnline) {
         // Tentar criar online primeiro
@@ -145,6 +155,15 @@ export function useOfflineBaleCreation() {
 async function saveBaleOffline(bale: CreateBaleData) {
   const operationId = crypto.randomUUID();
 
+  // Validate minimal fields before saving offline
+  if (!bale.safra || !bale.talhao) {
+    throw new Error('Safra e talhão são obrigatórios');
+  }
+  const talhaoExists = TALHOES_INFO.some(t => t.nome === bale.talhao);
+  if (!talhaoExists) {
+    throw new Error('Talhão inválido');
+  }
+
   await offlineStorage.savePendingOperation({
     type: 'create',
     data: bale,
@@ -168,15 +187,29 @@ async function saveBaleOffline(bale: CreateBaleData) {
 }
 
 async function saveBatchOffline(data: CreateBatchData) {
-  const operations = [];
+  // Basic validations
+  if (!data.safra || !data.talhao) throw new Error('Safra e talhão são obrigatórios');
+  const talhaoExists = TALHOES_INFO.some(t => t.nome === data.talhao);
+  if (!talhaoExists) throw new Error('Talhão inválido');
+  if (data.quantidade < 1 || data.quantidade > 1000) throw new Error('Quantidade inválida');
+
+  const operations: string[] = [];
 
   for (let i = 0; i < data.quantidade; i++) {
-    const operationId = crypto.randomUUID();
-
-    const baleData: CreateBatchData = {
+    // Incrementar contador local para obter próximo número
+    const nextNumber = await offlineStorage.incrementCounter(data.safra, data.talhao);
+    
+    // Formatar número com 5 dígitos
+    const formattedNumber = String(nextNumber).padStart(5, '0');
+    
+    // Gerar ID do fardo
+    const baleId = `${data.safra}-${data.talhao}-${formattedNumber}`;
+    
+    const baleData: CreateBaleData = {
+      id: baleId,
       safra: data.safra,
       talhao: data.talhao,
-      quantidade: 1, // Cada operação cria 1 fardo
+      numero: nextNumber,
     };
 
     await offlineStorage.savePendingOperation({
@@ -184,8 +217,23 @@ async function saveBatchOffline(data: CreateBatchData) {
       data: baleData,
     });
 
-    operations.push(operationId);
+    // Adicionar ao cache local para aparecer na UI
+    const localBale: Partial<Bale> = {
+      id: baleId,
+      safra: data.safra,
+      talhao: data.talhao,
+      numero: nextNumber,
+      status: 'campo',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: 'offline-user',
+    };
+
+    await offlineStorage.addBaleLocally(localBale as Bale);
+
+    operations.push(baleId);
   }
 
+  console.log(`✅ ${data.quantidade} fardos criados offline com numeração sequencial`);
   return { offline: true, operations };
 }

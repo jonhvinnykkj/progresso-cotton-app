@@ -17,6 +17,10 @@ export function useOfflineStatusUpdate() {
     mutationFn: async (data: UpdateStatusData) => {
       const isOnline = navigator.onLine;
 
+      // basic validation
+      if (!data.id) throw new Error('ID do fardo é obrigatório');
+      if (!data.userId) throw new Error('Usuário é obrigatório para atualizar status');
+
       if (isOnline) {
         // Tentar atualizar online primeiro
         try {

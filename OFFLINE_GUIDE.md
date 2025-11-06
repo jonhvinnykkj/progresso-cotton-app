@@ -2,47 +2,81 @@
 
 ## Visão Geral
 
-O aplicativo agora suporta operações offline completas para Campo, Transporte e Algodoeira. Quando não há conexão com internet, as operações são salvas localmente no IndexedDB e sincronizadas automaticamente quando a conexão é restaurada.
+O aplicativo agora suporta operações offline completas para Campo, Transporte e Algodoeira. Quando não há conexão com internet, as operações são salvas localmente no IndexedDB e sincronizadas automaticamente quando a conexão é restaurada. Inclui retry limitado, limpeza automática de operações antigas, validações offline, tratamento de conflitos, quota management e indicador de progresso.
 
 ## Componentes Criados
 
 ### 1. **offline-storage.ts**
 
-Gerenciamento do IndexedDB com duas stores:
+Gerenciamento do IndexedDB com três stores:
 
 - `bales`: Cache local de fardos
 - `pending_operations`: Fila de operações para sincronizar
+- `talhao_counters`: Contadores locais para numeração sequencial
 
 **Principais métodos:**
 
 - `savePendingOperation()` - Salva operação para sincronizar depois
 - `getAllPendingOperations()` - Lista operações pendentes
+- `updatePendingOperation()` - Atualiza estado (attemptCount, status)
 - `removePendingOperation()` - Remove operação após sync bem-sucedida
+- `cleanupOldPendingOperations()` - Remove operações com mais de 7 dias
+- `getPendingCount()` - Verifica quota (limite de 1000 operações)
 - `addBaleLocally()` - Adiciona fardo ao cache local
 - `updateBaleStatus()` - Atualiza status localmente
+- `incrementCounter()` - Incrementa contador local para numeração offline
+
+**Quota Management:**
+
+- Limite de 1000 operações pendentes
+- Limpeza automática de operações com mais de 7 dias no init()
+- Erro claro se quota excedida
 
 ### 2. **use-offline-sync.ts**
 
 Hook que gerencia a sincronização automática:
 
 - Detecta quando o dispositivo volta online (`window.addEventListener('online')`)
-- Sincroniza todas as operações pendentes automaticamente
-- Exibe toast de feedback ao usuário
+- Sincroniza operações pendentes automaticamente com retry limitado
+- Tenta no máximo 3 vezes por operação antes de marcar como 'failed'
+- Trata conflitos HTTP 409/404 (bale já existe ou não encontrado)
+- Reconcilia cache local com dados do servidor quando detecta divergência
+- Exibe toast de feedback e progresso visual (barra no topo)
 - Invalida queries do TanStack Query para atualizar UI
+
+**Retry e Falhas:**
+
+- `attemptCount` rastreia tentativas de sincronização
+- Se `attemptCount >= 3`, operação é marcada como `status: 'failed'`
+- Operações com `status: 'failed'` são ignoradas em sincronizações futuras
+
+**Tratamento de Conflitos:**
+
+- HTTP 409 (bale já existe): busca do servidor e reconcilia cache local
+- HTTP 404 (bale não encontrado): marca operação como falhada
+- Conflito de status: compara com servidor e resolve automaticamente quando possível
 
 ### 3. **use-offline-bale-creation.ts**
 
 Hook para criação de fardos (usado em Campo):
 
 - `createBale()` - Cria fardo individual
-- `createBatch()` - Cria lote de fardos
+- `createBatch()` - Cria lote de fardos com numeração sequencial offline
 
 **Comportamento:**
 
 - Tenta criar online primeiro
 - Se offline ou falhar, salva localmente
+- Valida safra, talhão (contra TALHOES_INFO) e quantidade antes de salvar
+- Usa contadores locais (`incrementCounter`) para gerar números sequenciais offline
 - Adiciona ao cache local para aparecer na UI imediatamente
 - Exibe toast diferente para operações offline vs online
+
+**Validações Offline:**
+
+- Safra e talhão são obrigatórios
+- Talhão deve existir em TALHOES_INFO
+- Quantidade: 1 a 1000 fardos
 
 ### 4. **use-offline-status-update.ts**
 

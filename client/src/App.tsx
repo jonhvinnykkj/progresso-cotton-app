@@ -9,6 +9,7 @@ import { useVersionCheck } from "./hooks/use-version-check";
 import { useProductivityMonitor } from "./hooks/use-productivity-monitor";
 import { useNotifications } from "./hooks/use-notifications";
 import { useOfflineSync } from "./lib/use-offline-sync";
+import { useCounterSync } from "./hooks/use-counter-sync";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
@@ -50,15 +51,36 @@ function RealtimeProvider() {
   useVersionCheck();
 
   // Sync offline operations when online
-  useOfflineSync();
+  const sync = useOfflineSync();
 
-  // Monitor productivity and send notifications (only when authenticated)
+  // Sync counters from server (only when authenticated)
   if (isAuthenticated) {
+    useCounterSync();
     useProductivityMonitor();
     useNotifications();
   }
 
-  return null;
+  // Render a small progress bar when syncing
+  return (
+    <>
+      {sync && sync.isSyncing && (
+        <div style={{ position: 'fixed', left: 0, right: 0, top: 0, zIndex: 9999 }}>
+          <div style={{ height: 4, background: 'rgba(0,0,0,0.1)' }} />
+          <div
+            role="progressbar"
+            aria-valuenow={sync.progress}
+            style={{
+              height: 4,
+              width: `${sync.progress}%`,
+              maxWidth: '100%',
+              background: 'linear-gradient(90deg,#10b981,#f59e0b)',
+              transition: 'width 300ms ease',
+            }}
+          />
+        </div>
+      )}
+    </>
+  );
 }
 
 function Router() {

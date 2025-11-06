@@ -5,9 +5,13 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { Printer, QrCode, ArrowLeft, Loader2, Share2 } from "lucide-react";
+import { Printer, QrCode, ArrowLeft, Loader2, Share2, Download } from "lucide-react";
 import QRCode from "qrcode";
 import { Capacitor } from "@capacitor/core";
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import logoProgresso from "/favicon.png";
 import type { Bale } from "@shared/schema";
 import { Footer } from "@/components/footer";
@@ -150,28 +154,83 @@ export default function Etiqueta() {
     // Detectar se está no Android
     if (Capacitor.isNativePlatform()) {
       toast({
-        title: "Preparando etiquetas...",
-        description: "Gerando visualização para impressão",
+        title: "Gerando PDF...",
+        description: "Aguarde enquanto preparamos suas etiquetas",
       });
 
-      // Aguardar um momento para o toast aparecer
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // No Android, usar a janela de impressão do sistema
       try {
-        // Abrir janela de impressão do Android
-        window.print();
-        
-        toast({
-          title: "Janela de impressão aberta",
-          description: "Selecione 'Salvar como PDF' ou uma impressora conectada",
+        // Capturar a área de impressão como imagem
+        const printElement = printAreaRef.current;
+        if (!printElement) {
+          throw new Error("Elemento de impressão não encontrado");
+        }
+
+        // Gerar canvas da área de impressão
+        const canvas = await html2canvas(printElement, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
         });
+
+        // Criar PDF
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        
+        // Gerar blob do PDF
+        const pdfBlob = pdf.output('blob');
+        const reader = new FileReader();
+        
+        reader.onloadend = async () => {
+          const base64data = (reader.result as string).split(',')[1];
+          const fileName = `etiquetas_${new Date().getTime()}.pdf`;
+
+          try {
+            // Salvar arquivo
+            const result = await Filesystem.writeFile({
+              path: fileName,
+              data: base64data,
+              directory: Directory.Documents
+            });
+
+            // Compartilhar arquivo
+            await Share.share({
+              title: 'Etiquetas de Fardos',
+              text: `${bales.length} etiqueta(s) gerada(s)`,
+              url: result.uri,
+              dialogTitle: 'Compartilhar ou Salvar PDF'
+            });
+
+            toast({
+              title: "PDF gerado com sucesso!",
+              description: "Arquivo salvo em Documentos",
+            });
+          } catch (error) {
+            console.error("Erro ao salvar/compartilhar:", error);
+            toast({
+              variant: "destructive",
+              title: "Erro ao salvar PDF",
+              description: "Tente novamente",
+            });
+          }
+        };
+
+        reader.readAsDataURL(pdfBlob);
       } catch (error) {
-        console.error("Erro ao imprimir:", error);
+        console.error("Erro ao gerar PDF:", error);
         toast({
           variant: "destructive",
-          title: "Erro ao imprimir",
-          description: "Tente usar o menu Compartilhar > Imprimir do navegador",
+          title: "Erro ao gerar PDF",
+          description: "Tente usar a opção de impressão do navegador",
         });
       }
     } else {
@@ -313,23 +372,20 @@ export default function Etiqueta() {
                   disabled={qrDataUrls.size === 0}
                   className="w-full lg:w-auto h-12 rounded-xl shadow-lg bg-white text-green-600 hover:bg-white/90 hover:scale-105 transition-all duration-300 font-bold shrink-0"
                 >
-                  <Printer className="w-5 h-5 mr-2" />
-                  {Capacitor.isNativePlatform() ? "Imprimir / Salvar PDF" : "Imprimir Todas"}
+                  {Capacitor.isNativePlatform() ? (
+                    <>
+                      <Download className="w-5 h-5 mr-2" />
+                      Gerar PDF
+                    </>
+                  ) : (
+                    <>
+                      <Printer className="w-5 h-5 mr-2" />
+                      Imprimir Todas
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
-            
-            {/* Instrução para Android */}
-            {Capacitor.isNativePlatform() && (
-              <div className="px-6 pb-4">
-                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                  <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-2">
-                    <Share2 className="w-4 h-4 shrink-0" />
-                    <span>Clique em "Imprimir / Salvar PDF" e selecione "Salvar como PDF" ou uma impressora</span>
-                  </p>
-                </div>
-              </div>
-            )}
             
             <CardContent className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">

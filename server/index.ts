@@ -48,7 +48,12 @@ app.use(helmet({
       ],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
+      frameSrc: [
+        "'self'",
+        "https://www.youtube.com",
+        "https://youtube.com",
+        "https://www.youtube-nocookie.com", // YouTube privacy-enhanced mode
+      ],
       workerSrc: ["'self'", "blob:"], // For Service Workers
     },
   },

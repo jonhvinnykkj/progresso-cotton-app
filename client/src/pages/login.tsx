@@ -303,7 +303,7 @@ export default function Login() {
           /* Video background for desktop */
           <iframe
             className="absolute w-[300%] h-[300%] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-            src="https://www.youtube.com/embed/bPeEKCrpkjU?rel=0&controls=0&loop=1&mute=1&autoplay=1&playlist=bPeEKCrpkjU&playsinline=1&enablejsapi=1&origin=*"
+            src="https://www.youtube-nocookie.com/embed/uoGMYtZc1dM?rel=0&controls=0&loop=1&mute=1&autoplay=1&playlist=uoGMYtZc1dM&playsinline=1&enablejsapi=1"
             title="Background Video"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             style={{ border: 'none' }}

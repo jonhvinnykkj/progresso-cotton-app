@@ -38,6 +38,9 @@ import {
   Award,
   Boxes,
   Percent,
+  LayoutDashboard,
+  Map,
+  LineChart,
 } from "lucide-react";
 import { Page, PageContent } from "@/components/layout/page";
 import {
@@ -642,202 +645,263 @@ export default function TalhaoStats() {
           </div>
         </div>
 
-        {/* ========== DASHBOARD DE KPIs ========== */}
-        <div className="glass-card rounded-2xl overflow-hidden">
-          <div className="relative p-4 border-b border-border/30">
-            <div className="absolute inset-0 bg-gradient-to-r from-accent/10 via-accent/5 to-transparent" />
-            <div className="relative flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-accent/20">
-                  <Zap className="w-4 h-4 text-accent" />
-                </div>
-                <div>
-                  <h2 className="text-base font-semibold">Dashboard de KPIs</h2>
-                  <p className="text-xs text-muted-foreground">Métricas chave de performance</p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refetchCarregamentos()}
-                disabled={isRefetchingCarregamentos}
-                className="rounded-lg border-border/50 hover:border-accent/50 h-8 text-xs"
-              >
-                <RefreshCw className={cn("w-3 h-3 mr-1", isRefetchingCarregamentos && "animate-spin")} />
-                Atualizar
-              </Button>
-            </div>
-          </div>
-
-          <div className="p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-              {/* KPI 1: Taxa de Beneficiamento */}
-              <div className="group p-3 rounded-xl bg-surface border border-border/30 hover:border-neon-cyan/40 hover:scale-105 hover:shadow-glow-cyan/20 transition-all duration-200 cursor-default">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 rounded-lg bg-neon-cyan/20 group-hover:bg-neon-cyan/30 transition-colors">
-                    <Factory className="w-3 h-3 text-neon-cyan" />
-                  </div>
-                </div>
-                <p className="text-xl font-bold text-neon-cyan">{taxaBeneficiamento.toFixed(1)}%</p>
-                <p className="text-[10px] text-muted-foreground leading-tight">Taxa Benefic.</p>
-              </div>
-
-              {/* KPI 2: Fardos Hoje */}
-              <div className="group p-3 rounded-xl bg-surface border border-border/30 hover:border-primary/40 hover:scale-105 hover:shadow-glow/20 transition-all duration-200 cursor-default">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 rounded-lg bg-primary/20 group-hover:bg-primary/30 transition-colors">
-                    <CalendarDays className="w-3 h-3 text-primary" />
-                  </div>
-                </div>
-                <p className="text-xl font-bold text-primary">{balesToday}</p>
-                <p className="text-[10px] text-muted-foreground leading-tight">Fardos Hoje</p>
-              </div>
-
-              {/* KPI 3: Média/Dia */}
-              <div className="group p-3 rounded-xl bg-surface border border-border/30 hover:border-accent/40 hover:scale-105 transition-all duration-200 cursor-default">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 rounded-lg bg-accent/20 group-hover:bg-accent/30 transition-colors">
-                    <TrendingUp className="w-3 h-3 text-accent" />
-                  </div>
-                </div>
-                <p className="text-xl font-bold text-accent">{fardosPorDia.toFixed(1)}</p>
-                <p className="text-[10px] text-muted-foreground leading-tight">Fardos/Dia</p>
-              </div>
-
-              {/* KPI 4: Tempo Médio */}
-              <div className="group p-3 rounded-xl bg-surface border border-border/30 hover:border-neon-orange/40 hover:scale-105 hover:shadow-glow-orange/20 transition-all duration-200 cursor-default">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 rounded-lg bg-neon-orange/20 group-hover:bg-neon-orange/30 transition-colors">
-                    <Timer className="w-3 h-3 text-neon-orange" />
-                  </div>
-                </div>
-                <p className="text-xl font-bold text-neon-orange">
-                  {tempoMedioProcessamento > 24
-                    ? `${Math.floor(tempoMedioProcessamento / 24)}d`
-                    : `${Math.floor(tempoMedioProcessamento)}h`}
-                </p>
-                <p className="text-[10px] text-muted-foreground leading-tight">Tempo Proc.</p>
-              </div>
-
-              {/* KPI 5: Rendimento Pluma */}
-              <div className="group p-3 rounded-xl bg-surface border border-border/30 hover:border-primary/40 hover:scale-105 transition-all duration-200 cursor-default">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 rounded-lg bg-primary/20 group-hover:bg-primary/30 transition-colors">
-                    <Wheat className="w-3 h-3 text-primary" />
-                  </div>
-                </div>
-                <p className="text-xl font-bold">
-                  {rendimentoMedioPluma > 0 ? `${rendimentoMedioPluma.toFixed(1)}%` : "-"}
-                </p>
-                <p className="text-[10px] text-muted-foreground leading-tight">Rend. Pluma</p>
-              </div>
-
-              {/* KPI 6: Talhões Ativos */}
-              <div className="group p-3 rounded-xl bg-surface border border-border/30 hover:border-neon-cyan/40 hover:scale-105 transition-all duration-200 cursor-default">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 rounded-lg bg-neon-cyan/20 group-hover:bg-neon-cyan/30 transition-colors">
-                    <MapPin className="w-3 h-3 text-neon-cyan" />
-                  </div>
-                </div>
-                <p className="text-xl font-bold">{talhoesAtivos}/{talhaoStats.length}</p>
-                <p className="text-[10px] text-muted-foreground leading-tight">Talhões Ativos</p>
-              </div>
-
-              {/* KPI 7: Semana */}
-              <div className="group p-3 rounded-xl bg-surface border border-border/30 hover:border-accent/40 hover:scale-105 transition-all duration-200 cursor-default">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 rounded-lg bg-accent/20 group-hover:bg-accent/30 transition-colors">
-                    <Calendar className="w-3 h-3 text-accent" />
-                  </div>
-                </div>
-                <p className="text-xl font-bold text-accent">{balesThisWeek}</p>
-                <p className="text-[10px] text-muted-foreground leading-tight">Esta Semana</p>
-              </div>
-
-              {/* KPI 8: Real vs Previsto */}
-              <div className="group p-3 rounded-xl bg-surface border border-border/30 hover:border-green-500/40 hover:scale-105 transition-all duration-200 cursor-default">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className={cn(
-                    "p-1.5 rounded-lg",
-                    totaisProdutividade.mediaRealArrobas >= parseFloat(avgArrobasPorHectare)
-                      ? "bg-green-500/20"
-                      : totaisProdutividade.talhoesComDados === 0
-                        ? "bg-muted/20"
-                        : "bg-red-500/20"
-                  )}>
-                    {totaisProdutividade.talhoesComDados === 0 ? (
-                      <Minus className="w-3 h-3 text-muted-foreground" />
-                    ) : totaisProdutividade.mediaRealArrobas >= parseFloat(avgArrobasPorHectare) ? (
-                      <ArrowUpRight className="w-3 h-3 text-green-500" />
-                    ) : (
-                      <ArrowDownRight className="w-3 h-3 text-red-500" />
-                    )}
-                  </div>
-                </div>
-                <p className={cn(
-                  "text-xl font-bold",
-                  totaisProdutividade.talhoesComDados === 0
-                    ? "text-muted-foreground"
-                    : totaisProdutividade.mediaRealArrobas >= parseFloat(avgArrobasPorHectare)
-                      ? "text-green-500"
-                      : "text-red-500"
-                )}>
-                  {totaisProdutividade.talhoesComDados === 0
-                    ? "-"
-                    : `${parseFloat(avgArrobasPorHectare) > 0
-                        ? (((totaisProdutividade.mediaRealArrobas - parseFloat(avgArrobasPorHectare)) /
-                            parseFloat(avgArrobasPorHectare)) * 100).toFixed(0)
-                        : "0"}%`}
-                </p>
-                <p className="text-[10px] text-muted-foreground leading-tight">Real vs Prev.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="talhao" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 gap-1 rounded-xl glass-card p-1 h-auto sm:h-12">
+        {/* Tabs - Navegação Principal */}
+        <Tabs defaultValue="visao-geral" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 gap-1.5 rounded-2xl glass-card p-2 h-auto">
+            {/* 1. Visão Geral - Primeiro contato */}
             <TabsTrigger
-              value="talhao"
-              className="rounded-lg px-2 py-2 text-xs font-semibold transition-colors data-[state=active]:bg-primary data-[state=active]:text-black"
+              value="visao-geral"
+              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 rounded-xl px-3 py-3 sm:py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-black data-[state=active]:shadow-glow hover:bg-primary/10"
             >
-              Talhões
+              <LayoutDashboard className="w-4 h-4" />
+              <span className="hidden sm:inline">Visão Geral</span>
+              <span className="sm:hidden text-[10px]">Geral</span>
             </TabsTrigger>
+
+            {/* 2. Produção - Talhões e produtividade */}
             <TabsTrigger
-              value="carregamentos"
-              className="rounded-lg px-2 py-2 text-xs font-semibold transition-colors data-[state=active]:bg-neon-orange data-[state=active]:text-black"
+              value="producao"
+              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 rounded-xl px-3 py-3 sm:py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-neon-cyan data-[state=active]:text-black data-[state=active]:shadow-glow-cyan hover:bg-neon-cyan/10"
             >
-              Carreg.
+              <Wheat className="w-4 h-4" />
+              <span className="hidden sm:inline">Produção</span>
+              <span className="sm:hidden text-[10px]">Produção</span>
             </TabsTrigger>
+
+            {/* 3. Transporte - Carregamentos */}
+            <TabsTrigger
+              value="transporte"
+              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 rounded-xl px-3 py-3 sm:py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-neon-orange data-[state=active]:text-black data-[state=active]:shadow-glow-orange hover:bg-neon-orange/10"
+            >
+              <Truck className="w-4 h-4" />
+              <span className="hidden sm:inline">Transporte</span>
+              <span className="sm:hidden text-[10px]">Transp.</span>
+            </TabsTrigger>
+
+            {/* 4. Beneficiamento - Pluma e fardinhos */}
             <TabsTrigger
               value="beneficiamento"
-              className="rounded-lg px-2 py-2 text-xs font-semibold transition-colors data-[state=active]:bg-purple-500 data-[state=active]:text-black"
+              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 rounded-xl px-3 py-3 sm:py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-purple-500 data-[state=active]:text-black data-[state=active]:shadow-lg hover:bg-purple-500/10"
             >
-              Benef.
+              <Factory className="w-4 h-4" />
+              <span className="hidden sm:inline">Beneficiamento</span>
+              <span className="sm:hidden text-[10px]">Benef.</span>
             </TabsTrigger>
+
+            {/* 5. Análises - Gráficos e comparativos */}
             <TabsTrigger
-              value="safra"
-              className="rounded-lg px-2 py-2 text-xs font-semibold transition-colors data-[state=active]:bg-primary data-[state=active]:text-black"
+              value="analises"
+              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 rounded-xl px-3 py-3 sm:py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-accent data-[state=active]:text-black data-[state=active]:shadow-lg hover:bg-accent/10"
             >
-              Safras
+              <LineChart className="w-4 h-4" />
+              <span className="hidden sm:inline">Análises</span>
+              <span className="sm:hidden text-[10px]">Análises</span>
             </TabsTrigger>
-            <TabsTrigger
-              value="graficos"
-              className="rounded-lg px-2 py-2 text-xs font-semibold transition-colors data-[state=active]:bg-neon-cyan data-[state=active]:text-black"
-            >
-              Gráficos
-            </TabsTrigger>
+
+            {/* 6. Mapa - Visualização espacial */}
             <TabsTrigger
               value="mapa"
-              className="rounded-lg px-2 py-2 text-xs font-semibold transition-colors data-[state=active]:bg-accent data-[state=active]:text-black"
+              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 rounded-xl px-3 py-3 sm:py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-emerald-500 data-[state=active]:text-black data-[state=active]:shadow-lg hover:bg-emerald-500/10"
             >
-              Mapa
+              <Map className="w-4 h-4" />
+              <span>Mapa</span>
             </TabsTrigger>
           </TabsList>
 
-          {/* Tab: Por Talhão */}
-          <TabsContent value="talhao" className="space-y-4 mt-4">
+          {/* ==================== TAB: VISÃO GERAL ==================== */}
+          <TabsContent value="visao-geral" className="space-y-6 mt-4">
+            {/* Resumo Rápido - Cards de Status */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Status: Campo */}
+              <div className="glass-card p-4 rounded-xl border-l-4 border-l-primary">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-lg bg-primary/20">
+                    <Package className="w-5 h-5 text-primary" />
+                  </div>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">No Campo</span>
+                </div>
+                <p className="text-3xl font-bold text-primary">{globalStats?.campo || 0}</p>
+                <p className="text-xs text-muted-foreground mt-1">fardos aguardando coleta</p>
+              </div>
+
+              {/* Status: Pátio */}
+              <div className="glass-card p-4 rounded-xl border-l-4 border-l-neon-orange">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-lg bg-neon-orange/20">
+                    <Truck className="w-5 h-5 text-neon-orange" />
+                  </div>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">No Pátio</span>
+                </div>
+                <p className="text-3xl font-bold text-neon-orange">{globalStats?.patio || 0}</p>
+                <p className="text-xs text-muted-foreground mt-1">fardos aguardando beneficiamento</p>
+              </div>
+
+              {/* Status: Beneficiado */}
+              <div className="glass-card p-4 rounded-xl border-l-4 border-l-neon-cyan">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-lg bg-neon-cyan/20">
+                    <CheckCircle className="w-5 h-5 text-neon-cyan" />
+                  </div>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">Beneficiado</span>
+                </div>
+                <p className="text-3xl font-bold text-neon-cyan">{globalStats?.beneficiado || 0}</p>
+                <p className="text-xs text-muted-foreground mt-1">fardos processados</p>
+              </div>
+
+              {/* Total */}
+              <div className="glass-card p-4 rounded-xl border-l-4 border-l-accent">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-lg bg-accent/20">
+                    <Layers className="w-5 h-5 text-accent" />
+                  </div>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">Total</span>
+                </div>
+                <p className="text-3xl font-bold">{globalStats?.total || 0}</p>
+                <p className="text-xs text-muted-foreground mt-1">fardos na safra {selectedSafra}</p>
+              </div>
+            </div>
+
+            {/* Progresso do Beneficiamento */}
+            <div className="glass-card p-5 rounded-xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-neon-cyan/20">
+                    <Factory className="w-5 h-5 text-neon-cyan" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Progresso do Beneficiamento</h3>
+                    <p className="text-xs text-muted-foreground">Taxa de processamento da safra</p>
+                  </div>
+                </div>
+                <span className="text-2xl font-bold text-neon-cyan">{taxaBeneficiamento.toFixed(1)}%</span>
+              </div>
+              <div className="h-4 rounded-full bg-surface overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-neon-cyan to-primary rounded-full transition-all duration-700"
+                  style={{ width: `${taxaBeneficiamento}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                <span>0%</span>
+                <span>Meta: 100%</span>
+              </div>
+            </div>
+
+            {/* Resumo por Área - Grid 3 colunas */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Produção */}
+              <div className="glass-card p-5 rounded-xl hover:shadow-glow-cyan/20 transition-shadow">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2.5 rounded-xl bg-neon-cyan/20">
+                    <Wheat className="w-5 h-5 text-neon-cyan" />
+                  </div>
+                  <h3 className="font-semibold">Produção</h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Talhões ativos</span>
+                    <span className="font-semibold">{talhoesAtivos}/{talhaoStats.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Produtividade</span>
+                    <span className="font-semibold text-neon-cyan">{avgArrobasPorHectare} @/ha</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Área total</span>
+                    <span className="font-semibold">{totalHectares.toFixed(0)} ha</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Transporte */}
+              <div className="glass-card p-5 rounded-xl hover:shadow-glow-orange/20 transition-shadow">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2.5 rounded-xl bg-neon-orange/20">
+                    <Truck className="w-5 h-5 text-neon-orange" />
+                  </div>
+                  <h3 className="font-semibold">Transporte</h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Carregamentos</span>
+                    <span className="font-semibold">{totaisCarregamentos.totalCarregamentos}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Volume total</span>
+                    <span className="font-semibold text-neon-orange">{(totaisCarregamentos.totalPesoKg / 1000).toFixed(1)} ton</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Média/carreg.</span>
+                    <span className="font-semibold">{(totaisCarregamentos.mediaPesoPorCarregamento / 1000).toFixed(1)} ton</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Beneficiamento */}
+              <div className="glass-card p-5 rounded-xl hover:shadow-lg transition-shadow">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2.5 rounded-xl bg-purple-500/20">
+                    <Factory className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <h3 className="font-semibold">Beneficiamento</h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Peso pluma</span>
+                    <span className="font-semibold text-purple-500">{(totaisLotes.totalPesoPluma / 1000).toFixed(1)} ton</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Lotes</span>
+                    <span className="font-semibold">{totaisLotes.totalLotes}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Rendimento</span>
+                    <span className="font-semibold">{rendimentoCalculado > 0 ? `${rendimentoCalculado.toFixed(1)}%` : '-'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Top 5 Talhões */}
+            <div className="glass-card rounded-xl overflow-hidden">
+              <div className="p-4 border-b border-border/30">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/20">
+                    <Award className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Top 5 Talhões</h3>
+                    <p className="text-xs text-muted-foreground">Maior produtividade (@/ha)</p>
+                  </div>
+                </div>
+              </div>
+              <div className="divide-y divide-border/30">
+                {topTalhoes.map((t, index) => (
+                  <div key={t.talhao} className="flex items-center justify-between p-4 hover:bg-surface/50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <span className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
+                        index === 0 ? "bg-yellow-500/20 text-yellow-500" :
+                        index === 1 ? "bg-gray-400/20 text-gray-400" :
+                        index === 2 ? "bg-amber-600/20 text-amber-600" :
+                        "bg-surface text-muted-foreground"
+                      )}>
+                        {index + 1}º
+                      </span>
+                      <div>
+                        <p className="font-semibold">{t.talhao}</p>
+                        <p className="text-xs text-muted-foreground">{t.hectares.toFixed(1)} ha • {t.total} fardos</p>
+                      </div>
+                    </div>
+                    <span className="text-lg font-bold text-primary">{t.arrobasPorHa.toFixed(0)} @/ha</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* ==================== TAB: PRODUÇÃO (antigo talhao) ==================== */}
+          <TabsContent value="producao" className="space-y-4 mt-4">
             {/* Search */}
             <div className="relative">
               <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
@@ -987,8 +1051,8 @@ export default function TalhaoStats() {
             )}
           </TabsContent>
 
-          {/* Tab: Carregamentos */}
-          <TabsContent value="carregamentos" className="space-y-4 mt-4">
+          {/* ==================== TAB: TRANSPORTE ==================== */}
+          <TabsContent value="transporte" className="space-y-4 mt-4">
             {/* KPIs de Carregamentos */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="glass-card p-4 rounded-xl">
@@ -1346,98 +1410,71 @@ export default function TalhaoStats() {
             </div>
           </TabsContent>
 
-          {/* Tab: Por Safra */}
-          <TabsContent value="safra" className="space-y-4 mt-4">
-            {safraStats.length === 0 ? (
-              <div className="glass-card rounded-xl p-12 text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-surface mb-4">
-                  <Layers className="h-8 w-8 text-muted-foreground" />
+          {/* ==================== TAB: ANÁLISES (consolidada) ==================== */}
+          <TabsContent value="analises" className="space-y-6 mt-4">
+            {/* ===== SEÇÃO: COMPARATIVO POR SAFRA ===== */}
+            <div className="glass-card rounded-2xl overflow-hidden">
+              <div className="relative p-4 border-b border-border/30">
+                <div className="absolute inset-0 bg-gradient-to-r from-neon-orange/10 via-neon-orange/5 to-transparent" />
+                <div className="relative flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-neon-orange/20">
+                    <Calendar className="w-5 h-5 text-neon-orange" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-semibold">Comparativo por Safra</h2>
+                    <p className="text-xs text-muted-foreground">Análise comparativa entre safras</p>
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Nenhuma safra registrada</h3>
-                <p className="text-sm text-muted-foreground">
-                  Crie fardos para visualizar estatísticas por safra
-                </p>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {safraStats.map((stat) => {
-                  const progressCampo = stat.total > 0 ? (stat.campo / stat.total) * 100 : 0;
-                  const progressPatio = stat.total > 0 ? (stat.patio / stat.total) * 100 : 0;
-                  const progressBeneficiado = stat.total > 0 ? (stat.beneficiado / stat.total) * 100 : 0;
-
-                  return (
-                    <div
-                      key={stat.safra}
-                      className="glass-card rounded-xl p-5 hover:shadow-glow-orange transition-all duration-300 border border-border/30 hover:border-neon-orange/40"
-                    >
-                      <div className="flex items-start justify-between gap-3 mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-xl bg-neon-orange/20 text-neon-orange flex items-center justify-center">
-                            <Calendar className="w-6 h-6" />
-                          </div>
-                          <h3 className="text-lg font-semibold">Safra {stat.safra}</h3>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-2xl font-bold text-neon-orange">{stat.total}</span>
-                          <p className="text-[10px] text-muted-foreground uppercase">fardos</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="p-3 rounded-lg bg-surface border border-border/30">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <div className="p-1.5 rounded-lg bg-primary/20">
-                                <Package className="w-3.5 h-3.5 text-primary" />
-                              </div>
-                              <span className="text-sm font-medium">Campo</span>
-                            </div>
-                            <span className="font-bold">{stat.campo}</span>
-                          </div>
-                          <div className="h-2 bg-surface-hover rounded-full overflow-hidden">
-                            <div className="h-full bg-primary rounded-full" style={{ width: `${progressCampo}%` }} />
-                          </div>
-                        </div>
-
-                        <div className="p-3 rounded-lg bg-surface border border-border/30">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <div className="p-1.5 rounded-lg bg-neon-orange/20">
-                                <Truck className="w-3.5 h-3.5 text-neon-orange" />
-                              </div>
-                              <span className="text-sm font-medium">Pátio</span>
-                            </div>
-                            <span className="font-bold">{stat.patio}</span>
-                          </div>
-                          <div className="h-2 bg-surface-hover rounded-full overflow-hidden">
-                            <div className="h-full bg-neon-orange rounded-full" style={{ width: `${progressPatio}%` }} />
-                          </div>
-                        </div>
-
-                        <div className="p-3 rounded-lg bg-surface border border-border/30">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <div className="p-1.5 rounded-lg bg-neon-cyan/20">
-                                <CheckCircle className="w-3.5 h-3.5 text-neon-cyan" />
-                              </div>
-                              <span className="text-sm font-medium">Beneficiado</span>
-                            </div>
-                            <span className="font-bold">{stat.beneficiado}</span>
-                          </div>
-                          <div className="h-2 bg-surface-hover rounded-full overflow-hidden">
-                            <div className="h-full bg-neon-cyan rounded-full" style={{ width: `${progressBeneficiado}%` }} />
-                          </div>
-                        </div>
-                      </div>
+              <div className="p-4">
+                {safraStats.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-surface mb-3">
+                      <Layers className="h-6 w-6 text-muted-foreground" />
                     </div>
-                  );
-                })}
+                    <p className="text-sm text-muted-foreground">Nenhuma safra registrada</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {safraStats.map((stat) => {
+                      const progressBeneficiado = stat.total > 0 ? (stat.beneficiado / stat.total) * 100 : 0;
+                      return (
+                        <div
+                          key={stat.safra}
+                          className="p-4 rounded-xl bg-surface border border-border/30 hover:border-neon-orange/40 transition-colors"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-5 h-5 text-neon-orange" />
+                              <span className="font-semibold">Safra {stat.safra}</span>
+                            </div>
+                            <span className="text-xl font-bold text-neon-orange">{stat.total}</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center text-xs mb-3">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                              <p className="font-bold text-primary">{stat.campo}</p>
+                              <p className="text-muted-foreground">Campo</p>
+                            </div>
+                            <div className="p-2 rounded-lg bg-neon-orange/10">
+                              <p className="font-bold text-neon-orange">{stat.patio}</p>
+                              <p className="text-muted-foreground">Pátio</p>
+                            </div>
+                            <div className="p-2 rounded-lg bg-neon-cyan/10">
+                              <p className="font-bold text-neon-cyan">{stat.beneficiado}</p>
+                              <p className="text-muted-foreground">Benef.</p>
+                            </div>
+                          </div>
+                          <div className="h-2 bg-surface-hover rounded-full overflow-hidden">
+                            <div className="h-full bg-neon-cyan rounded-full transition-all" style={{ width: `${progressBeneficiado}%` }} />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-1">{progressBeneficiado.toFixed(0)}% beneficiado</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </TabsContent>
-
-          {/* Tab: Gráficos - REFORMULADA */}
-          <TabsContent value="graficos" className="space-y-6 mt-4">
+            </div>
             {/* Filtros Compactos */}
             <div className="glass-card p-4 rounded-xl">
               <div className="flex flex-wrap items-center gap-4">

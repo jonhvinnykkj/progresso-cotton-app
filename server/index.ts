@@ -29,6 +29,8 @@ app.use(helmet({
         "'self'",
         "'unsafe-inline'",
         "'unsafe-eval'", // unsafe-eval needed for Vite in dev
+        "https://www.youtube.com", // YouTube player scripts
+        "https://s.ytimg.com", // YouTube player scripts
       ],
       imgSrc: [
         "'self'",
@@ -39,6 +41,10 @@ app.use(helmet({
       connectSrc: [
         "'self'",
         "https://cotton-manager-progresso.up.railway.app", // API in production
+        "https://www.youtube.com", // YouTube player API
+        "https://youtube.com",
+        "https://www.google.com", // YouTube tracking
+        "https://*.googlevideo.com", // YouTube video streams
       ],
       fontSrc: [
         "'self'",

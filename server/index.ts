@@ -41,10 +41,13 @@ app.use(helmet({
       connectSrc: [
         "'self'",
         "https://cotton-manager-progresso.up.railway.app", // API in production
-        "https://www.youtube.com", // YouTube player API
+        "https://*.youtube.com", // All YouTube domains
         "https://youtube.com",
-        "https://www.google.com", // YouTube tracking
+        "https://*.google.com", // Google APIs and tracking
         "https://*.googlevideo.com", // YouTube video streams
+        "https://*.ytimg.com", // YouTube images
+        "https://*.googleapis.com", // Google APIs
+        "https://*.gstatic.com", // Google static resources
       ],
       fontSrc: [
         "'self'",

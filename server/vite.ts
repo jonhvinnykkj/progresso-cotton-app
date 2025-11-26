@@ -76,7 +76,30 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Serve static files with proper MIME types and caching
+  app.use(express.static(distPath, {
+    maxAge: '1y', // Cache assets for 1 year (they have hashed filenames)
+    etag: true,
+    setHeaders: (res, filePath) => {
+      // Set correct MIME types explicitly
+      if (filePath.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      } else if (filePath.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css; charset=utf-8');
+      } else if (filePath.endsWith('.json')) {
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      } else if (filePath.endsWith('.svg')) {
+        res.setHeader('Content-Type', 'image/svg+xml');
+      } else if (filePath.endsWith('.png')) {
+        res.setHeader('Content-Type', 'image/png');
+      }
+      
+      // Don't cache HTML files
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    }
+  }));
 
   // fall through to index.html if the file doesn't exist
   // BUT skip API routes to let them be handled by registerRoutes
@@ -85,6 +108,12 @@ export function serveStatic(app: Express) {
     if (req.originalUrl.startsWith("/api")) {
       return next();
     }
+    
+    // For asset files that don't exist, return 404 instead of index.html
+    if (req.originalUrl.startsWith("/assets/")) {
+      return res.status(404).send('Asset not found');
+    }
+    
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

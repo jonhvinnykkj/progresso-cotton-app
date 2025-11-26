@@ -30,6 +30,7 @@ app.use(helmet({
         "'unsafe-inline'",
         "'unsafe-eval'", // unsafe-eval needed for Vite in dev
         "https://www.youtube.com", // YouTube player scripts
+        "https://www.youtube-nocookie.com", // YouTube privacy-enhanced mode
         "https://s.ytimg.com", // YouTube player scripts
       ],
       imgSrc: [
@@ -43,6 +44,7 @@ app.use(helmet({
         "https://cotton-manager-progresso.up.railway.app", // API in production
         "https://*.youtube.com", // All YouTube domains
         "https://youtube.com",
+        "https://*.youtube-nocookie.com", // YouTube privacy-enhanced mode
         "https://*.google.com", // Google APIs and tracking
         "https://*.googlevideo.com", // YouTube video streams
         "https://*.ytimg.com", // YouTube images

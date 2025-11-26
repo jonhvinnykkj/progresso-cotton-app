@@ -15,13 +15,11 @@ export function useOfflineBales() {
   // Monitor online/offline status
   useEffect(() => {
     const handleOnline = () => {
-      console.log("🌐 Voltou online - sincronizando dados...");
       setIsOnline(true);
       syncPendingUpdates();
     };
-    
+
     const handleOffline = () => {
-      console.log("📴 Ficou offline - usando cache local");
       setIsOnline(false);
       toast({
         variant: "warning",
@@ -44,16 +42,10 @@ export function useOfflineBales() {
     queryKey: ["/api/bales"],
     queryFn: async () => {
       if (!isOnline) {
-        // Load from offline storage
-        console.log("📴 Offline - carregando do cache");
-        const cachedBales = await offlineStorage.getAllBales();
-        console.log(`📴 Retornando ${cachedBales.length} fardos do cache`);
-        return cachedBales;
+        return await offlineStorage.getAllBales();
       }
 
       try {
-        // Try to fetch from API
-        console.log("🌐 Online - buscando dados da API...");
         const url = API_URL ? `${API_URL}/api/bales` : "/api/bales";
         const response = await fetch(url, {
           headers: getAuthHeaders(),
@@ -63,20 +55,10 @@ export function useOfflineBales() {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        console.log(`🌐 Recebidos ${data.length} fardos da API`);
-        
-        // Save to offline storage for future offline use
-        console.log(`💾 Salvando ${data.length} fardos no cache offline...`);
         await offlineStorage.saveBales(data);
-        console.log(`💾 ✅ Cache atualizado com sucesso`);
-        
         return data;
-      } catch (error) {
-        console.error("❌ Erro ao buscar dados online, usando cache:", error);
-        // Fallback to offline storage
-        const cachedBales = await offlineStorage.getAllBales();
-        console.log(`📴 Fallback: retornando ${cachedBales.length} fardos do cache`);
-        return cachedBales;
+      } catch {
+        return await offlineStorage.getAllBales();
       }
     },
     staleTime: isOnline ? 30000 : Infinity, // 30s when online, never stale offline
@@ -90,8 +72,6 @@ export function useOfflineBales() {
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateBaleStatus }) => {
       if (!isOnline) {
-        // Update offline storage
-        console.log(`📴 Offline - salvando atualização localmente: ${id} → ${data.status}`);
         await offlineStorage.updateBaleStatus(id, data.status);
         
         // Update local query cache immediately
@@ -130,7 +110,6 @@ export function useOfflineBales() {
       }
     },
     onError: (error: any) => {
-      console.error("❌ Erro ao atualizar status:", error);
       toast({
         variant: "destructive",
         title: "Erro ao atualizar",
@@ -146,17 +125,13 @@ export function useOfflineBales() {
     setSyncInProgress(true);
     try {
       const pending = await offlineStorage.getPendingUpdates();
-      
+
       if (pending.length === 0) {
-        console.log("✅ Nenhuma atualização pendente");
-        // Just refresh data from server
         queryClient.invalidateQueries({ queryKey: ["/api/bales"] });
         setSyncInProgress(false);
         return;
       }
 
-      console.log(`🔄 Sincronizando ${pending.length} atualizações pendentes...`);
-      
       let successCount = 0;
       let errorCount = 0;
 
@@ -166,13 +141,10 @@ export function useOfflineBales() {
           await apiRequest("PATCH", `/api/bales/${encodedId}/status`, {
             status: update.status as any,
           });
-          
           await offlineStorage.clearPendingUpdate(update.id);
           successCount++;
-          console.log(`✅ Sincronizado: ${update.id} → ${update.status}`);
-        } catch (error) {
+        } catch {
           errorCount++;
-          console.error(`❌ Erro ao sincronizar ${update.id}:`, error);
         }
       }
 
@@ -182,12 +154,9 @@ export function useOfflineBales() {
           title: "Sincronização concluída",
           description: `${successCount} atualizações sincronizadas${errorCount > 0 ? `, ${errorCount} falharam` : ""}.`,
         });
-        
-        // Refresh data from server
         queryClient.invalidateQueries({ queryKey: ["/api/bales"] });
       }
-    } catch (error) {
-      console.error("❌ Erro na sincronização:", error);
+    } catch {
       toast({
         variant: "destructive",
         title: "Erro na sincronização",

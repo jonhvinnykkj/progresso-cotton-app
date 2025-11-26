@@ -1,23 +1,30 @@
+const PROD_API_URL = 'https://progresso-cotton-app-production.up.railway.app';
+
 // API Configuration for different environments
 export const getApiUrl = (): string => {
+  // Allow override via env for testing: set VITE_API_URL to '', http://localhost:5000, etc.
+  const envApiUrl = import.meta.env?.VITE_API_URL?.trim();
+  if (envApiUrl !== undefined && envApiUrl !== null && envApiUrl !== '') {
+    return envApiUrl;
+  }
+
   // Check if running in Capacitor (mobile app)
   // @ts-ignore - Capacitor is added globally by the plugin
   const isNative = typeof window !== 'undefined' && window.Capacitor !== undefined;
-  
-  // Check if running on Railway (production web)
-  const isRailwayWeb = typeof window !== 'undefined' && 
-    window.location.hostname === 'progresso-cotton-app-production.up.railway.app';
 
-  // SEMPRE use Railway em produção (mobile ou web hospedado)
-  if (isNative || isRailwayWeb) {
-    return 'https://progresso-cotton-app-production.up.railway.app';
+  // When developing locally in the browser, use relative paths so Vite's proxy can avoid CORS
+  const isLocalhost = typeof window !== 'undefined' && (
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1'
+  );
+
+  if (!isNative && isLocalhost) {
+    return '';
   }
 
-  // Para localhost: usa Railway também (para não precisar de backend local)
-  // Se quiser testar com backend local, mude para: return '';
-  return 'https://progresso-cotton-app-production.up.railway.app';
+  // Default to production API (mobile builds and hosted web)
+  return PROD_API_URL;
 };
 
 export const API_URL = getApiUrl();
-
 

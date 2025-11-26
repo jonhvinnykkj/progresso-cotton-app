@@ -1,51 +1,34 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { API_URL } from '@/lib/api-config';
 
 export function useRealtime(isAuthenticated: boolean) {
   const queryClient = useQueryClient();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
-    // Don't connect if not authenticated
-    if (!isAuthenticated) {
-      console.log('⏸️ SSE disabled - user not authenticated');
-      return;
-    }
+    if (!isAuthenticated) return;
 
-    console.log('🚀 Initializing SSE connection...');
-
-    // Connect to Server-Sent Events
     const url = API_URL ? `${API_URL}/api/events` : '/api/events';
     const eventSource = new EventSource(url);
 
-    eventSource.onopen = () => {
-      console.log('✅ SSE connection opened');
-    };
-
-    eventSource.addEventListener('connected', (event) => {
-      console.log('🔌 Connected to real-time updates', event);
+    eventSource.addEventListener('bale-update', () => {
+      // Debounce para evitar múltiplas invalidações simultâneas
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+      debounceRef.current = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/bales'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/bales/stats'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/bales/stats-by-talhao'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/bales/stats-by-safra'] });
+      }, 300);
     });
 
-    eventSource.addEventListener('bale-update', (event) => {
-      console.log('📦 Bale update received!', event);
-      
-      // Invalidate all bale-related queries to trigger refetch
-      queryClient.invalidateQueries({ queryKey: ['/api/bales'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/bales/stats'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/bales/stats-by-talhao'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/bales/stats-by-safra'] });
-      
-      console.log('✨ Queries invalidated, refetching...');
-    });
-
-    eventSource.onerror = (error) => {
-      console.error('❌ SSE connection error:', error);
-      console.log('🔄 Attempting to reconnect...');
-    };
-
-    // Cleanup on unmount
     return () => {
-      console.log('🔌 Closing SSE connection');
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
       eventSource.close();
     };
   }, [queryClient, isAuthenticated]);

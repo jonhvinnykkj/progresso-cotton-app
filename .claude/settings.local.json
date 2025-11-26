@@ -3,7 +3,17 @@
     "allow": [
       "Bash(npm install:*)",
       "Bash(npm run build:*)",
-      "Bash(npx cap sync android)"
+      "Bash(npx cap sync android)",
+      "Bash(xargs basename:*)",
+      "Bash(npm run db:push:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(cat:*)",
+      "Bash(node:*)",
+      "Bash(npx tsx:*)",
+      "Bash(curl:*)",
+      "Bash(npx drizzle-kit:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

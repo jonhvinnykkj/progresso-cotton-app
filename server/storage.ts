@@ -10,10 +10,22 @@ import {
   type TalhaoCounter,
   type Notification,
   type CreateNotification,
+  type ProducaoTalhao,
+  type UpsertProducaoTalhao,
+  type Carregamento,
+  type CreateCarregamento,
+  type RendimentoTalhao,
+  type UpsertRendimentoTalhao,
+  type Lote,
+  type CreateLote,
+  type UpdateLote,
+  type Fardinho,
+  type CreateFardinho,
+  type UpdateFardinho,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
-import { users as usersTable, bales as balesTable, settings as settingsTable, talhaoCounters as talhaoCountersTable, notifications as notificationsTable } from "@shared/schema";
+import { users as usersTable, bales as balesTable, settings as settingsTable, talhaoCounters as talhaoCountersTable, notifications as notificationsTable, producaoTalhao as producaoTalhaoTable, carregamentos as carregamentosTable, rendimentoTalhao as rendimentoTalhaoTable, lotes as lotesTable, fardinhos as fardinhosTable } from "@shared/schema";
 import { eq, sql, inArray } from "drizzle-orm";
 import { hashPassword } from "./auth";
 
@@ -68,6 +80,39 @@ export interface IStorage {
   getActiveNotifications(): Promise<Notification[]>;
   createNotification(data: CreateNotification & { createdBy: string }): Promise<Notification>;
   deleteNotification(id: string): Promise<void>;
+
+  // Produção por talhão methods (DEPRECATED)
+  getProducaoByTalhao(safra: string, talhao: string): Promise<ProducaoTalhao | undefined>;
+  getAllProducaoBySafra(safra: string): Promise<ProducaoTalhao[]>;
+  upsertProducaoTalhao(data: UpsertProducaoTalhao, userId: string): Promise<ProducaoTalhao>;
+
+  // Carregamentos methods
+  getAllCarregamentosBySafra(safra: string): Promise<Carregamento[]>;
+  getCarregamentosByTalhao(safra: string, talhao: string): Promise<Carregamento[]>;
+  createCarregamento(data: CreateCarregamento, userId: string): Promise<Carregamento>;
+  deleteCarregamento(id: string): Promise<void>;
+  getPesoBrutoByTalhao(safra: string): Promise<{ talhao: string; pesoBrutoTotal: number; quantidadeCarregamentos: number }[]>;
+
+  // Rendimento Talhão methods
+  getRendimentoByTalhao(safra: string, talhao: string): Promise<RendimentoTalhao | undefined>;
+  getAllRendimentoBySafra(safra: string): Promise<RendimentoTalhao[]>;
+  upsertRendimentoTalhao(data: UpsertRendimentoTalhao, userId: string): Promise<RendimentoTalhao>;
+
+  // Lotes methods (beneficiamento)
+  getAllLotesBySafra(safra: string): Promise<Lote[]>;
+  getLoteById(id: string): Promise<Lote | undefined>;
+  createLote(data: CreateLote, userId: string): Promise<Lote>;
+  updateLote(id: string, data: UpdateLote, userId: string): Promise<Lote>;
+  deleteLote(id: string): Promise<void>;
+  getNextLoteNumber(safra: string): Promise<number>;
+  getTotalPesoBrutoSafra(safra: string): Promise<number>;
+
+  // Fardinhos methods (separado dos lotes)
+  getAllFardinhosBySafra(safra: string): Promise<Fardinho[]>;
+  createFardinho(data: CreateFardinho, userId: string): Promise<Fardinho>;
+  updateFardinho(id: string, data: UpdateFardinho): Promise<Fardinho>;
+  deleteFardinho(id: string): Promise<void>;
+  getTotalFardinhosSafra(safra: string): Promise<number>;
 }
 
 export class PostgresStorage implements IStorage {
@@ -629,6 +674,449 @@ export class PostgresStorage implements IStorage {
     } catch (error) {
       console.error('❌ Error deleting notification:', error);
       throw new Error('Erro ao deletar notificação');
+    }
+  }
+
+  // Produção por talhão methods
+  async getProducaoByTalhao(safra: string, talhao: string): Promise<ProducaoTalhao | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(producaoTalhaoTable)
+        .where(sql`${producaoTalhaoTable.safra} = ${safra} AND ${producaoTalhaoTable.talhao} = ${talhao}`)
+        .limit(1);
+      return result[0];
+    } catch (error) {
+      console.warn('⚠️ producao_talhao table may not exist:', error);
+      return undefined;
+    }
+  }
+
+  async getAllProducaoBySafra(safra: string): Promise<ProducaoTalhao[]> {
+    try {
+      const result = await db
+        .select()
+        .from(producaoTalhaoTable)
+        .where(eq(producaoTalhaoTable.safra, safra));
+      return result;
+    } catch (error) {
+      console.warn('⚠️ producao_talhao table may not exist:', error);
+      return [];
+    }
+  }
+
+  async upsertProducaoTalhao(data: UpsertProducaoTalhao, userId: string): Promise<ProducaoTalhao> {
+    const now = new Date();
+
+    // Check if exists
+    const existing = await this.getProducaoByTalhao(data.safra, data.talhao);
+
+    if (existing) {
+      // Update
+      const result = await db
+        .update(producaoTalhaoTable)
+        .set({
+          pesoBrutoTotal: data.pesoBrutoTotal,
+          pesoPlumaTotal: data.pesoPlumaTotal,
+          updatedAt: now,
+          updatedBy: userId,
+        })
+        .where(sql`${producaoTalhaoTable.safra} = ${data.safra} AND ${producaoTalhaoTable.talhao} = ${data.talhao}`)
+        .returning();
+      return result[0];
+    }
+
+    // Insert new
+    const result = await db
+      .insert(producaoTalhaoTable)
+      .values({
+        safra: data.safra,
+        talhao: data.talhao,
+        pesoBrutoTotal: data.pesoBrutoTotal,
+        pesoPlumaTotal: data.pesoPlumaTotal,
+        createdAt: now,
+        updatedAt: now,
+        updatedBy: userId,
+      })
+      .returning();
+
+    return result[0];
+  }
+
+  // Carregamentos methods
+  async getAllCarregamentosBySafra(safra: string): Promise<Carregamento[]> {
+    try {
+      const result = await db
+        .select()
+        .from(carregamentosTable)
+        .where(eq(carregamentosTable.safra, safra))
+        .orderBy(sql`${carregamentosTable.dataCarregamento} DESC`);
+      return result;
+    } catch (error) {
+      console.warn('⚠️ carregamentos table may not exist:', error);
+      return [];
+    }
+  }
+
+  async getCarregamentosByTalhao(safra: string, talhao: string): Promise<Carregamento[]> {
+    try {
+      const result = await db
+        .select()
+        .from(carregamentosTable)
+        .where(sql`${carregamentosTable.safra} = ${safra} AND ${carregamentosTable.talhao} = ${talhao}`)
+        .orderBy(sql`${carregamentosTable.dataCarregamento} DESC`);
+      return result;
+    } catch (error) {
+      console.warn('⚠️ carregamentos table may not exist:', error);
+      return [];
+    }
+  }
+
+  async createCarregamento(data: CreateCarregamento, userId: string): Promise<Carregamento> {
+    try {
+      const now = new Date();
+      const dataCarregamento = data.dataCarregamento ? new Date(data.dataCarregamento) : now;
+
+      console.log('Creating carregamento:', { data, userId });
+
+      const result = await db
+        .insert(carregamentosTable)
+        .values({
+          safra: data.safra,
+          talhao: data.talhao,
+          pesoKg: data.pesoKg,
+          dataCarregamento,
+          observacao: data.observacao || null,
+          createdAt: now,
+          createdBy: userId,
+        })
+        .returning();
+
+      console.log('Carregamento created:', result[0]);
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error creating carregamento:', error);
+      throw error;
+    }
+  }
+
+  async deleteCarregamento(id: string): Promise<void> {
+    try {
+      await db.delete(carregamentosTable).where(eq(carregamentosTable.id, id));
+    } catch (error) {
+      console.error('❌ Error deleting carregamento:', error);
+      throw new Error('Erro ao deletar carregamento');
+    }
+  }
+
+  async getPesoBrutoByTalhao(safra: string): Promise<{ talhao: string; pesoBrutoTotal: number; quantidadeCarregamentos: number }[]> {
+    try {
+      const result = await db
+        .select({
+          talhao: carregamentosTable.talhao,
+          pesoBrutoTotal: sql<number>`COALESCE(SUM(CAST(${carregamentosTable.pesoKg} AS DECIMAL)), 0)`,
+          quantidadeCarregamentos: sql<number>`COUNT(*)`,
+        })
+        .from(carregamentosTable)
+        .where(eq(carregamentosTable.safra, safra))
+        .groupBy(carregamentosTable.talhao);
+
+      return result.map(r => ({
+        talhao: r.talhao,
+        pesoBrutoTotal: Number(r.pesoBrutoTotal) || 0,
+        quantidadeCarregamentos: Number(r.quantidadeCarregamentos) || 0,
+      }));
+    } catch (error) {
+      console.warn('⚠️ Error fetching peso bruto by talhao:', error);
+      return [];
+    }
+  }
+
+  // Rendimento Talhão methods
+  async getRendimentoByTalhao(safra: string, talhao: string): Promise<RendimentoTalhao | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(rendimentoTalhaoTable)
+        .where(sql`${rendimentoTalhaoTable.safra} = ${safra} AND ${rendimentoTalhaoTable.talhao} = ${talhao}`)
+        .limit(1);
+      return result[0];
+    } catch (error) {
+      console.warn('⚠️ rendimento_talhao table may not exist:', error);
+      return undefined;
+    }
+  }
+
+  async getAllRendimentoBySafra(safra: string): Promise<RendimentoTalhao[]> {
+    try {
+      const result = await db
+        .select()
+        .from(rendimentoTalhaoTable)
+        .where(eq(rendimentoTalhaoTable.safra, safra));
+      return result;
+    } catch (error) {
+      console.warn('⚠️ rendimento_talhao table may not exist:', error);
+      return [];
+    }
+  }
+
+  async upsertRendimentoTalhao(data: UpsertRendimentoTalhao, userId: string): Promise<RendimentoTalhao> {
+    const now = new Date();
+
+    // Check if exists
+    const existing = await this.getRendimentoByTalhao(data.safra, data.talhao);
+
+    if (existing) {
+      // Update
+      const result = await db
+        .update(rendimentoTalhaoTable)
+        .set({
+          rendimentoPluma: data.rendimentoPluma,
+          updatedAt: now,
+          updatedBy: userId,
+        })
+        .where(sql`${rendimentoTalhaoTable.safra} = ${data.safra} AND ${rendimentoTalhaoTable.talhao} = ${data.talhao}`)
+        .returning();
+      return result[0];
+    }
+
+    // Insert new
+    const result = await db
+      .insert(rendimentoTalhaoTable)
+      .values({
+        safra: data.safra,
+        talhao: data.talhao,
+        rendimentoPluma: data.rendimentoPluma,
+        createdAt: now,
+        updatedAt: now,
+        updatedBy: userId,
+      })
+      .returning();
+
+    return result[0];
+  }
+
+  // Lotes methods (beneficiamento)
+  async getAllLotesBySafra(safra: string): Promise<Lote[]> {
+    try {
+      const result = await db
+        .select()
+        .from(lotesTable)
+        .where(eq(lotesTable.safra, safra))
+        .orderBy(sql`${lotesTable.numeroLote} DESC`);
+      return result;
+    } catch (error) {
+      console.warn('⚠️ lotes table may not exist:', error);
+      return [];
+    }
+  }
+
+  async getLoteById(id: string): Promise<Lote | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(lotesTable)
+        .where(eq(lotesTable.id, id))
+        .limit(1);
+      return result[0];
+    } catch (error) {
+      console.warn('⚠️ lotes table may not exist:', error);
+      return undefined;
+    }
+  }
+
+  async getNextLoteNumber(safra: string): Promise<number> {
+    try {
+      const result = await db
+        .select({
+          maxNumero: sql<number>`COALESCE(MAX(${lotesTable.numeroLote}), 0)`,
+        })
+        .from(lotesTable)
+        .where(eq(lotesTable.safra, safra));
+      return (Number(result[0]?.maxNumero) || 0) + 1;
+    } catch (error) {
+      console.warn('⚠️ lotes table may not exist:', error);
+      return 1;
+    }
+  }
+
+  async getTotalPesoBrutoSafra(safra: string): Promise<number> {
+    try {
+      const result = await db
+        .select({
+          total: sql<number>`COALESCE(SUM(CAST(${carregamentosTable.pesoKg} AS DECIMAL)), 0)`,
+        })
+        .from(carregamentosTable)
+        .where(eq(carregamentosTable.safra, safra));
+
+      return Number(result[0]?.total) || 0;
+    } catch (error) {
+      console.warn('⚠️ Error fetching total peso bruto:', error);
+      return 0;
+    }
+  }
+
+  async createLote(data: CreateLote, userId: string): Promise<Lote> {
+    try {
+      const now = new Date();
+      const dataProcessamento = data.dataProcessamento ? new Date(data.dataProcessamento) : now;
+      const numeroLote = await this.getNextLoteNumber(data.safra);
+
+      console.log('Creating lote:', { data, userId, numeroLote });
+
+      const result = await db
+        .insert(lotesTable)
+        .values({
+          safra: data.safra,
+          numeroLote,
+          pesoPluma: data.pesoPluma,
+          qtdFardinhos: data.qtdFardinhos,
+          dataProcessamento,
+          observacao: data.observacao || null,
+          createdAt: now,
+          createdBy: userId,
+          updatedAt: now,
+        })
+        .returning();
+
+      console.log('Lote created:', result[0]);
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error creating lote:', error);
+      throw error;
+    }
+  }
+
+  async updateLote(id: string, data: UpdateLote, userId: string): Promise<Lote> {
+    try {
+      const now = new Date();
+      const updates: any = {
+        updatedAt: now,
+        updatedBy: userId,
+      };
+
+      if (data.pesoPluma !== undefined) {
+        updates.pesoPluma = data.pesoPluma;
+      }
+      if (data.qtdFardinhos !== undefined) {
+        updates.qtdFardinhos = data.qtdFardinhos;
+      }
+      if (data.dataProcessamento !== undefined) {
+        updates.dataProcessamento = new Date(data.dataProcessamento);
+      }
+      if (data.observacao !== undefined) {
+        updates.observacao = data.observacao;
+      }
+
+      const result = await db
+        .update(lotesTable)
+        .set(updates)
+        .where(eq(lotesTable.id, id))
+        .returning();
+
+      if (!result[0]) {
+        throw new Error('Lote não encontrado');
+      }
+
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error updating lote:', error);
+      throw error;
+    }
+  }
+
+  async deleteLote(id: string): Promise<void> {
+    try {
+      await db.delete(lotesTable).where(eq(lotesTable.id, id));
+    } catch (error) {
+      console.error('❌ Error deleting lote:', error);
+      throw new Error('Erro ao deletar lote');
+    }
+  }
+
+  // Fardinhos methods (separado dos lotes)
+  async getAllFardinhosBySafra(safra: string): Promise<Fardinho[]> {
+    try {
+      const result = await db
+        .select()
+        .from(fardinhosTable)
+        .where(eq(fardinhosTable.safra, safra))
+        .orderBy(sql`${fardinhosTable.dataRegistro} DESC`);
+      return result;
+    } catch (error) {
+      console.warn('⚠️ fardinhos table may not exist:', error);
+      return [];
+    }
+  }
+
+  async createFardinho(data: CreateFardinho, userId: string): Promise<Fardinho> {
+    try {
+      const now = new Date();
+      const dataRegistro = data.dataRegistro ? new Date(data.dataRegistro) : now;
+
+      console.log('Creating fardinho:', { data, userId });
+
+      const result = await db
+        .insert(fardinhosTable)
+        .values({
+          safra: data.safra,
+          quantidade: data.quantidade,
+          dataRegistro,
+          observacao: data.observacao || null,
+          createdAt: now,
+          createdBy: userId,
+        })
+        .returning();
+
+      console.log('Fardinho created:', result[0]);
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error creating fardinho:', error);
+      throw error;
+    }
+  }
+
+  async updateFardinho(id: string, data: UpdateFardinho): Promise<Fardinho> {
+    try {
+      const updateData: Record<string, unknown> = {};
+      if (data.quantidade !== undefined) updateData.quantidade = data.quantidade;
+      if (data.observacao !== undefined) updateData.observacao = data.observacao;
+
+      const result = await db
+        .update(fardinhosTable)
+        .set(updateData)
+        .where(eq(fardinhosTable.id, id))
+        .returning();
+
+      if (!result[0]) throw new Error('Fardinho não encontrado');
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error updating fardinho:', error);
+      throw error;
+    }
+  }
+
+  async deleteFardinho(id: string): Promise<void> {
+    try {
+      await db.delete(fardinhosTable).where(eq(fardinhosTable.id, id));
+    } catch (error) {
+      console.error('❌ Error deleting fardinho:', error);
+      throw new Error('Erro ao deletar fardinho');
+    }
+  }
+
+  async getTotalFardinhosSafra(safra: string): Promise<number> {
+    try {
+      const result = await db
+        .select({
+          total: sql<number>`COALESCE(SUM(${fardinhosTable.quantidade}), 0)`,
+        })
+        .from(fardinhosTable)
+        .where(eq(fardinhosTable.safra, safra));
+      return Number(result[0]?.total) || 0;
+    } catch (error) {
+      console.warn('⚠️ fardinhos table may not exist:', error);
+      return 0;
     }
   }
 }

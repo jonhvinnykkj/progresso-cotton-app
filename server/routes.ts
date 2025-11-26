@@ -8,6 +8,13 @@ import {
   updateBaleStatusSchema,
   updateDefaultSafraSchema,
   createNotificationSchema,
+  upsertProducaoTalhaoSchema,
+  createCarregamentoSchema,
+  upsertRendimentoTalhaoSchema,
+  createLoteSchema,
+  updateLoteSchema,
+  createFardinhoSchema,
+  updateFardinhoSchema,
 } from "@shared/schema";
 import { addClient, notifyBaleChange, notifyVersionUpdate } from "./events";
 import {
@@ -606,16 +613,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/excel", authenticateToken, async (req, res) => {
     try {
       const bales = await storage.getAllBales();
-      
+
       const filters = {
         startDate: req.query.startDate as string | undefined,
         endDate: req.query.endDate as string | undefined,
         status: req.query.status ? (req.query.status as string).split(',') : undefined,
         talhao: req.query.talhao ? (req.query.talhao as string).split(',') : undefined,
       };
-      
+
       const excelBuffer = generateExcel(bales, filters);
-      
+
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", `attachment; filename=relatorio-${Date.now()}.xlsx`);
       res.send(excelBuffer);
@@ -624,6 +631,342 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         error: "Erro ao gerar relatório Excel",
       });
+    }
+  });
+
+  // Produção por talhão endpoints (dados reais da algodoeira)
+  app.get("/api/producao/:safra", authenticateToken, async (req, res) => {
+    try {
+      const { safra } = req.params;
+      const producao = await storage.getAllProducaoBySafra(safra);
+      res.json(producao);
+    } catch (error) {
+      console.error("Error fetching producao:", error);
+      res.status(500).json({
+        error: "Erro ao buscar dados de produção",
+      });
+    }
+  });
+
+  app.get("/api/producao/:safra/:talhao", authenticateToken, async (req, res) => {
+    try {
+      const { safra, talhao } = req.params;
+      const producao = await storage.getProducaoByTalhao(safra, talhao);
+
+      if (!producao) {
+        return res.json(null);
+      }
+
+      res.json(producao);
+    } catch (error) {
+      console.error("Error fetching producao by talhao:", error);
+      res.status(500).json({
+        error: "Erro ao buscar dados de produção do talhão",
+      });
+    }
+  });
+
+  app.put("/api/producao", authenticateToken, authorizeRoles("algodoeira", "admin", "superadmin"), async (req, res) => {
+    try {
+      const data = upsertProducaoTalhaoSchema.parse(req.body);
+      const userId = req.user?.userId || "unknown-user";
+
+      const producao = await storage.upsertProducaoTalhao(data, userId);
+
+      res.json(producao);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error saving producao:", error);
+      res.status(500).json({
+        error: "Erro ao salvar dados de produção",
+      });
+    }
+  });
+
+  // ========== CARREGAMENTOS ENDPOINTS ==========
+
+  // Get all carregamentos by safra
+  app.get("/api/carregamentos/:safra", authenticateToken, async (req, res) => {
+    try {
+      const { safra } = req.params;
+      const carregamentos = await storage.getAllCarregamentosBySafra(safra);
+      res.json(carregamentos);
+    } catch (error) {
+      console.error("Error fetching carregamentos:", error);
+      res.status(500).json({ error: "Erro ao buscar carregamentos" });
+    }
+  });
+
+  // Get carregamentos by talhao
+  app.get("/api/carregamentos/:safra/:talhao", authenticateToken, async (req, res) => {
+    try {
+      const { safra, talhao } = req.params;
+      const carregamentos = await storage.getCarregamentosByTalhao(safra, talhao);
+      res.json(carregamentos);
+    } catch (error) {
+      console.error("Error fetching carregamentos by talhao:", error);
+      res.status(500).json({ error: "Erro ao buscar carregamentos do talhão" });
+    }
+  });
+
+  // Get peso bruto total by talhao (aggregated)
+  app.get("/api/carregamentos-totais/:safra", authenticateToken, async (req, res) => {
+    try {
+      const { safra } = req.params;
+      const totais = await storage.getPesoBrutoByTalhao(safra);
+      res.json(totais);
+    } catch (error) {
+      console.error("Error fetching peso bruto totals:", error);
+      res.status(500).json({ error: "Erro ao buscar totais de peso bruto" });
+    }
+  });
+
+  // Create carregamento
+  app.post("/api/carregamentos", authenticateToken, authorizeRoles("algodoeira", "admin", "superadmin"), async (req, res) => {
+    try {
+      const data = createCarregamentoSchema.parse(req.body);
+      const userId = req.user?.userId || "unknown-user";
+      const carregamento = await storage.createCarregamento(data, userId);
+      res.status(201).json(carregamento);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error creating carregamento:", error);
+      res.status(500).json({ error: "Erro ao criar carregamento" });
+    }
+  });
+
+  // Delete carregamento
+  app.delete("/api/carregamentos/:id", authenticateToken, authorizeRoles("algodoeira", "admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteCarregamento(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting carregamento:", error);
+      res.status(500).json({ error: "Erro ao deletar carregamento" });
+    }
+  });
+
+  // ========== RENDIMENTO ENDPOINTS ==========
+
+  // Get all rendimento by safra
+  app.get("/api/rendimento/:safra", authenticateToken, async (req, res) => {
+    try {
+      const { safra } = req.params;
+      const rendimentos = await storage.getAllRendimentoBySafra(safra);
+      res.json(rendimentos);
+    } catch (error) {
+      console.error("Error fetching rendimento:", error);
+      res.status(500).json({ error: "Erro ao buscar rendimentos" });
+    }
+  });
+
+  // Get rendimento by talhao
+  app.get("/api/rendimento/:safra/:talhao", authenticateToken, async (req, res) => {
+    try {
+      const { safra, talhao } = req.params;
+      const rendimento = await storage.getRendimentoByTalhao(safra, talhao);
+      res.json(rendimento || null);
+    } catch (error) {
+      console.error("Error fetching rendimento by talhao:", error);
+      res.status(500).json({ error: "Erro ao buscar rendimento do talhão" });
+    }
+  });
+
+  // Upsert rendimento
+  app.put("/api/rendimento", authenticateToken, authorizeRoles("algodoeira", "admin", "superadmin"), async (req, res) => {
+    try {
+      const data = upsertRendimentoTalhaoSchema.parse(req.body);
+      const userId = req.user?.userId || "unknown-user";
+      const rendimento = await storage.upsertRendimentoTalhao(data, userId);
+      res.json(rendimento);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error saving rendimento:", error);
+      res.status(500).json({ error: "Erro ao salvar rendimento" });
+    }
+  });
+
+  // ========== LOTES ENDPOINTS (BENEFICIAMENTO) ==========
+
+  // Get all lotes by safra
+  app.get("/api/lotes/:safra", authenticateToken, async (req, res) => {
+    try {
+      const { safra } = req.params;
+      const lotes = await storage.getAllLotesBySafra(safra);
+      res.json(lotes);
+    } catch (error) {
+      console.error("Error fetching lotes:", error);
+      res.status(500).json({ error: "Erro ao buscar lotes" });
+    }
+  });
+
+  // Get total peso bruto da safra (soma de todos os carregamentos)
+  app.get("/api/lotes-peso-bruto/:safra", authenticateToken, async (req, res) => {
+    try {
+      const { safra } = req.params;
+      const pesoBrutoTotal = await storage.getTotalPesoBrutoSafra(safra);
+      res.json({ pesoBrutoTotal });
+    } catch (error) {
+      console.error("Error fetching peso bruto total:", error);
+      res.status(500).json({ error: "Erro ao buscar peso bruto total" });
+    }
+  });
+
+  // Get lote by ID
+  app.get("/api/lote/:id", authenticateToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const lote = await storage.getLoteById(id);
+      if (!lote) {
+        return res.status(404).json({ error: "Lote não encontrado" });
+      }
+      res.json(lote);
+    } catch (error) {
+      console.error("Error fetching lote:", error);
+      res.status(500).json({ error: "Erro ao buscar lote" });
+    }
+  });
+
+  // Create lote
+  app.post("/api/lotes", authenticateToken, authorizeRoles("algodoeira", "admin", "superadmin"), async (req, res) => {
+    try {
+      const data = createLoteSchema.parse(req.body);
+      const userId = req.user?.userId || "unknown-user";
+      const lote = await storage.createLote(data, userId);
+      res.status(201).json(lote);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error creating lote:", error);
+      res.status(500).json({ error: "Erro ao criar lote" });
+    }
+  });
+
+  // Update lote
+  app.patch("/api/lotes/:id", authenticateToken, authorizeRoles("algodoeira", "admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const data = updateLoteSchema.parse(req.body);
+      const userId = req.user?.userId || "unknown-user";
+      const lote = await storage.updateLote(id, data, userId);
+      res.json(lote);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error updating lote:", error);
+      res.status(500).json({ error: "Erro ao atualizar lote" });
+    }
+  });
+
+  // Delete lote
+  app.delete("/api/lotes/:id", authenticateToken, authorizeRoles("algodoeira", "admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteLote(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting lote:", error);
+      res.status(500).json({ error: "Erro ao deletar lote" });
+    }
+  });
+
+  // ========== FARDINHOS ENDPOINTS (SEPARADO DOS LOTES) ==========
+
+  // Get all fardinhos by safra
+  app.get("/api/fardinhos/:safra", authenticateToken, async (req, res) => {
+    try {
+      const { safra } = req.params;
+      const fardinhos = await storage.getAllFardinhosBySafra(safra);
+      res.json(fardinhos);
+    } catch (error) {
+      console.error("Error fetching fardinhos:", error);
+      res.status(500).json({ error: "Erro ao buscar fardinhos" });
+    }
+  });
+
+  // Get total fardinhos da safra
+  app.get("/api/fardinhos-total/:safra", authenticateToken, async (req, res) => {
+    try {
+      const { safra } = req.params;
+      const totalFardinhos = await storage.getTotalFardinhosSafra(safra);
+      res.json({ totalFardinhos });
+    } catch (error) {
+      console.error("Error fetching total fardinhos:", error);
+      res.status(500).json({ error: "Erro ao buscar total de fardinhos" });
+    }
+  });
+
+  // Create fardinho
+  app.post("/api/fardinhos", authenticateToken, authorizeRoles("algodoeira", "admin", "superadmin"), async (req, res) => {
+    try {
+      const data = createFardinhoSchema.parse(req.body);
+      const userId = req.user?.userId || "unknown-user";
+      const fardinho = await storage.createFardinho(data, userId);
+      res.status(201).json(fardinho);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error creating fardinho:", error);
+      res.status(500).json({ error: "Erro ao criar fardinho" });
+    }
+  });
+
+  // Update fardinho
+  app.patch("/api/fardinhos/:id", authenticateToken, authorizeRoles("algodoeira", "admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const data = updateFardinhoSchema.parse(req.body);
+      const fardinho = await storage.updateFardinho(id, data);
+      res.json(fardinho);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error updating fardinho:", error);
+      res.status(500).json({ error: "Erro ao atualizar fardinho" });
+    }
+  });
+
+  // Delete fardinho
+  app.delete("/api/fardinhos/:id", authenticateToken, authorizeRoles("algodoeira", "admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteFardinho(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting fardinho:", error);
+      res.status(500).json({ error: "Erro ao deletar fardinho" });
     }
   });
 

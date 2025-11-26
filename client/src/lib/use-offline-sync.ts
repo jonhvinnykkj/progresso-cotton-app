@@ -25,8 +25,7 @@ async function checkRealOnlineStatus(): Promise<boolean> {
 
     clearTimeout(timeoutId);
     return response.ok;
-  } catch (error) {
-    console.log('⚠️ Sem conexão real com o servidor');
+  } catch {
     return false;
   }
 }
@@ -42,19 +41,14 @@ export function useOfflineSync() {
 
   useEffect(() => {
     const handleOnline = async () => {
-      console.log('🌐 Evento online detectado, verificando conexão real...');
       const reallyOnline = await checkRealOnlineStatus();
       setIsOnline(reallyOnline);
       if (reallyOnline) {
-        console.log('✅ Conexão confirmada com servidor');
         syncAllPendingOperations();
-      } else {
-        console.log('❌ Sem conexão real com servidor');
       }
     };
 
     const handleOffline = () => {
-      console.log('📴 Ficou offline');
       setIsOnline(false);
     };
 
@@ -81,7 +75,6 @@ export function useOfflineSync() {
     // Verificar conexão real antes de sincronizar
     const reallyOnline = await checkRealOnlineStatus();
     if (!reallyOnline) {
-      console.log('⚠️ Sem conexão real, cancelando sincronização');
       setIsOnline(false);
       return;
     }
@@ -99,13 +92,11 @@ export function useOfflineSync() {
       const pending = operations.filter((op) => !op.status || op.status === 'pending');
 
       if (pending.length === 0) {
-        console.log('✅ Nenhuma operação pendente');
         syncInProgressRef.current = false;
         setIsSyncing(false);
         return;
       }
 
-      console.log(`🔄 Sincronizando ${pending.length} operações pendentes...`);
       setTotalOps(pending.length);
 
       let successCount = 0;
@@ -135,9 +126,7 @@ export function useOfflineSync() {
           await offlineStorage.removePendingOperation(operation.id);
           successCount++;
           setProcessedOps((p) => p + 1);
-        } catch (error: any) {
-          console.error(`❌ Erro ao sincronizar operação ${operation.id}:`, error);
-
+        } catch {
           // increment attemptCount and set lastAttempt
           const newAttempts = (operation.attemptCount || 0) + 1;
           const patch: any = { attemptCount: newAttempts, lastAttempt: new Date().toISOString() };
@@ -166,8 +155,8 @@ export function useOfflineSync() {
         queryClient.invalidateQueries({ queryKey: ['/api/bales'] });
         queryClient.invalidateQueries({ queryKey: ['/api/bales/stats'] });
       }
-    } catch (error) {
-      console.error('❌ Erro na sincronização:', error);
+    } catch {
+      // Sync error - will retry later
     } finally {
       syncInProgressRef.current = false;
       setIsSyncing(false);
@@ -191,11 +180,10 @@ export function useOfflineSync() {
       // If server assigned a different ID, update local cache
       try {
         if (created && created.id && created.id !== operation.data.id) {
-          // remove temporary local bale (if exists) and add the server one
           await offlineStorage.addBaleLocally(created);
         }
-      } catch (err) {
-        console.warn('Não foi possível reconciliar bale localmente:', err);
+      } catch {
+        // Ignore local reconciliation errors
       }
       return;
     }
@@ -214,8 +202,8 @@ export function useOfflineSync() {
           const serverBale = await getResp.json();
           await offlineStorage.addBaleLocally(serverBale);
         }
-      } catch (err) {
-        console.warn('Erro ao recuperar bale existente para reconciliar:', err);
+      } catch {
+        // Ignore reconciliation errors
       }
       // treat as success and remove pending op
       return;
@@ -246,14 +234,11 @@ export function useOfflineSync() {
 
     // Conflict or not found handling
     if (response.status === 404) {
-      // Bale not found on server — remove local cached bale and treat as failed
+      // Bale not found on server
       try {
         await offlineStorage.removePendingOperation(operation.id);
-        // also remove local cached bale if present
-        // best-effort: attempt to delete from bales store
-        // (we don't have a deleteBale method; use get+put approach is heavy, so skip)
-      } catch (err) {
-        console.warn('Erro ao limpar bale local após 404:', err);
+      } catch {
+        // Ignore cleanup errors
       }
       throw new Error('Bale not found on server');
     }
@@ -276,8 +261,8 @@ export function useOfflineSync() {
             throw new Error('Conflict: server has a different status');
           }
         }
-      } catch (err) {
-        console.warn('Erro ao recuperar bale para resolver conflito:', err);
+      } catch {
+        // Ignore conflict resolution errors
       }
     }
 

@@ -4,7 +4,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -30,13 +29,22 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { getAuthHeaders } from "@/lib/api-client";
 import { API_URL } from "@/lib/api-config";
-import { Footer } from "@/components/footer";
-import { Settings, LogOut, Save, Loader2, Trash2, AlertTriangle, Bell } from "lucide-react";
-import logoProgresso from "/favicon.png";
+import {
+  Settings,
+  Save,
+  Loader2,
+  Trash2,
+  AlertTriangle,
+  Bell,
+  ArrowLeft,
+  Sparkles,
+  Wheat,
+  CheckCircle,
+  Info,
+} from "lucide-react";
+import { Page, PageContent } from "@/components/layout/page";
+import logoFavicon from "/favicon.png";
 import { z } from "zod";
-import { NavSidebar, useSidebar } from "@/components/nav-sidebar";
-import { cn } from "@/lib/utils";
-import { NotificationManager } from "@/components/notification-manager";
 
 const safraSettingsSchema = z.object({
   safra: z.string().min(1, "Safra é obrigatória"),
@@ -46,18 +54,15 @@ type SafraSettingsForm = z.infer<typeof safraSettingsSchema>;
 
 export default function SettingsPage() {
   const [, setLocation] = useLocation();
-  const { logout, user, selectedRole } = useAuth();
-  const { collapsed, shouldShowNavbar } = useSidebar();
+  const { user, selectedRole } = useAuth();
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Verificar se é superadmin
   if (selectedRole !== "superadmin") {
     return <Redirect to="/dashboard" />;
   }
 
-  // Buscar safra padrão atual
   const { data: defaultSafraData, isLoading } = useQuery<{ value: string }>({
     queryKey: ["/api/settings/default-safra"],
   });
@@ -69,10 +74,11 @@ export default function SettingsPage() {
     },
   });
 
-  // Mutation para atualizar safra padrão
   const updateSafraMutation = useMutation({
     mutationFn: async (data: SafraSettingsForm) => {
-      const url = API_URL ? `${API_URL}/api/settings/default-safra` : "/api/settings/default-safra";
+      const url = API_URL
+        ? `${API_URL}/api/settings/default-safra`
+        : "/api/settings/default-safra";
       const response = await fetch(url, {
         method: "PUT",
         headers: {
@@ -93,6 +99,7 @@ export default function SettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings/default-safra"] });
       toast({
+        variant: "success",
         title: "Configurações salvas",
         description: "Safra padrão atualizada com sucesso",
       });
@@ -113,30 +120,24 @@ export default function SettingsPage() {
   const handleDeleteAllBales = async () => {
     setIsDeleting(true);
     try {
-      console.log("🗑️ Iniciando deleção de todos os fardos...");
-      console.log("Enviando confirmação: DELETE_ALL_BALES");
-      
       const response = await apiRequest("DELETE", "/api/bales/all", {
         confirm: "DELETE_ALL_BALES",
       });
 
-      console.log("Response status:", response.status);
-      const data = await response.json() as { message?: string; deletedCount: number };
-      console.log("Response data:", data);
+      const data = (await response.json()) as { message?: string; deletedCount: number };
 
       toast({
+        variant: "success",
         title: "Fardos deletados",
         description: data.message || `${data.deletedCount} fardo(s) deletado(s) com sucesso`,
       });
 
-      // Invalidate all bale-related queries
       queryClient.invalidateQueries({ queryKey: ["/api/bales"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bales/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bales/stats-by-talhao"] });
 
       setShowDeleteDialog(false);
     } catch (error) {
-      console.error("❌ Erro ao deletar fardos:", error);
       toast({
         variant: "destructive",
         title: "Erro ao deletar fardos",
@@ -147,293 +148,276 @@ export default function SettingsPage() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    setLocation("/");
-  };
-
   return (
-    <>
-      <NavSidebar />
-      <div className={cn(
-        "mobile-page transition-all duration-300 min-h-screen bg-[#F5F5F0]",
-        shouldShowNavbar && (collapsed ? "lg:ml-20" : "lg:ml-64")
-      )}>
-        {/* Header modernizado */}
-        <header className="mobile-header bg-background/95 backdrop-blur-md border-b shadow-sm lg:sticky top-0 z-50">
-        <div className="container mx-auto px-4 max-w-7xl">
-          <div className="flex items-center justify-between gap-3 py-3">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="p-2 bg-gradient-to-br from-green-500 to-yellow-500 rounded-2xl shadow-lg shrink-0">
-              <img
-                src={logoProgresso}
-                alt="Grupo Progresso"
-                className="h-6 w-6 sm:h-8 sm:w-8 transition-transform hover:scale-110 duration-300"
-              />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-lg sm:text-xl font-bold truncate bg-gradient-to-r from-green-600 to-yellow-600 bg-clip-text text-transparent">
-                Configurações
-              </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                Administrador: {user?.username}
-              </p>
+    <Page>
+      <PageContent className="max-w-3xl space-y-6">
+        {/* Hero Header */}
+        <div className="relative overflow-hidden rounded-2xl glass-card p-6">
+          <div className="absolute inset-0 bg-gradient-to-br from-neon-orange/10 via-transparent to-primary/5" />
+
+          <div className="relative">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="h-14 w-14 rounded-xl bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center">
+                    <img src={logoFavicon} alt="Cotton" className="h-10 w-10" />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-neon-orange flex items-center justify-center">
+                    <Sparkles className="h-2.5 w-2.5 text-black" />
+                  </div>
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-display font-bold">
+                    <span className="gradient-text">Configurações</span>
+                  </h1>
+                  <p className="text-sm text-muted-foreground">
+                    Administrador: {user?.username}
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLocation("/dashboard")}
+                className="rounded-xl border-border/50 hover:border-primary/50"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
+              </Button>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLogout}
-            className="shrink-0 transition-all hover:scale-105 duration-300 rounded-xl border-2 border-green-300 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-950 font-bold text-green-700 hover:text-red-600"
-          >
-            Sair
-          </Button>
         </div>
-        </div>
-      </header>
 
-      {/* Conteúdo principal */}
-      <main className="mobile-content bg-gradient-to-br from-background via-muted/10 to-background">
-        <div className="container mx-auto px-4 py-6 max-w-2xl space-y-5">
-          
-          {/* Configuração de Safra Padrão */}
-          <Card className="shadow-xl border-2 rounded-2xl overflow-hidden animate-fade-in-up">
-            <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-6 pb-8 relative overflow-hidden">
-              {/* Decorative circles */}
-              <div className="absolute inset-0 opacity-10">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
+        {/* Safra Settings */}
+        <div className="glass-card rounded-2xl overflow-hidden">
+          <div className="relative p-5 border-b border-border/30">
+            <div className="absolute inset-0 bg-gradient-to-r from-neon-orange/10 via-neon-orange/5 to-transparent" />
+            <div className="relative flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-neon-orange/20">
+                <Wheat className="w-5 h-5 text-neon-orange" />
               </div>
-              
-              <div className="relative">
-                <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl w-fit mb-3">
-                  <Settings className="w-6 h-6 text-white" />
-                </div>
-                <CardTitle className="text-xl text-white font-bold">
-                  Safra Padrão
-                </CardTitle>
-                <CardDescription className="text-white/90 text-sm mt-1">
+              <div>
+                <h2 className="text-lg font-semibold">Safra Padrão</h2>
+                <p className="text-sm text-muted-foreground">
                   Defina qual safra será incluída automaticamente em todos os novos fardos
-                </CardDescription>
-              </div>
-            </div>
-            
-            <CardContent className="p-6">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                </div>
-              ) : (
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(handleSave)} className="space-y-5">
-                    <FormField
-                      control={form.control}
-                      name="safra"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm font-semibold flex items-center gap-2">
-                            <Settings className="w-4 h-4 text-primary" />
-                            Safra
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Ex: 2024/2025"
-                              data-testid="input-safra"
-                              className="h-12 rounded-xl border-2 hover:border-primary/50 transition-all focus:scale-[1.01] duration-300 text-base"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription className="text-xs">
-                            Esta safra será automaticamente incluída em todos os QR codes gerados pelos operadores de campo
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <Button
-                      type="submit"
-                      className="w-full h-13 rounded-xl shadow-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 hover:scale-[1.02] transition-all duration-300 font-bold text-base"
-                      disabled={updateSafraMutation.isPending}
-                      data-testid="button-save-settings"
-                    >
-                      {updateSafraMutation.isPending ? (
-                        <>
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          Salvando...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-5 h-5 mr-2" />
-                          Salvar Configurações
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </Form>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Informações Adicionais */}
-          <Card className="shadow-lg border-2 rounded-2xl animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
-            <CardHeader className="pb-4 p-6">
-              <CardTitle className="text-lg font-bold">Como funciona</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground px-6 pb-6">
-              <p className="flex items-start gap-2">
-                <span className="text-green-600 font-bold">•</span>
-                A safra definida aqui será automaticamente incluída em todos os fardos criados pelos operadores de campo
-              </p>
-              <p className="flex items-start gap-2">
-                <span className="text-green-600 font-bold">•</span>
-                Os operadores não precisam informar a safra manualmente - ela virá pré-definida
-              </p>
-              <p className="flex items-start gap-2">
-                <span className="text-green-600 font-bold">•</span>
-                A safra aparecerá nos QR codes e etiquetas dos fardos
-              </p>
-              <p className="flex items-start gap-2">
-                <span className="text-green-600 font-bold">•</span>
-                Você pode alterar a safra padrão a qualquer momento (afetará apenas fardos novos)
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Notificações do Sistema (apenas superadmin) */}
-          {user?.roles && JSON.parse(user.roles).includes("superadmin") && (
-            <Card className="shadow-lg border-2 rounded-2xl animate-fade-in-up" style={{ animationDelay: "0.15s" }}>
-              <div className="bg-gradient-to-r from-blue-500 to-cyan-500 p-6 pb-8 relative overflow-hidden">
-                <div className="absolute inset-0 opacity-10">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
-                </div>
-                
-                <div className="relative">
-                  <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl w-fit mb-3">
-                    <Bell className="w-6 h-6 text-white" />
-                  </div>
-                  <CardTitle className="text-xl text-white font-bold">
-                    Notificações do Sistema
-                  </CardTitle>
-                  <CardDescription className="text-white/90 text-sm mt-1">
-                    Envie avisos personalizados para todos os usuários
-                  </CardDescription>
-                </div>
-              </div>
-              
-              <CardContent className="p-6">
-                <NotificationManager />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Danger Zone */}
-          <Card className="border-2 border-destructive shadow-xl rounded-2xl animate-fade-in-up overflow-hidden" style={{ animationDelay: "0.2s" }}>
-            <div className="bg-gradient-to-r from-red-500 to-orange-500 p-6 pb-8 relative overflow-hidden">
-              <div className="absolute inset-0 opacity-10">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
-              </div>
-              
-              <div className="relative">
-                <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl w-fit mb-3">
-                  <AlertTriangle className="w-6 h-6 text-white" />
-                </div>
-                <CardTitle className="text-xl text-white font-bold">
-                  Zona de Perigo
-                </CardTitle>
-                <CardDescription className="text-white/90 text-sm mt-1">
-                  Ações irreversíveis que afetam permanentemente os dados do sistema
-                </CardDescription>
-              </div>
-            </div>
-            
-            <CardContent className="space-y-4 p-6">
-              {/* Delete All Bales */}
-              <div className="flex flex-col sm:flex-row items-start justify-between gap-4 p-5 border-2 border-destructive/30 rounded-xl bg-gradient-to-br from-destructive/5 to-destructive/10 hover:scale-[1.01] transition-all duration-300">
-                <div className="flex-1 space-y-2">
-                  <h3 className="font-bold text-base flex items-center gap-2">
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                    Deletar Todos os Fardos
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Remove permanentemente todos os fardos cadastrados do banco de dados de
-                    produção. Esta ação não pode ser desfeita.
-                  </p>
-                </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setShowDeleteDialog(true)}
-                  data-testid="button-delete-all-bales"
-                  className="shrink-0 h-11 rounded-xl px-6 font-bold hover:scale-105 transition-all duration-300"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Deletar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-        </div>
-      </main>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent data-testid="dialog-confirm-delete" className="rounded-2xl border-2">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-destructive text-xl font-bold">
-              <div className="p-2 bg-destructive/10 rounded-xl">
-                <AlertTriangle className="h-6 w-6" />
-              </div>
-              Confirmar Exclusão
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3 text-base pt-2">
-                <p className="font-semibold text-foreground">
-                  Você está prestes a deletar TODOS os fardos do banco de dados de produção.
                 </p>
-                <p>Esta ação é <strong className="text-destructive">PERMANENTE</strong> e <strong className="text-destructive">IRREVERSÍVEL</strong>.</p>
-                <p>Todos os fardos cadastrados serão perdidos.</p>
-                <div className="p-4 bg-destructive/10 border-2 border-destructive/30 rounded-xl mt-3">
-                  <p className="text-destructive font-bold flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5" />
-                    Tem certeza que deseja continuar?
+              </div>
+            </div>
+          </div>
+
+          <div className="p-5">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSave)} className="space-y-5">
+                  <FormField
+                    control={form.control}
+                    name="safra"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-semibold flex items-center gap-2">
+                          <Settings className="w-4 h-4 text-neon-orange" />
+                          Safra
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Ex: 2024/2025"
+                            data-testid="input-safra"
+                            className="h-12 rounded-xl bg-surface border-border/50 focus:border-neon-orange text-base"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription className="text-xs text-muted-foreground">
+                          Esta safra será automaticamente incluída em todos os QR codes gerados
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button
+                    type="submit"
+                    className="w-full h-12 rounded-xl bg-neon-orange hover:bg-neon-orange/90 text-black font-semibold shadow-glow-orange"
+                    disabled={updateSafraMutation.isPending}
+                    data-testid="button-save-settings"
+                  >
+                    {updateSafraMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-5 h-5 mr-2" />
+                        Salvar Configurações
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            )}
+          </div>
+        </div>
+
+        {/* How It Works */}
+        <div className="glass-card rounded-2xl overflow-hidden">
+          <div className="relative p-5 border-b border-border/30">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent" />
+            <div className="relative flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/20">
+                <Info className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="text-lg font-semibold">Como funciona</h2>
+            </div>
+          </div>
+
+          <div className="p-5 space-y-3">
+            {[
+              "A safra definida aqui será automaticamente incluída em todos os fardos criados pelos operadores de campo",
+              "Os operadores não precisam informar a safra manualmente - ela virá pré-definida",
+              "A safra aparecerá nos QR codes e etiquetas dos fardos",
+              "Você pode alterar a safra padrão a qualquer momento (afetará apenas fardos novos)",
+            ].map((text, index) => (
+              <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-surface border border-border/30">
+                <CheckCircle className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-muted-foreground">{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Notifications (superadmin only) */}
+        {user?.roles && JSON.parse(user.roles).includes("superadmin") && (
+          <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="relative p-5 border-b border-border/30">
+              <div className="absolute inset-0 bg-gradient-to-r from-neon-cyan/10 via-neon-cyan/5 to-transparent" />
+              <div className="relative flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-neon-cyan/20">
+                  <Bell className="w-5 h-5 text-neon-cyan" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">Notificações do Sistema</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Envie avisos personalizados para todos os usuários
                   </p>
                 </div>
               </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:gap-2">
-            <AlertDialogCancel
-              disabled={isDeleting}
-              data-testid="button-cancel-delete"
-              className="h-11 rounded-xl border-2 hover:scale-105 transition-all duration-300 font-semibold"
-            >
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteAllBales}
-              disabled={isDeleting}
-              data-testid="button-confirm-delete"
-              className="h-11 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:scale-105 transition-all duration-300 font-bold"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Deletando...
-                </>
-              ) : (
-                "Sim, Deletar Tudo"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </div>
 
-      {/* Footer */}
-      <Footer />
-      </div>
-    </>
+            <div className="p-5">
+              <div className="text-center py-8 text-muted-foreground">
+                <Bell className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">Funcionalidade em desenvolvimento</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Danger Zone */}
+        <div className="glass-card rounded-2xl overflow-hidden border border-destructive/30">
+          <div className="relative p-5 border-b border-destructive/30">
+            <div className="absolute inset-0 bg-gradient-to-r from-destructive/10 via-destructive/5 to-transparent" />
+            <div className="relative flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-destructive/20">
+                <AlertTriangle className="w-5 h-5 text-destructive" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-destructive">Zona de Perigo</h2>
+                <p className="text-sm text-muted-foreground">
+                  Ações irreversíveis que afetam permanentemente os dados do sistema
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-5">
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-4 p-5 border border-destructive/30 rounded-xl bg-destructive/5">
+              <div className="flex-1 space-y-2">
+                <h3 className="font-bold text-base flex items-center gap-2 text-destructive">
+                  <Trash2 className="w-4 h-4" />
+                  Deletar Todos os Fardos
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Remove permanentemente todos os fardos cadastrados do banco de dados de
+                  produção. Esta ação não pode ser desfeita.
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowDeleteDialog(true)}
+                data-testid="button-delete-all-bales"
+                className="shrink-0 h-11 rounded-xl px-6 font-semibold"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Deletar
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent
+            data-testid="dialog-confirm-delete"
+            className="rounded-2xl glass-card border-destructive/50"
+          >
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-3 text-xl">
+                <div className="p-2.5 rounded-xl bg-destructive/20">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                </div>
+                <span className="text-destructive">Confirmar Exclusão</span>
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-4 pt-2">
+                  <p className="font-semibold text-foreground">
+                    Você está prestes a deletar TODOS os fardos do banco de dados de produção.
+                  </p>
+                  <p className="text-muted-foreground">
+                    Esta ação é <strong className="text-destructive">PERMANENTE</strong> e{" "}
+                    <strong className="text-destructive">IRREVERSÍVEL</strong>.
+                  </p>
+                  <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-xl">
+                    <p className="text-destructive font-bold flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5" />
+                      Tem certeza que deseja continuar?
+                    </p>
+                  </div>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-3">
+              <AlertDialogCancel
+                disabled={isDeleting}
+                data-testid="button-cancel-delete"
+                className="h-11 rounded-xl border-border/50"
+              >
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteAllBales}
+                disabled={isDeleting}
+                data-testid="button-confirm-delete"
+                className="h-11 rounded-xl bg-destructive hover:bg-destructive/90"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Deletando...
+                  </>
+                ) : (
+                  "Sim, Deletar Tudo"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </PageContent>
+    </Page>
   );
 }

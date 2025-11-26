@@ -1,33 +1,46 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./lib/auth-context";
+import { ThemeProvider } from "./lib/theme-context";
 import { useRealtime } from "./hooks/use-realtime";
 import { useVersionCheck } from "./hooks/use-version-check";
 import { useProductivityMonitor } from "./hooks/use-productivity-monitor";
-import { useNotifications } from "./hooks/use-notifications";
 import { useOfflineSync } from "./lib/use-offline-sync";
 import { useCounterSync } from "./hooks/use-counter-sync";
-import { usePushNotifications } from "./hooks/use-push-notifications";
-import { useNotificationListener } from "./hooks/use-notification-listener";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
-import Dashboard from "@/pages/dashboard";
-import Campo from "@/pages/campo";
-import Transporte from "@/pages/transporte";
-import Algodoeira from "@/pages/algodoeira";
-import BaleDetails from "@/pages/bale-details";
-import Etiqueta from "@/pages/etiqueta";
-import SettingsPage from "@/pages/settings";
-import TalhaoStats from "@/pages/talhao-stats";
-import UserManagement from "@/pages/user-management";
-import ReportsPage from "@/pages/reports";
 
-function ProtectedRoute({ component: Component, allowedRoles }: { 
-  component: () => JSX.Element; 
-  allowedRoles?: string[] 
+// Lazy load pages for better initial bundle size
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const Campo = lazy(() => import("@/pages/campo"));
+const Transporte = lazy(() => import("@/pages/transporte"));
+const Algodoeira = lazy(() => import("@/pages/algodoeira"));
+const BaleDetails = lazy(() => import("@/pages/bale-details"));
+const Etiqueta = lazy(() => import("@/pages/etiqueta"));
+const SettingsPage = lazy(() => import("@/pages/settings"));
+const TalhaoStats = lazy(() => import("@/pages/talhao-stats"));
+const UserManagement = lazy(() => import("@/pages/user-management"));
+const ReportsPage = lazy(() => import("@/pages/reports"));
+
+// Loading fallback component
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <span className="text-sm text-muted-foreground">Carregando...</span>
+      </div>
+    </div>
+  );
+}
+
+function ProtectedRoute({ component: Component, allowedRoles }: {
+  component: React.ComponentType;
+  allowedRoles?: string[]
 }) {
   const { isAuthenticated, user } = useAuth();
 
@@ -75,14 +88,7 @@ function RealtimeProvider() {
   // Sync counters from server (hooks must be called unconditionally)
   useCounterSync();
 
-  // Initialize push notifications (Android/iOS)
-  usePushNotifications();
-  
-  // Monitor notifications and trigger native notifications instantly
-  useNotificationListener();
-  
   useProductivityMonitor();
-  useNotifications();
 
   // Render a small progress bar when syncing
   return (
@@ -109,8 +115,9 @@ function RealtimeProvider() {
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Login} />
+    <Suspense fallback={<PageLoader />}>
+      <Switch>
+        <Route path="/" component={Login} />
       
       <Route path="/dashboard">
         <ProtectedRoute component={Dashboard} />
@@ -153,20 +160,23 @@ function Router() {
       </Route>
       
       <Route component={NotFound} />
-    </Switch>
+      </Switch>
+    </Suspense>
   );
 }
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <RealtimeProvider />
-          <Router />
-        </AuthProvider>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <AuthProvider>
+            <RealtimeProvider />
+            <Router />
+          </AuthProvider>
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

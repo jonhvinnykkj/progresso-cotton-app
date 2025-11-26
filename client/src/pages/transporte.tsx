@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import type { Bale } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { QRScanner } from "@/components/qr-scanner";
@@ -19,15 +18,12 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useOfflineStatusUpdate } from "@/hooks/use-offline-status-update";
-import { Footer } from "@/components/footer";
 import { getAuthHeaders } from "@/lib/api-client";
 import { API_URL } from "@/lib/api-config";
-import { NavSidebar, useSidebar } from "@/components/nav-sidebar";
-import { cn } from "@/lib/utils";
+import { Page, PageContent } from "@/components/layout/page";
 import {
   ScanLine,
   Truck,
-  LogOut,
   Loader2,
   Package,
   AlertCircle,
@@ -36,64 +32,45 @@ import {
   CheckCircle2,
   Keyboard,
   WifiOff,
-  Wifi,
-  RefreshCw,
-  ArrowLeft,
+  LogOut,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import logoProgresso from "/favicon.png";
-
+import logoFavicon from "/favicon.png";
 export default function Transporte() {
   const [, setLocation] = useLocation();
-  const { logout, user, selectedRole } = useAuth();
+  const { logout, user } = useAuth();
   const { toast } = useToast();
-  const { collapsed, shouldShowNavbar } = useSidebar();
   const [showScanner, setShowScanner] = useState(false);
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualBaleId, setManualBaleId] = useState("");
   const [scannedBale, setScannedBale] = useState<Bale | null>(null);
-  
+
   const { updateStatus } = useOfflineStatusUpdate();
   const isOnline = navigator.onLine;
 
-  // Fetch bales
-  const { data: bales = [], isLoading } = useQuery<Bale[]>({
+  const { data: bales = [] } = useQuery<Bale[]>({
     queryKey: ["/api/bales"],
   });
 
   const processBaleId = async (baleId: string) => {
-    // Remove espaços em branco e normaliza o ID
     const normalizedId = baleId.trim().toUpperCase();
-    
-    console.log('🔍 DEBUG TRANSPORTE - ID do QR Code:', {
-      original: baleId,
-      normalizado: normalizedId,
-      length: normalizedId.length,
-      chars: normalizedId.split('').map(c => `${c}(${c.charCodeAt(0)})`).join(' ')
-    });
-    console.log('📦 Total de fardos disponíveis:', bales.length);
-    console.log('📋 Primeiros 10 IDs no sistema:', bales.map(b => b.id).slice(0, 10));
-    console.log('📋 Status dos fardos:', bales.map(b => ({ id: b.id, status: b.status })).slice(0, 5));
-    
-    // Busca pelo ID (que é o próprio QR Code) - case insensitive
+
     const bale = bales.find((b) => b.id.toUpperCase() === normalizedId);
 
     if (!bale) {
-      console.error('❌ FARDO NÃO ENCONTRADO!');
-      console.error('ID buscado:', normalizedId);
-      console.error('Todos os IDs no sistema:', bales.map(b => b.id));
-      
-      // Tenta buscar direto na API como fallback
       try {
         const encodedId = encodeURIComponent(normalizedId);
-        const url = API_URL ? `${API_URL}/api/bales/${encodedId}` : `/api/bales/${encodedId}`;
+        const url = API_URL
+          ? `${API_URL}/api/bales/${encodedId}`
+          : `/api/bales/${encodedId}`;
         const response = await fetch(url, {
           headers: getAuthHeaders(),
           credentials: "include",
         });
         if (response.ok) {
           const apiBale = await response.json();
-          console.log('✅ Fardo encontrado direto na API:', apiBale);
           if (apiBale.status !== "campo") {
             toast({
               variant: "destructive",
@@ -106,9 +83,9 @@ export default function Transporte() {
           return;
         }
       } catch (error) {
-        console.error('Erro ao buscar fardo na API:', error);
+        console.error("Erro ao buscar fardo na API:", error);
       }
-      
+
       toast({
         variant: "destructive",
         title: "Fardo não encontrado",
@@ -116,8 +93,6 @@ export default function Transporte() {
       });
       return;
     }
-
-    console.log('✅ Fardo encontrado:', bale);
 
     if (bale.status !== "campo") {
       toast({
@@ -162,7 +137,6 @@ export default function Transporte() {
       },
       {
         onSuccess: () => {
-          // Close modal after successful update
           setScannedBale(null);
         },
       }
@@ -175,256 +149,333 @@ export default function Transporte() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-green-50/30 via-yellow-50/20 to-green-50/40 dark:from-gray-900 dark:to-gray-800">
-      <NavSidebar />
+    <Page>
+      <PageContent className="max-w-2xl space-y-6">
+        {/* Hero Header - Cotton Dark Premium */}
+        <div className="relative overflow-hidden rounded-2xl glass-card">
+          {/* Background gradients */}
+          <div className="absolute inset-0 bg-gradient-to-br from-neon-orange/20 via-neon-orange/5 to-transparent" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-neon-orange/15 via-transparent to-transparent" />
 
-      <div className={cn(
-        "flex-1 flex flex-col transition-all duration-300",
-        shouldShowNavbar && (collapsed ? "lg:ml-20" : "lg:ml-64")
-      )}>
-        {/* Header Mobile apenas */}
-        <header className="lg:hidden mobile-header bg-background/95 backdrop-blur-md border-b shadow-sm sticky top-0 z-50">
-          <div className="container mx-auto px-4 max-w-7xl">
-            <div className="flex items-center justify-between gap-3 py-3">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="p-2 bg-gradient-to-br from-green-500 to-yellow-500 rounded-2xl shadow-lg shrink-0">
-                  <img
-                    src={logoProgresso}
-                    alt="Grupo Progresso"
-                    className="h-6 w-6 sm:h-8 sm:w-8 transition-transform hover:scale-110 duration-300"
-                  />
+          {/* Animated dots pattern */}
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute top-4 right-8 h-2 w-2 rounded-full bg-neon-orange animate-pulse" />
+            <div className="absolute top-12 right-20 h-1.5 w-1.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.5s' }} />
+            <div className="absolute bottom-8 right-12 h-1 w-1 rounded-full bg-neon-orange animate-pulse" style={{ animationDelay: '1s' }} />
+          </div>
+
+          <div className="relative p-6 sm:p-8">
+            <div className="flex items-start justify-between gap-4">
+              {/* Left side - Brand and title */}
+              <div className="flex items-start gap-4">
+                {/* Cotton Logo */}
+                <div className="relative">
+                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-neon-orange to-neon-orange/80 flex items-center justify-center shadow-glow-orange overflow-hidden">
+                    <img src={logoFavicon} alt="Cotton" className="h-12 w-12 object-contain" />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-primary border-2 border-background flex items-center justify-center">
+                    <Truck className="h-2.5 w-2.5 text-black" />
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h1 className="text-lg font-bold truncate bg-gradient-to-r from-green-600 to-yellow-600 bg-clip-text text-transparent">
-                    Transporte
+
+                <div className="pt-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sparkles className="h-4 w-4 text-neon-orange" />
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                      Cotton App
+                    </span>
+                  </div>
+                  <h1 className="text-2xl sm:text-3xl font-display font-bold mb-2">
+                    <span className="bg-gradient-to-r from-neon-orange to-primary bg-clip-text text-transparent">
+                      Transporte
+                    </span>
                   </h1>
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs text-muted-foreground truncate">
-                    {user?.username}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-neon-orange/20 text-neon-orange">
+                      <span className="w-1.5 h-1.5 rounded-full bg-neon-orange mr-1.5 animate-pulse" />
+                      {user?.username || "Operador"}
+                    </span>
+                    {!isOnline && (
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] px-2 py-1 bg-amber-500/20 text-amber-400 rounded-full"
+                      >
+                        <WifiOff className="w-3 h-3 mr-1" />
+                        Offline
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Logout button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="rounded-xl border-border/50 hover:border-destructive/50 hover:text-destructive shrink-0"
+              >
+                <LogOut className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Sair</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Bottom glow line */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neon-orange/50 to-transparent" />
+        </div>
+
+        {/* Alerta de modo offline */}
+        {!isOnline && (
+          <Alert className="border border-amber-500/30 bg-amber-500/10 rounded-xl animate-fade-in-up">
+            <WifiOff className="h-5 w-5 text-amber-500" />
+            <AlertDescription className="text-sm text-amber-200">
+              <strong className="font-bold">Modo Offline:</strong> Trabalhando
+              com dados salvos localmente. As atualizações serão sincronizadas
+              quando você voltar online.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!scannedBale ? (
+          /* Scanner Card */
+          <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="relative p-5 border-b border-border/30">
+              <div className="absolute inset-0 bg-gradient-to-r from-neon-orange/20 via-neon-orange/10 to-transparent" />
+              <div className="relative flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-neon-orange/20">
+                  <Truck className="w-5 h-5 text-neon-orange" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">Escanear Fardo</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Campo → Pátio via QR ou ID
                   </p>
-                  {!isOnline && (
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 animate-pulse">
-                      <WifiOff className="w-3 h-3 mr-1" />
-                      Offline
-                    </Badge>
-                  )}
                 </div>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="shrink-0 transition-all hover:scale-105 duration-300 rounded-xl border-2 border-green-300 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-950 font-bold text-green-700 hover:text-red-600"
-            >
-              Sair
-            </Button>
-          </div>
-        </div>
-      </header>        {/* Conteúdo principal */}
-        <main className="flex-1 bg-gradient-to-br from-background via-muted/10 to-background pb-20 lg:pb-8">
-        <div className="container mx-auto px-4 py-6 max-w-2xl space-y-5">
-          
-          {/* Alerta de modo offline modernizado */}
-          {!isOnline && (
-            <Alert className="border-2 border-amber-500/50 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 rounded-xl animate-fade-in-up">
-              <WifiOff className="h-5 w-5 text-amber-600" />
-              <AlertDescription className="text-sm">
-                <strong className="font-bold">Modo Offline:</strong> Trabalhando com dados salvos localmente. 
-                As atualizações serão sincronizadas quando você voltar online.
-              </AlertDescription>
-            </Alert>
-          )}
 
-          {!scannedBale ? (
-            <Card className="shadow-xl border-2 rounded-2xl overflow-hidden animate-fade-in-up">
-              <div className="bg-gradient-to-r from-green-500 to-yellow-500 p-6 pb-8 relative overflow-hidden">
-                {/* Decorative circles */}
-                <div className="absolute inset-0 opacity-10">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
-                </div>
-                
-                <div className="relative">
-                  <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl w-fit mb-3">
-                    <Truck className="w-6 h-6 text-white" />
+            <div className="p-5 space-y-4">
+              {/* Status flow indicator */}
+              <div className="flex items-center justify-center gap-3 py-4 px-6 rounded-xl bg-surface/50 border border-border/30">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-primary/20">
+                    <Package className="w-4 h-4 text-primary" />
                   </div>
-                  <CardTitle className="text-xl text-white font-bold">
-                    Escanear Fardo
-                  </CardTitle>
-                  <p className="text-white/90 text-sm mt-1">
-                    Registre o transporte do campo para o pátio
+                  <span className="text-sm font-semibold text-primary">
+                    Campo
+                  </span>
+                </div>
+                <ArrowRight className="w-5 h-5 text-neon-orange animate-pulse" />
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-neon-orange/20">
+                    <Truck className="w-4 h-4 text-neon-orange" />
+                  </div>
+                  <span className="text-sm font-semibold text-neon-orange">
+                    Pátio
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                <Button
+                  onClick={() => setShowScanner(true)}
+                  className="w-full h-14 rounded-xl bg-neon-orange hover:bg-neon-orange/90 text-black font-semibold text-base shadow-glow-orange"
+                  data-testid="button-scan-qr"
+                >
+                  <ScanLine className="w-5 h-5 mr-2" />
+                  Escanear QR Code
+                </Button>
+
+                <Button
+                  onClick={() => setShowManualInput(true)}
+                  variant="outline"
+                  className="w-full h-14 rounded-xl text-base font-semibold border-border/50 hover:border-neon-orange/50 hover:text-neon-orange"
+                  data-testid="button-manual-input"
+                >
+                  <Keyboard className="w-5 h-5 mr-2" />
+                  Digitar Manualmente
+                </Button>
+              </div>
+
+              <div className="p-4 rounded-xl bg-neon-orange/10 border border-neon-orange/20">
+                <div className="flex gap-3 items-start">
+                  <Package className="h-5 w-5 shrink-0 text-neon-orange mt-0.5" />
+                  <p className="text-sm text-foreground/80 leading-relaxed">
+                    <strong className="text-neon-orange">Campo → Pátio:</strong>{" "}
+                    escaneie o QR Code ou digite manualmente o ID. Apenas fardos
+                    com status "Campo" podem ser movimentados.
                   </p>
                 </div>
               </div>
-              
-              <CardContent className="space-y-5 p-6">
-                <div className="grid grid-cols-1 gap-3">
-                  <Button
-                    onClick={() => setShowScanner(true)}
-                    className="w-full h-13 rounded-xl shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl duration-300 bg-gradient-to-r from-green-500 to-yellow-500 hover:from-green-600 hover:to-yellow-600 text-base font-bold"
-                    data-testid="button-scan-qr"
-                  >
-                    <ScanLine className="w-5 h-5 mr-2" />
-                    Escanear QR Code
-                  </Button>
-
-                  <Button
-                    onClick={() => setShowManualInput(true)}
-                    variant="outline"
-                    className="w-full h-13 rounded-xl border-2 hover:border-primary/50 transition-all hover:scale-[1.02] duration-300 text-base font-semibold"
-                    data-testid="button-manual-input"
-                  >
-                    <Keyboard className="w-5 h-5 mr-2" />
-                    Digitar Manualmente
-                  </Button>
+            </div>
+          </div>
+        ) : (
+          /* Confirmation Card */
+          <div className="glass-card rounded-2xl overflow-hidden animate-fade-in-up">
+            <div className="relative p-5 border-b border-border/30">
+              <div className="absolute inset-0 bg-gradient-to-r from-neon-orange/20 via-neon-orange/10 to-transparent" />
+              <div className="relative flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-neon-orange/20">
+                    <Truck className="w-5 h-5 text-neon-orange" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      Confirmar Transporte
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Revise e confirme para enviar ao pátio
+                    </p>
+                  </div>
                 </div>
-
-                <Alert className="border-2 border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl">
-                  <Package className="h-5 w-5 text-primary shrink-0" />
-                  <AlertDescription className="text-sm leading-snug">
-                    <strong className="font-semibold">Campo → Pátio:</strong> Escaneie o QR Code ou digite manualmente o ID do fardo que será transportado do campo para o
-                    pátio. Apenas fardos com status "Campo" podem ser movimentados.
-                  </AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="shadow-xl border-2 rounded-2xl overflow-hidden animate-fade-in-up">
-              <div className="bg-gradient-to-r from-green-500 to-yellow-500 p-5 relative overflow-hidden">
-                <div className="absolute inset-0 opacity-10">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                </div>
-                
-                <CardTitle className="text-lg text-white font-bold flex items-center gap-2 relative">
-                  <Truck className="w-5 h-5 shrink-0" />
-                  Confirmar Transporte
-                  <Badge variant="secondary" className="ml-auto bg-white/20 text-white border-white/30">
-                    Campo → Pátio
-                  </Badge>
-                </CardTitle>
+                <Badge className="bg-neon-orange/20 text-neon-orange border-neon-orange/30 rounded-full">
+                  Campo → Pátio
+                </Badge>
               </div>
-              
-              <CardContent className="space-y-5 p-6">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between py-3 border-b-2">
-                    <span className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Status Atual:
-                    </span>
-                    <StatusBadge status={scannedBale.status} />
-                  </div>
+            </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border-2 border-primary/20 hover:scale-[1.02] transition-transform duration-300">
-                      <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5 font-semibold">
-                        <Hash className="w-3.5 h-3.5" />
-                        Número
-                      </p>
-                      <p className="font-bold text-lg truncate" data-testid="text-bale-numero">
-                        {scannedBale.numero}
-                      </p>
-                    </div>
-                    <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border-2 border-primary/20 hover:scale-[1.02] transition-transform duration-300">
-                      <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5 font-semibold">
-                        <Wheat className="w-3.5 h-3.5" />
-                        Talhão
-                      </p>
-                      <p className="font-bold text-lg truncate" data-testid="text-bale-talhao">
-                        {scannedBale.talhao}
-                      </p>
-                    </div>
-                  </div>
+            <div className="p-5 space-y-5">
+              {/* Status atual */}
+              <div className="flex items-center justify-between py-3 border-b border-border/30">
+                <span className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Status Atual:
+                </span>
+                <StatusBadge status={scannedBale.status} />
+              </div>
 
-                  <div className="flex items-start gap-3 p-4 bg-gradient-to-br from-green-50 to-yellow-50 dark:from-green-950/20 dark:to-yellow-950/20 border-2 border-green-200 dark:border-green-800 rounded-xl">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <p className="text-xs font-semibold text-green-600">QR Code / ID</p>
-                      <p className="text-xs font-mono text-muted-foreground break-all leading-snug">
-                        {scannedBale.id}
-                      </p>
-                    </div>
-                  </div>
-
-                  <Alert variant="destructive" className="border-2 rounded-xl">
-                    <AlertCircle className="h-5 w-5 shrink-0" />
-                    <AlertDescription className="text-sm leading-snug">
-                      <strong className="font-bold">Atenção:</strong> Ao confirmar, o fardo será marcado como
-                      "Pátio" e não poderá ser revertido para "Campo".
-                    </AlertDescription>
-                  </Alert>
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setScannedBale(null)}
-                    className="flex-1 h-12 rounded-xl border-2 hover:scale-[1.02] transition-all duration-300 font-semibold"
-                    data-testid="button-cancel"
+              {/* Dados do fardo */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 rounded-xl bg-surface border border-border/30">
+                  <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5 font-semibold">
+                    <Hash className="w-3.5 h-3.5" />
+                    Número
+                  </p>
+                  <p
+                    className="font-bold text-xl text-foreground"
+                    data-testid="text-bale-numero"
                   >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleConfirmTransport}
-                    disabled={updateStatus.isPending}
-                    className="flex-1 h-12 rounded-xl shadow-lg bg-gradient-to-r from-green-500 to-yellow-500 hover:from-green-600 hover:to-yellow-600 hover:scale-[1.02] transition-all duration-300 font-bold"
-                    data-testid="button-confirm-transport"
-                  >
-                    {updateStatus.isPending ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        {isOnline ? "Atualizando..." : "Salvando..."}
-                      </>
-                    ) : (
-                      <>
-                        <Truck className="w-4 h-4 mr-2" />
-                        Confirmar
-                      </>
-                    )}
-                  </Button>
+                    {scannedBale.numero}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                <div className="p-4 rounded-xl bg-surface border border-border/30">
+                  <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5 font-semibold">
+                    <Wheat className="w-3.5 h-3.5" />
+                    Talhão
+                  </p>
+                  <p
+                    className="font-bold text-xl text-foreground"
+                    data-testid="text-bale-talhao"
+                  >
+                    {scannedBale.talhao}
+                  </p>
+                </div>
+              </div>
 
-          {/* Instruções */}
-          <Card className="bg-muted/30 border-muted">
-            <CardContent className="pt-5 pb-5">
-              <h3 className="font-semibold text-sm mb-3">Instruções</h3>
-              <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside leading-snug">
-                <li>Escaneie o QR Code do fardo a ser transportado</li>
-                <li>Verifique os dados do fardo exibidos</li>
-                <li>Clique em "Confirmar" para atualizar o status</li>
-              </ol>
-            </CardContent>
-          </Card>
+              {/* QR Code / ID */}
+              <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/20 rounded-xl">
+                <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0 space-y-1">
+                  <p className="text-xs font-semibold text-primary">
+                    QR Code / ID
+                  </p>
+                  <p className="text-xs font-mono text-muted-foreground break-all leading-snug">
+                    {scannedBale.id}
+                  </p>
+                </div>
+              </div>
+
+              {/* Alerta */}
+              <Alert className="border border-destructive/30 bg-destructive/10 rounded-xl">
+                <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+                <AlertDescription className="text-sm text-foreground/80">
+                  <strong className="font-bold text-destructive">
+                    Atenção:
+                  </strong>{" "}
+                  Ao confirmar, o fardo será marcado como "Pátio" e não poderá
+                  ser revertido para "Campo".
+                </AlertDescription>
+              </Alert>
+
+              {/* Botões de ação */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setScannedBale(null)}
+                  className="flex-1 h-12 rounded-xl border-border/50 font-semibold"
+                  data-testid="button-cancel"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleConfirmTransport}
+                  disabled={updateStatus.isPending}
+                  className="flex-1 h-12 rounded-xl bg-neon-orange hover:bg-neon-orange/90 text-black font-bold shadow-glow-orange"
+                  data-testid="button-confirm-transport"
+                >
+                  {updateStatus.isPending ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      {isOnline ? "Atualizando..." : "Salvando..."}
+                    </>
+                  ) : (
+                    <>
+                      <Truck className="w-4 h-4 mr-2" />
+                      Confirmar
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Instruções */}
+        <div className="glass-card p-5 rounded-xl">
+          <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-neon-orange" />
+            Instruções
+          </h3>
+          <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside leading-relaxed">
+            <li>Escaneie o QR Code do fardo a ser transportado</li>
+            <li>Verifique os dados do fardo exibidos</li>
+            <li>Clique em "Confirmar" para atualizar o status</li>
+          </ol>
         </div>
-      </main>
+      </PageContent>
 
+      {/* QR Scanner */}
       {showScanner && (
         <QRScanner onScan={handleScan} onClose={() => setShowScanner(false)} />
       )}
 
       {/* Manual Input Dialog */}
       <Dialog open={showManualInput} onOpenChange={setShowManualInput}>
-        <DialogContent data-testid="dialog-manual-input">
+        <DialogContent className="sm:max-w-md rounded-2xl border-border/50 bg-card">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Keyboard className="w-5 h-5" />
+            <DialogTitle className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-neon-orange/20">
+                <Keyboard className="w-5 h-5 text-neon-orange" />
+              </div>
               Digitar ID do Fardo
             </DialogTitle>
-            <DialogDescription>
-              Digite o ID do fardo que você deseja processar. Você pode usar o ID completo ou o código QR.
+            <DialogDescription className="text-muted-foreground">
+              Digite o ID do fardo que você deseja processar. Você pode usar o
+              ID completo ou o código QR.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label htmlFor="bale-id" className="text-sm font-medium">
+              <label
+                htmlFor="bale-id"
+                className="text-sm font-medium text-foreground/80"
+              >
                 ID do Fardo
               </label>
               <Input
                 id="bale-id"
-                placeholder="Ex: fZZWULwYD1NY"
+                placeholder="Ex: S25/26-T1B-00001"
                 value={manualBaleId}
                 onChange={(e) => setManualBaleId(e.target.value)}
                 onKeyDown={(e) => {
@@ -434,16 +485,18 @@ export default function Transporte() {
                 }}
                 data-testid="input-manual-bale-id"
                 autoFocus
+                className="h-12 rounded-xl bg-surface border-border/50 font-mono"
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-3">
             <Button
               variant="outline"
               onClick={() => {
                 setShowManualInput(false);
                 setManualBaleId("");
               }}
+              className="flex-1 h-11 rounded-xl border-border/50"
               data-testid="button-cancel-manual"
             >
               Cancelar
@@ -451,6 +504,7 @@ export default function Transporte() {
             <Button
               onClick={handleManualSubmit}
               disabled={!manualBaleId.trim()}
+              className="flex-1 h-11 rounded-xl bg-neon-orange hover:bg-neon-orange/90 text-black font-semibold"
               data-testid="button-submit-manual"
             >
               <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -459,10 +513,6 @@ export default function Transporte() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-        {/* Footer */}
-        <Footer />
-      </div>
-    </div>
+    </Page>
   );
 }

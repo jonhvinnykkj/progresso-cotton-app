@@ -1,23 +1,49 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, UserPlus, Users, Edit } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Trash2,
+  UserPlus,
+  Users,
+  Edit,
+  ArrowLeft,
+  Sparkles,
+  Shield,
+  Loader2,
+  User,
+  Lock,
+  Calendar,
+  AlertTriangle,
+} from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { getAuthHeaders } from "@/lib/api-client";
 import { API_URL } from "@/lib/api-config";
-import { NavSidebar, useSidebar } from "@/components/nav-sidebar";
+import { Page, PageContent } from "@/components/layout/page";
 import { cn } from "@/lib/utils";
-import logoProgresso from "/favicon.png";
+import logoFavicon from "/favicon.png";
 
 type UserRole = "admin" | "campo" | "transporte" | "algodoeira";
 
@@ -25,17 +51,17 @@ interface User {
   id: string;
   username: string;
   displayName: string;
-  roles: string; // JSON array de papéis
+  roles: string;
   createdAt: string;
   createdBy?: string;
 }
 
 export default function UserManagement() {
   const { user, selectedRole } = useAuth();
-  const { collapsed, shouldShowNavbar } = useSidebar();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
@@ -45,11 +71,10 @@ export default function UserManagement() {
   const [editRoles, setEditRoles] = useState<UserRole[]>([]);
 
   const toggleRole = (roleToToggle: UserRole) => {
-    setSelectedRoles(prev => {
+    setSelectedRoles((prev) => {
       if (prev.includes(roleToToggle)) {
-        // Não permitir desmarcar se for o último
         if (prev.length === 1) return prev;
-        return prev.filter(r => r !== roleToToggle);
+        return prev.filter((r) => r !== roleToToggle);
       } else {
         return [...prev, roleToToggle];
       }
@@ -57,11 +82,10 @@ export default function UserManagement() {
   };
 
   const toggleEditRole = (roleToToggle: UserRole) => {
-    setEditRoles(prev => {
+    setEditRoles((prev) => {
       if (prev.includes(roleToToggle)) {
-        // Não permitir desmarcar se for o último
         if (prev.length === 1) return prev;
-        return prev.filter(r => r !== roleToToggle);
+        return prev.filter((r) => r !== roleToToggle);
       } else {
         return [...prev, roleToToggle];
       }
@@ -93,9 +117,14 @@ export default function UserManagement() {
     },
   });
 
-  // Criar usuário
   const createUserMutation = useMutation({
-    mutationFn: async (userData: { username: string; displayName: string; password: string; role: UserRole; roles: UserRole[] }) => {
+    mutationFn: async (userData: {
+      username: string;
+      displayName: string;
+      password: string;
+      role: UserRole;
+      roles: UserRole[];
+    }) => {
       const url = API_URL ? `${API_URL}/api/users` : "/api/users";
       const response = await fetch(url, {
         method: "POST",
@@ -119,7 +148,6 @@ export default function UserManagement() {
         title: "Usuário criado!",
         description: `Usuário ${displayName} foi criado com sucesso.`,
       });
-      // Limpar formulário
       setUsername("");
       setDisplayName("");
       setPassword("");
@@ -134,10 +162,11 @@ export default function UserManagement() {
     },
   });
 
-  // Atualizar papéis do usuário
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, roles }: { userId: string; roles: UserRole[] }) => {
-      const url = API_URL ? `${API_URL}/api/users/${userId}/roles` : `/api/users/${userId}/roles`;
+      const url = API_URL
+        ? `${API_URL}/api/users/${userId}/roles`
+        : `/api/users/${userId}/roles`;
       const response = await fetch(url, {
         method: "PATCH",
         headers: {
@@ -171,7 +200,6 @@ export default function UserManagement() {
     },
   });
 
-  // Deletar usuário
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
       const url = API_URL ? `${API_URL}/api/users/${userId}` : `/api/users/${userId}`;
@@ -212,38 +240,44 @@ export default function UserManagement() {
       });
       return;
     }
-    // Usar o primeiro papel selecionado como papel principal
     const mainRole = selectedRoles[0];
-    createUserMutation.mutate({ 
-      username, 
-      displayName, 
-      password, 
+    createUserMutation.mutate({
+      username,
+      displayName,
+      password,
       role: mainRole,
-      roles: selectedRoles 
+      roles: selectedRoles,
     });
   };
 
   const getRoleBadge = (role: UserRole | "superadmin") => {
-    const roleColors: Record<string, string> = {
-      superadmin: "bg-gradient-to-r from-purple-500 to-purple-600 text-white border-0",
-      admin: "bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0",
-      campo: "bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0",
-      transporte: "bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-0",
-      algodoeira: "bg-gradient-to-r from-orange-500 to-orange-600 text-white border-0",
+    const roleConfig: Record<string, { label: string; className: string }> = {
+      superadmin: {
+        label: "Super Admin",
+        className: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+      },
+      admin: {
+        label: "Administrador",
+        className: "bg-neon-cyan/20 text-neon-cyan border-neon-cyan/30",
+      },
+      campo: {
+        label: "Campo",
+        className: "bg-primary/20 text-primary border-primary/30",
+      },
+      transporte: {
+        label: "Transporte",
+        className: "bg-neon-orange/20 text-neon-orange border-neon-orange/30",
+      },
+      algodoeira: {
+        label: "Algodoeira",
+        className: "bg-accent/20 text-accent border-accent/30",
+      },
     };
-    
-    const roleLabels: Record<string, string> = {
-      superadmin: "Super Admin",
-      admin: "Administrador",
-      campo: "Campo",
-      transporte: "Transporte",
-      algodoeira: "Algodoeira",
-    };
-    
+
+    const config = roleConfig[role] || { label: role, className: "bg-surface" };
+
     return (
-      <Badge className={`${roleColors[role] || "bg-gray-500"} font-semibold`}>
-        {roleLabels[role] || role}
-      </Badge>
+      <Badge className={cn("font-semibold border", config.className)}>{config.label}</Badge>
     );
   };
 
@@ -258,333 +292,405 @@ export default function UserManagement() {
         </div>
       );
     } catch {
-      return <Badge className="bg-gray-500">Erro</Badge>;
+      return <Badge className="bg-surface">Erro</Badge>;
     }
   };
 
-  // Verificar se é superadmin
   if (selectedRole !== "superadmin") {
     return (
-      <>
-        <NavSidebar />
-        <div className={cn(
-          "min-h-screen bg-gradient-to-br from-background via-muted/10 to-background transition-all duration-300",
-          shouldShowNavbar && (collapsed ? "lg:ml-20" : "lg:ml-64")
-        )}>
-          <div className="container mx-auto py-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Acesso Negado</CardTitle>
-                <CardDescription>
-                  Apenas Super Administradores podem acessar esta página.
-                </CardDescription>
-              </CardHeader>
-            </Card>
+      <Page>
+        <PageContent className="flex items-center justify-center min-h-[60vh]">
+          <div className="glass-card p-8 rounded-2xl text-center max-w-md">
+            <div className="p-4 rounded-2xl bg-destructive/20 mb-4 inline-block">
+              <Shield className="w-12 h-12 text-destructive" />
+            </div>
+            <h2 className="text-xl font-bold mb-2">Acesso Negado</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Apenas Super Administradores podem acessar esta página.
+            </p>
+            <Button
+              onClick={() => setLocation("/dashboard")}
+              className="w-full h-12 rounded-xl btn-neon"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar ao Dashboard
+            </Button>
           </div>
-        </div>
-      </>
+        </PageContent>
+      </Page>
     );
   }
 
   return (
-    <>
-      <NavSidebar />
-      <div className={cn(
-        "min-h-screen bg-gradient-to-br from-background via-muted/10 to-background transition-all duration-300",
-        shouldShowNavbar && (collapsed ? "lg:ml-20" : "lg:ml-64")
-      )}>
-        <main className="container mx-auto py-6 px-4 space-y-6">
-        {/* Header */}
-        <header className="mobile-header bg-background/95 backdrop-blur-md border-b shadow-sm lg:sticky top-0 z-50 -mx-4 px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl">
-              <Users className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-green-600 to-yellow-600 bg-clip-text text-transparent">
-                Gerenciamento de Usuários
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Controle completo de acessos e permissões
-              </p>
+    <Page>
+      <PageContent className="max-w-6xl space-y-6">
+        {/* Hero Header */}
+        <div className="relative overflow-hidden rounded-2xl glass-card p-6">
+          <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/10 via-transparent to-primary/5" />
+
+          <div className="relative">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="h-14 w-14 rounded-xl bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center">
+                    <img src={logoFavicon} alt="Cotton" className="h-10 w-10" />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-neon-cyan flex items-center justify-center">
+                    <Sparkles className="h-2.5 w-2.5 text-black" />
+                  </div>
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-display font-bold">
+                    <span className="gradient-text">Gerenciamento de Usuários</span>
+                  </h1>
+                  <p className="text-sm text-muted-foreground">
+                    Controle completo de acessos e permissões
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLocation("/dashboard")}
+                className="rounded-xl border-border/50 hover:border-primary/50"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
+              </Button>
             </div>
           </div>
-        </header>
+        </div>
 
-        {/* Formulário de Criação */}
-        <Card className="shadow-xl border-2 rounded-2xl overflow-hidden animate-fade-in-up">
-          <CardHeader className="bg-gradient-to-r from-green-500 to-emerald-500 text-white relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
-            </div>
-            <CardTitle className="flex items-center gap-2 relative">
-              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                <UserPlus className="h-5 w-5" />
+        {/* Create User Form */}
+        <div className="glass-card rounded-2xl overflow-hidden">
+          <div className="relative p-5 border-b border-border/30">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent" />
+            <div className="relative flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/20">
+                <UserPlus className="w-5 h-5 text-primary" />
               </div>
-              Criar Novo Usuário
-            </CardTitle>
-            <CardDescription className="text-white/90 relative">
-              Adicione um novo usuário ao sistema com permissões específicas
-            </CardDescription>
-          </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCreateUser} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h2 className="text-lg font-semibold">Criar Novo Usuário</h2>
+                <p className="text-sm text-muted-foreground">
+                  Adicione um novo usuário ao sistema com permissões específicas
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={handleCreateUser} className="p-5 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="font-semibold">Nome de Usuário (Login)</Label>
+                <Label className="flex items-center gap-2 text-sm font-semibold">
+                  <User className="h-4 w-4 text-primary" />
+                  Nome de Usuário (Login)
+                </Label>
                 <Input
-                  id="username"
                   placeholder="Ex: joao.silva"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   minLength={3}
                   required
-                  className="h-12 rounded-xl border-2 hover:border-primary/50 transition-all"
+                  className="h-11 rounded-xl bg-surface border-border/50 focus:border-primary"
                 />
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="displayName" className="font-semibold">Nome de Exibição</Label>
+                <Label className="flex items-center gap-2 text-sm font-semibold">
+                  <User className="h-4 w-4 text-neon-orange" />
+                  Nome de Exibição
+                </Label>
                 <Input
-                  id="displayName"
                   placeholder="Ex: João Silva"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   minLength={3}
                   required
-                  className="h-12 rounded-xl border-2 hover:border-primary/50 transition-all"
+                  className="h-11 rounded-xl bg-surface border-border/50 focus:border-neon-orange"
                 />
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="password" className="font-semibold">Senha</Label>
+                <Label className="flex items-center gap-2 text-sm font-semibold">
+                  <Lock className="h-4 w-4 text-neon-cyan" />
+                  Senha
+                </Label>
                 <Input
-                  id="password"
                   type="password"
                   placeholder="Mínimo 4 caracteres"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   minLength={4}
                   required
-                  className="h-12 rounded-xl border-2 hover:border-primary/50 transition-all"
+                  className="h-11 rounded-xl bg-surface border-border/50 focus:border-neon-cyan"
                 />
               </div>
             </div>
-            
+
             <div className="space-y-3">
-              <Label className="font-bold text-base">Papéis de Acesso (selecione um ou mais)</Label>
+              <Label className="text-sm font-semibold">
+                Papéis de Acesso (selecione um ou mais)
+              </Label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                  { value: "admin" as UserRole, label: "Administrador", color: "from-blue-500 to-blue-600" },
-                  { value: "campo" as UserRole, label: "Campo", color: "from-green-500 to-emerald-500" },
-                  { value: "transporte" as UserRole, label: "Transporte", color: "from-yellow-500 to-yellow-600" },
-                  { value: "algodoeira" as UserRole, label: "Algodoeira", color: "from-orange-500 to-orange-600" }
-                ].map(role => (
-                  <div 
-                    key={role.value} 
-                    className={`flex items-center space-x-2 border-2 rounded-xl p-3 transition-all cursor-pointer ${
-                      selectedRoles.includes(role.value) 
-                        ? 'border-primary bg-primary/5 shadow-md' 
-                        : 'border-muted hover:border-primary/30 hover:bg-accent'
-                    }`}
+                  { value: "admin" as UserRole, label: "Administrador", color: "neon-cyan" },
+                  { value: "campo" as UserRole, label: "Campo", color: "primary" },
+                  { value: "transporte" as UserRole, label: "Transporte", color: "neon-orange" },
+                  { value: "algodoeira" as UserRole, label: "Algodoeira", color: "accent" },
+                ].map((role) => (
+                  <div
+                    key={role.value}
+                    className={cn(
+                      "flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all",
+                      selectedRoles.includes(role.value)
+                        ? `border-${role.color}/50 bg-${role.color}/10`
+                        : "border-border/30 bg-surface hover:border-primary/30"
+                    )}
+                    onClick={() => toggleRole(role.value)}
                   >
-                    <Checkbox 
-                      id={role.value}
+                    <Checkbox
                       checked={selectedRoles.includes(role.value)}
                       onCheckedChange={() => toggleRole(role.value)}
+                      className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                     />
-                    <Label 
-                      htmlFor={role.value} 
-                      className="cursor-pointer flex-1 font-semibold"
-                    >
-                      {role.label}
-                    </Label>
+                    <span className="text-sm font-semibold">{role.label}</span>
                   </div>
                 ))}
               </div>
             </div>
-            
-            <Button 
-              type="submit" 
+
+            <Button
+              type="submit"
               disabled={createUserMutation.isPending}
-              className="h-13 rounded-xl shadow-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 font-bold text-base px-8"
+              className="h-12 rounded-xl btn-neon font-semibold px-8"
             >
-              {createUserMutation.isPending ? "Criando..." : "Criar Usuário"}
+              {createUserMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Criando...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Criar Usuário
+                </>
+              )}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Tabela de Usuários */}
-      <Card className="shadow-xl border-2 rounded-2xl overflow-hidden animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
-        <CardHeader className="bg-gradient-to-r from-green-600 to-yellow-600 text-white relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
-          </div>
-          <CardTitle className="flex items-center gap-2 relative">
-            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-              <Users className="h-5 w-5" />
-            </div>
-            Usuários do Sistema
-          </CardTitle>
-          <CardDescription className="text-white/90 relative font-medium">
-            {users.length} usuário(s) cadastrado(s)
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <p className="text-center text-muted-foreground py-12 font-semibold">Carregando usuários...</p>
-          ) : users.length === 0 ? (
-            <p className="text-center text-muted-foreground py-12 font-semibold">Nenhum usuário encontrado</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b-2">
-                    <TableHead className="font-bold">Nome de Exibição</TableHead>
-                    <TableHead className="font-bold">Login</TableHead>
-                    <TableHead className="font-bold">Tipo</TableHead>
-                    <TableHead className="font-bold">Criado em</TableHead>
-                    <TableHead className="text-right font-bold">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((u) => (
-                    <TableRow key={u.id} className="hover:bg-muted/50 transition-colors">
-                      <TableCell className="font-bold">{u.displayName}</TableCell>
-                      <TableCell className="text-muted-foreground font-medium">{u.username}</TableCell>
-                      <TableCell>{getRolesBadges(u.roles)}</TableCell>
-                      <TableCell className="text-muted-foreground font-medium">
-                        {new Date(u.createdAt).toLocaleDateString('pt-BR')}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {u.id !== user?.id && (
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openEditDialog(u)}
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950 rounded-lg"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setUserToDelete(u)}
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Dialog de Edição de Papéis */}
-      {/* Dialog de Edição */}
-      <Dialog open={!!userToEdit} onOpenChange={(open) => !open && setUserToEdit(null)}>
-        <DialogContent className="rounded-2xl border-2">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <div className="p-2 bg-green-500/10 rounded-lg">
-                <Edit className="h-5 w-5 text-green-600" />
+        {/* Users List */}
+        <div className="glass-card rounded-2xl overflow-hidden">
+          <div className="relative p-5 border-b border-border/30">
+            <div className="absolute inset-0 bg-gradient-to-r from-neon-cyan/10 via-neon-cyan/5 to-transparent" />
+            <div className="relative flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-neon-cyan/20">
+                  <Users className="w-5 h-5 text-neon-cyan" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">Usuários do Sistema</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {users.length} usuário(s) cadastrado(s)
+                  </p>
+                </div>
               </div>
-              Editar Papéis do Usuário
-            </DialogTitle>
-            <DialogDescription className="font-medium">
-              Altere os papéis de acesso de <strong>{userToEdit?.displayName}</strong>
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-3">
-              <Label className="font-bold text-base">Papéis de Acesso (selecione um ou mais)</Label>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { value: "admin" as UserRole, label: "Administrador" },
-                  { value: "campo" as UserRole, label: "Campo" },
-                  { value: "transporte" as UserRole, label: "Transporte" },
-                  { value: "algodoeira" as UserRole, label: "Algodoeira" }
-                ].map(role => (
-                  <div 
-                    key={role.value} 
-                    className={`flex items-center space-x-2 border-2 rounded-xl p-3 transition-all cursor-pointer ${
-                      editRoles.includes(role.value) 
-                        ? 'border-primary bg-primary/5 shadow-md' 
-                        : 'border-muted hover:border-primary/30 hover:bg-accent'
-                    }`}
+            </div>
+          </div>
+
+          <div className="p-5">
+            {isLoading ? (
+              <div className="text-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-3" />
+                <p className="text-muted-foreground">Carregando usuários...</p>
+              </div>
+            ) : users.length === 0 ? (
+              <div className="text-center py-12">
+                <Users className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+                <p className="text-muted-foreground">Nenhum usuário encontrado</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {users.map((u) => (
+                  <div
+                    key={u.id}
+                    className="glass-card rounded-xl p-4 border border-border/30 hover:border-primary/30 transition-all"
                   >
-                    <Checkbox 
-                      id={`edit-${role.value}`}
-                      checked={editRoles.includes(role.value)}
-                      onCheckedChange={() => toggleEditRole(role.value)}
-                    />
-                    <Label 
-                      htmlFor={`edit-${role.value}`} 
-                      className="cursor-pointer flex-1 font-semibold"
-                    >
-                      {role.label}
-                    </Label>
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                          <User className="w-6 h-6 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-semibold truncate">{u.displayName}</h3>
+                          <p className="text-sm text-muted-foreground truncate">@{u.username}</p>
+                        </div>
+                      </div>
+
+                      <div className="hidden sm:flex items-center gap-4">
+                        {getRolesBadges(u.roles)}
+                      </div>
+
+                      <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="w-4 h-4" />
+                        {new Date(u.createdAt).toLocaleDateString("pt-BR")}
+                      </div>
+
+                      {u.id !== user?.id && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditDialog(u)}
+                            className="rounded-lg hover:bg-primary/10 text-primary"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setUserToDelete(u)}
+                            className="rounded-lg hover:bg-destructive/10 text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="sm:hidden mt-3 pt-3 border-t border-border/30">
+                      {getRolesBadges(u.roles)}
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setUserToEdit(null)}
-                className="h-11 rounded-xl border-2"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={() => userToEdit && updateUserMutation.mutate({ userId: userToEdit.id, roles: editRoles })}
-                disabled={updateUserMutation.isPending || editRoles.length === 0}
-                className="h-11 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 font-bold"
-              >
-                {updateUserMutation.isPending ? "Salvando..." : "Salvar Alterações"}
-              </Button>
-            </div>
+            )}
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
 
-      {/* Dialog de Confirmação de Exclusão */}
-      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
-        <AlertDialogContent className="rounded-2xl border-2">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-xl">
-              <div className="p-2 bg-red-500/10 rounded-lg">
-                <Trash2 className="h-5 w-5 text-red-600" />
+        {/* Edit Dialog */}
+        <Dialog open={!!userToEdit} onOpenChange={(open) => !open && setUserToEdit(null)}>
+          <DialogContent className="rounded-2xl glass-card border-border/50 max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3 text-xl">
+                <div className="p-2.5 rounded-xl bg-primary/20">
+                  <Edit className="h-5 w-5 text-primary" />
+                </div>
+                Editar Papéis do Usuário
+              </DialogTitle>
+              <DialogDescription>
+                Altere os papéis de acesso de <strong>{userToEdit?.displayName}</strong>
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold">
+                  Papéis de Acesso (selecione um ou mais)
+                </Label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { value: "admin" as UserRole, label: "Administrador" },
+                    { value: "campo" as UserRole, label: "Campo" },
+                    { value: "transporte" as UserRole, label: "Transporte" },
+                    { value: "algodoeira" as UserRole, label: "Algodoeira" },
+                  ].map((role) => (
+                    <div
+                      key={role.value}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all",
+                        editRoles.includes(role.value)
+                          ? "border-primary/50 bg-primary/10"
+                          : "border-border/30 bg-surface hover:border-primary/30"
+                      )}
+                      onClick={() => toggleEditRole(role.value)}
+                    >
+                      <Checkbox
+                        checked={editRoles.includes(role.value)}
+                        onCheckedChange={() => toggleEditRole(role.value)}
+                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      />
+                      <span className="text-sm font-semibold">{role.label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              Confirmar Exclusão
-            </AlertDialogTitle>
-            <AlertDialogDescription className="font-medium">
-              Tem certeza que deseja remover o usuário <strong>{userToDelete?.displayName}</strong>? 
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="h-11 rounded-xl border-2">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => userToDelete && deleteUserMutation.mutate(userToDelete.id)}
-              className="h-11 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 font-bold"
-            >
-              Remover Usuário
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      </main>
-      </div>
-    </>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setUserToEdit(null)}
+                  className="h-11 rounded-xl border-border/50"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={() =>
+                    userToEdit && updateUserMutation.mutate({ userId: userToEdit.id, roles: editRoles })
+                  }
+                  disabled={updateUserMutation.isPending || editRoles.length === 0}
+                  className="h-11 rounded-xl btn-neon font-semibold"
+                >
+                  {updateUserMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    "Salvar Alterações"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+          <AlertDialogContent className="rounded-2xl glass-card border-border/50">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-3 text-xl">
+                <div className="p-2.5 rounded-xl bg-destructive/20">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                </div>
+                Confirmar Exclusão
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-3 pt-2">
+                <p>
+                  Tem certeza que deseja remover o usuário{" "}
+                  <strong className="text-foreground">{userToDelete?.displayName}</strong>?
+                </p>
+                <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-xl">
+                  <p className="text-destructive font-semibold text-sm">
+                    Esta ação não pode ser desfeita e todos os dados do usuário serão
+                    permanentemente removidos.
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-3">
+              <AlertDialogCancel className="h-11 rounded-xl border-border/50">
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => userToDelete && deleteUserMutation.mutate(userToDelete.id)}
+                className="h-11 rounded-xl bg-destructive hover:bg-destructive/90"
+                disabled={deleteUserMutation.isPending}
+              >
+                {deleteUserMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Removendo...
+                  </>
+                ) : (
+                  "Remover Usuário"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </PageContent>
+    </Page>
   );
 }

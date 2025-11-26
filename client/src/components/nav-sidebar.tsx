@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -21,7 +22,6 @@ export function useSidebar() {
 }
 import {
   LayoutDashboard,
-  Package,
   Truck,
   Wheat,
   BarChart3,
@@ -34,7 +34,8 @@ import {
   FileBarChart,
   RefreshCw,
   Menu,
-  X,
+  Sun,
+  Moon,
 } from "lucide-react";
 import logoProgresso from "/favicon.svg";
 import { useToast } from "@/hooks/use-toast";
@@ -51,14 +52,14 @@ interface NavItem {
 export function NavSidebar() {
   const [location, setLocation] = useLocation();
   const { logout, user, selectedRole, clearCacheAndReload } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Fechar menu mobile ao mudar de rota
   useEffect(() => {
-    setMobileOpen(false);
+    setMobileMenuOpen(false);
   }, [location]);
 
   const handleLogout = () => {
@@ -176,17 +177,6 @@ export function NavSidebar() {
     return item;
   });
 
-  // Debug: log para verificar
-  console.log('🔍 NavSidebar Debug:', { 
-    selectedRole, 
-    user: user?.username,
-    userRoles: user?.roles,
-    isAdminUser,
-    filteredItemsCount: filteredNavItems.length,
-    filteredItems: filteredNavItems.map(i => i.title),
-    mobileBarItemsCount: mobileBarItems.filter(i => i.showInMobileBar !== false).length
-  });
-
   // Sempre mostrar navbar (mesmo com 1 item, usuário precisa do botão de logout)
   const shouldShowNavbar = filteredNavItems.length >= 1;
 
@@ -204,22 +194,22 @@ export function NavSidebar() {
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "hidden lg:block fixed left-0 top-0 z-40 h-screen transition-all duration-300 ease-in-out bg-gradient-to-b from-green-50 to-yellow-50/30 dark:from-gray-900 dark:to-gray-800 border-r-2 border-green-200 dark:border-gray-700 shadow-xl",
+          "hidden lg:block fixed left-0 top-0 z-40 h-screen transition-all duration-300 ease-in-out bg-white border-r border-green-100 shadow-[6px_0_24px_rgba(0,0,0,0.05)]",
           collapsed ? "w-20" : "w-64"
         )}
       >
       <div className="flex h-full flex-col">
         {/* Header */}
-        <div className="flex h-16 items-center justify-between border-b border-green-100 dark:border-gray-700 px-4 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+        <div className="flex h-16 items-center justify-between border-b border-green-100 px-4 bg-white">
           {!collapsed && (
-            <div className="flex items-center gap-2 animate-fade-in">
+            <div className="flex items-center gap-3">
               <img 
                 src={logoProgresso} 
                 alt="Progresso" 
-                className="h-8 w-auto transition-transform hover:scale-110 duration-300"
+                className="h-8 w-auto"
               />
               <div className="flex flex-col">
-                <span className="font-bold text-green-700 dark:text-green-400 text-sm">
+                <span className="font-bold text-green-700 text-sm">
                   Cotton ID
                 </span>
                 <span className="text-xs text-muted-foreground">
@@ -232,25 +222,25 @@ export function NavSidebar() {
             <img 
               src={logoProgresso} 
               alt="Progresso" 
-              className="h-8 w-auto mx-auto transition-transform hover:scale-110 duration-300"
+              className="h-8 w-auto mx-auto"
             />
           )}
         </div>
 
         {/* User Info */}
         {!collapsed && user && (
-          <div className="p-4 border-b border-green-100 dark:border-gray-700 bg-white/30 dark:bg-gray-800/30 animate-fade-in">
+          <div className="p-4 border-b border-green-100 bg-white">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
+              <div className="h-10 w-10 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
                 {user.username.substring(0, 2).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate text-gray-900 dark:text-gray-100">
+                <p className="text-sm font-semibold truncate text-gray-900">
                   {user.username}
                 </p>
                 {selectedRole && (
-                  <p className="text-xs text-muted-foreground truncate">
-                    <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded font-medium">
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    <span className="px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full font-semibold">
                       {selectedRole}
                     </span>
                   </p>
@@ -271,9 +261,10 @@ export function NavSidebar() {
                 key={item.href}
                 variant={isActive ? "default" : "ghost"}
                 className={cn(
-                  "w-full justify-start transition-all duration-300 animate-fade-in-up hover:scale-105",
-                  isActive && "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md hover:from-green-600 hover:to-emerald-700",
-                  !isActive && "hover:bg-green-100 dark:hover:bg-gray-800",
+                  "w-full justify-start transition-colors duration-150",
+                  isActive
+                    ? "bg-green-100 text-green-900 border border-green-200 shadow-[0_2px_10px_rgba(22,163,74,0.12)]"
+                    : "bg-transparent hover:bg-green-50 text-gray-800",
                   collapsed && "justify-center px-2"
                 )}
                 style={{ animationDelay: `${index * 0.05}s` }}
@@ -294,12 +285,30 @@ export function NavSidebar() {
         </nav>
 
         {/* Footer Actions */}
-        <div className="border-t border-green-100 dark:border-gray-700 p-3 space-y-2 bg-white/30 dark:bg-gray-800/30">
+        <div className="border-t border-green-100 p-3 space-y-2 bg-white">
+          {/* Theme Toggle */}
+          <Button
+            variant="ghost"
+            className={cn(
+              "w-full justify-start transition-colors duration-150 hover:bg-green-50",
+              collapsed && "lg:justify-center lg:px-2"
+            )}
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Modo Claro" : "Modo Escuro"}
+          >
+            {theme === "dark" ? (
+              <Sun className={cn("h-5 w-5", !collapsed && "mr-3")} />
+            ) : (
+              <Moon className={cn("h-5 w-5", !collapsed && "mr-3")} />
+            )}
+            {!collapsed && (theme === "dark" ? "Modo Claro" : "Modo Escuro")}
+          </Button>
+
           {selectedRole === "superadmin" && (
             <Button
               variant="ghost"
               className={cn(
-                "w-full justify-start transition-all duration-300 hover:bg-green-100 dark:hover:bg-gray-800 hover:scale-105",
+                "w-full justify-start transition-colors duration-150 hover:bg-green-50",
                 collapsed && "lg:justify-center lg:px-2"
               )}
               onClick={handleClearCache}
@@ -313,7 +322,7 @@ export function NavSidebar() {
           <Button
             variant="ghost"
             className={cn(
-              "w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-300 hover:scale-105",
+              "w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors duration-150",
               collapsed && "lg:justify-center lg:px-2"
             )}
             onClick={handleLogout}
@@ -327,7 +336,7 @@ export function NavSidebar() {
           <Button
             variant="ghost"
             size="sm"
-            className="w-full hover:bg-green-100 dark:hover:bg-gray-800"
+            className="w-full hover:bg-green-100"
             onClick={() => setCollapsed(!collapsed)}
           >
             {collapsed ? (
@@ -343,15 +352,13 @@ export function NavSidebar() {
       </div>
     </aside>
 
-      {/* Mobile Bottom Navigation - Moderno com gradientes */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-white via-white to-white/95 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900/95 backdrop-blur-lg border-t-2 border-green-200/50 dark:border-gray-700 shadow-[0_-4px_20px_rgba(34,197,94,0.15)]">
-        {/* Barra de destaque superior */}
-        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-green-500 via-yellow-500 to-green-500"></div>
+      {/* Mobile Bottom Navigation - reformulada */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-green-100 shadow-[0_-6px_20px_rgba(0,0,0,0.06)]">
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-green-600 via-yellow-400 to-green-600" />
 
-        <div className="flex items-center justify-around h-16 px-1">
-          {/* Mostrar apenas itens marcados para mobile bar (max 4) */}
+        <div className="flex items-center justify-around h-16 px-2 gap-1">
           {mobileBarItems
-            .filter(item => item.showInMobileBar !== false) // Se não especificado, assume true (backward compatibility)
+            .filter(item => item.showInMobileBar !== false)
             .slice(0, 4)
             .map((item, index) => {
               const Icon = item.icon;
@@ -362,41 +369,33 @@ export function NavSidebar() {
                   key={item.href}
                   onClick={() => setLocation(item.href)}
                   className={cn(
-                    "relative flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-2xl transition-all duration-300 active:scale-95",
-                    isActive
-                      ? "text-white scale-105"
-                      : "text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400"
+                    "relative flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all duration-150 active:scale-95",
+                    isActive ? "text-green-900" : "text-gray-700 hover:text-green-700"
                   )}
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
-                  {/* Background gradiente para item ativo */}
                   {isActive && (
-                    <div className="absolute inset-0 bg-gradient-to-br from-green-500 via-green-600 to-yellow-500 rounded-2xl shadow-lg shadow-green-500/30 animate-fade-in"></div>
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-green-600 via-green-500 to-yellow-400 shadow-lg shadow-green-500/20 animate-fade-in" />
                   )}
-
-                  {/* Pill de destaque para item ativo */}
-                  {isActive && (
-                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full shadow-md animate-fade-in"></div>
-                  )}
-
                   <Icon
                     className={cn(
-                      "h-5 w-5 transition-all relative z-10",
-                      isActive ? "scale-110 drop-shadow-md" : "scale-100"
+                      "h-5 w-5 relative z-10",
+                      isActive ? "text-white drop-shadow-sm" : ""
                     )}
                     strokeWidth={isActive ? 2.5 : 2}
                   />
-                  <span className={cn(
-                    "text-[9px] font-medium relative z-10 transition-all",
-                    isActive ? "font-bold tracking-wide" : "font-normal"
-                  )}>
+                  <span
+                    className={cn(
+                      "text-[10px] font-medium relative z-10",
+                      isActive ? "text-white" : ""
+                    )}
+                  >
                     {item.title}
                   </span>
                 </button>
               );
             })}
 
-          {/* Botão hambúrguer - aparece quando há itens não mostrados na barra */}
           {(() => {
             const visibleInBar = mobileBarItems.filter(item => item.showInMobileBar !== false);
             const hasHiddenItems = mobileBarItems.some(item => item.showInMobileBar === false);
@@ -407,10 +406,10 @@ export function NavSidebar() {
             return (
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="relative flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-2xl transition-all duration-300 active:scale-95 text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400"
+                className="relative flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all duration-150 active:scale-95 text-gray-700 hover:text-green-700"
               >
-                <Menu className="h-5 w-5 transition-all" strokeWidth={2} />
-                <span className="text-[9px] font-medium transition-all">
+                <Menu className="h-5 w-5" strokeWidth={2} />
+                <span className="text-[10px] font-medium">
                   Mais
                 </span>
               </button>
@@ -454,10 +453,24 @@ export function NavSidebar() {
 
           {/* Footer com ações */}
           <div className="mt-6 pt-6 border-t space-y-2">
+            {/* Theme Toggle */}
+            <Button
+              variant="ghost"
+              className="w-full justify-start hover:bg-green-100"
+              onClick={toggleTheme}
+            >
+              {theme === "dark" ? (
+                <Sun className="h-5 w-5 mr-3" />
+              ) : (
+                <Moon className="h-5 w-5 mr-3" />
+              )}
+              {theme === "dark" ? "Modo Claro" : "Modo Escuro"}
+            </Button>
+
             {selectedRole === "superadmin" && (
               <Button
                 variant="ghost"
-                className="w-full justify-start hover:bg-green-100 dark:hover:bg-gray-800"
+                className="w-full justify-start hover:bg-green-100"
                 onClick={() => {
                   handleClearCache();
                   setMobileMenuOpen(false);
@@ -470,7 +483,7 @@ export function NavSidebar() {
 
             <Button
               variant="ghost"
-              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
               onClick={() => {
                 handleLogout();
                 setMobileMenuOpen(false);

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import type { User, UserRole } from "@shared/schema";
 
 interface AuthContextType {
@@ -28,8 +28,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedAccessToken = localStorage.getItem("cotton_access_token");
     const storedRefreshToken = localStorage.getItem("cotton_refresh_token");
 
-    console.log('🔐 Auth Init:', { hasUser: !!storedUser, role: storedRole });
-
     if (storedUser && storedAccessToken) {
       try {
         setUser(JSON.parse(storedUser));
@@ -38,10 +36,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (storedRole) {
           setSelectedRoleState(storedRole as UserRole);
-          console.log('✅ Role restaurado:', storedRole);
         }
-      } catch (error) {
-        console.error("Error parsing stored user:", error);
+      } catch {
         localStorage.removeItem("cotton_user");
         localStorage.removeItem("cotton_selected_role");
         localStorage.removeItem("cotton_access_token");
@@ -50,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = (newUser: User, newAccessToken: string, newRefreshToken: string, role?: UserRole) => {
+  const login = useCallback((newUser: User, newAccessToken: string, newRefreshToken: string, role?: UserRole) => {
     setUser(newUser);
     setAccessToken(newAccessToken);
     setRefreshToken(newRefreshToken);
@@ -63,14 +59,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSelectedRoleState(role);
       localStorage.setItem("cotton_selected_role", role);
     }
-  };
+  }, []);
 
-  const setSelectedRole = (role: UserRole) => {
+  const setSelectedRole = useCallback((role: UserRole) => {
     setSelectedRoleState(role);
     localStorage.setItem("cotton_selected_role", role);
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     setSelectedRoleState(null);
     setAccessToken(null);
@@ -80,9 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("cotton_selected_role");
     localStorage.removeItem("cotton_access_token");
     localStorage.removeItem("cotton_refresh_token");
-  };
+  }, []);
 
-  const getAuthHeaders = (): HeadersInit => {
+  const getAuthHeaders = useCallback((): HeadersInit => {
     if (!accessToken) {
       return {};
     }
@@ -90,9 +86,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return {
       Authorization: `Bearer ${accessToken}`,
     };
-  };
+  }, [accessToken]);
 
-  const clearCacheAndReload = async () => {
+  const clearCacheAndReload = useCallback(async () => {
     try {
       // Clear all caches
       if ('caches' in window) {
@@ -132,28 +128,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Hard reload
       window.location.reload();
-    } catch (error) {
-      console.error('Error clearing cache:', error);
+    } catch {
       // Reload anyway
       window.location.reload();
     }
-  };
+  }, []);
+
+  const isAuthenticated = !!user && !!accessToken;
+
+  const value = useMemo(() => ({
+    user,
+    selectedRole,
+    accessToken,
+    refreshToken,
+    setSelectedRole,
+    login,
+    logout,
+    isAuthenticated,
+    clearCacheAndReload,
+    getAuthHeaders,
+  }), [user, selectedRole, accessToken, refreshToken, setSelectedRole, login, logout, isAuthenticated, clearCacheAndReload, getAuthHeaders]);
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        selectedRole,
-        accessToken,
-        refreshToken,
-        setSelectedRole,
-        login,
-        logout,
-        isAuthenticated: !!user && !!accessToken,
-        clearCacheAndReload,
-        getAuthHeaders,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

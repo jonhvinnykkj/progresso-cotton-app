@@ -64,6 +64,68 @@ export const talhoesInfo = pgTable("talhoes_info", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Carregamentos de caminhão (peso por carregamento)
+export const carregamentos = pgTable("carregamentos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  safra: text("safra").notNull(),
+  talhao: text("talhao").notNull(),
+  pesoKg: text("peso_kg").notNull(), // Peso do carregamento em KG
+  dataCarregamento: timestamp("data_carregamento").notNull().defaultNow(),
+  observacao: text("observacao"), // Observação opcional
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: text("created_by"), // Usuário que cadastrou
+});
+
+// Rendimento de pluma por talhão (apenas o % - peso bruto vem dos carregamentos)
+export const rendimentoTalhao = pgTable("rendimento_talhao", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  safra: text("safra").notNull(),
+  talhao: text("talhao").notNull(),
+  rendimentoPluma: text("rendimento_pluma").notNull(), // Percentual (ex: "41.50")
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedBy: text("updated_by"), // Usuário que atualizou
+});
+
+// Lotes de beneficiamento (batches processadas na algodoeira)
+// Lote = quantidade de fardos beneficiados em um dia, independente de talhão
+export const lotes = pgTable("lotes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  safra: text("safra").notNull(),
+  numeroLote: integer("numero_lote").notNull(), // Número sequencial do lote na safra
+  pesoPluma: text("peso_pluma").notNull(), // Peso da pluma em KG (manual)
+  qtdFardinhos: integer("qtd_fardinhos").notNull().default(0), // Quantidade de fardinhos (opcional, default 0)
+  dataProcessamento: timestamp("data_processamento").notNull().defaultNow(),
+  observacao: text("observacao"), // Observação opcional
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: text("created_by"), // Usuário que cadastrou
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedBy: text("updated_by"), // Último usuário que atualizou
+});
+
+// Registro de fardinhos (separado dos lotes de pluma)
+export const fardinhos = pgTable("fardinhos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  safra: text("safra").notNull(),
+  quantidade: integer("quantidade").notNull(), // Quantidade de fardinhos registrados
+  dataRegistro: timestamp("data_registro").notNull().defaultNow(),
+  observacao: text("observacao"), // Observação opcional
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: text("created_by"), // Usuário que cadastrou
+});
+
+// DEPRECATED: Mantido para compatibilidade - usar carregamentos + rendimentoTalhao
+export const producaoTalhao = pgTable("producao_talhao", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  safra: text("safra").notNull(),
+  talhao: text("talhao").notNull(),
+  pesoBrutoTotal: text("peso_bruto_total").notNull(),
+  pesoPlumaTotal: text("peso_pluma_total").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedBy: text("updated_by"),
+});
+
 // Notifications table (admin broadcast messages)
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -164,5 +226,75 @@ export const updateDefaultSafraSchema = z.object({
 export type InsertSetting = z.infer<typeof insertSettingSchema>;
 export type Setting = typeof settings.$inferSelect;
 export type UpdateDefaultSafra = z.infer<typeof updateDefaultSafraSchema>;
-// Talh�o info type
+// Talhão info type
 export type TalhaoInfo = typeof talhoesInfo.$inferSelect;
+
+// Carregamentos schemas
+export const createCarregamentoSchema = z.object({
+  safra: z.string().min(1, "Safra é obrigatória"),
+  talhao: z.string().min(1, "Talhão é obrigatório"),
+  pesoKg: z.string().min(1, "Peso é obrigatório"),
+  dataCarregamento: z.string().optional(),
+  observacao: z.string().optional(),
+});
+
+export type CreateCarregamento = z.infer<typeof createCarregamentoSchema>;
+export type Carregamento = typeof carregamentos.$inferSelect;
+
+// Rendimento Talhão schemas
+export const upsertRendimentoTalhaoSchema = z.object({
+  safra: z.string().min(1, "Safra é obrigatória"),
+  talhao: z.string().min(1, "Talhão é obrigatório"),
+  rendimentoPluma: z.string().min(1, "Rendimento é obrigatório"),
+});
+
+export type UpsertRendimentoTalhao = z.infer<typeof upsertRendimentoTalhaoSchema>;
+export type RendimentoTalhao = typeof rendimentoTalhao.$inferSelect;
+
+// Lotes schemas (apenas peso da pluma)
+export const createLoteSchema = z.object({
+  safra: z.string().min(1, "Safra é obrigatória"),
+  pesoPluma: z.string().min(1, "Peso da pluma é obrigatório"),
+  qtdFardinhos: z.number().optional().default(0), // Opcional, agora fardinhos são registrados separadamente
+  dataProcessamento: z.string().optional(),
+  observacao: z.string().optional(),
+});
+
+export const updateLoteSchema = z.object({
+  pesoPluma: z.string().min(1, "Peso da pluma é obrigatório").optional(),
+  qtdFardinhos: z.number().optional(),
+  dataProcessamento: z.string().optional(),
+  observacao: z.string().optional(),
+});
+
+export type CreateLote = z.infer<typeof createLoteSchema>;
+export type UpdateLote = z.infer<typeof updateLoteSchema>;
+export type Lote = typeof lotes.$inferSelect;
+
+// Fardinhos schemas
+export const createFardinhoSchema = z.object({
+  safra: z.string().min(1, "Safra é obrigatória"),
+  quantidade: z.number().min(1, "Quantidade deve ser maior que 0"),
+  dataRegistro: z.string().optional(),
+  observacao: z.string().optional(),
+});
+
+export const updateFardinhoSchema = z.object({
+  quantidade: z.number().min(1, "Quantidade deve ser maior que 0").optional(),
+  observacao: z.string().optional(),
+});
+
+export type CreateFardinho = z.infer<typeof createFardinhoSchema>;
+export type UpdateFardinho = z.infer<typeof updateFardinhoSchema>;
+export type Fardinho = typeof fardinhos.$inferSelect;
+
+// DEPRECATED: Produção Talhão schemas (usar carregamentos + rendimentoTalhao)
+export const upsertProducaoTalhaoSchema = z.object({
+  safra: z.string().min(1, "Safra é obrigatória"),
+  talhao: z.string().min(1, "Talhão é obrigatório"),
+  pesoBrutoTotal: z.string().min(1, "Peso bruto é obrigatório"),
+  pesoPlumaTotal: z.string().min(1, "Peso da pluma é obrigatório"),
+});
+
+export type UpsertProducaoTalhao = z.infer<typeof upsertProducaoTalhaoSchema>;
+export type ProducaoTalhao = typeof producaoTalhao.$inferSelect;

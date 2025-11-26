@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { Printer, QrCode, ArrowLeft, Loader2, Share2, Download } from "lucide-react";
+import { Printer, QrCode, ArrowLeft, Loader2, Download } from "lucide-react";
 import QRCode from "qrcode";
 import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -27,11 +27,10 @@ export default function Etiqueta() {
   const [qrDataUrls, setQrDataUrls] = useState<Map<string, string>>(new Map());
   const printAreaRef = useRef<HTMLDivElement>(null);
 
-  // Buscar dados dos fardos (forçar refetch para garantir dados atualizados)
+  // Buscar dados dos fardos
   const { data: allBales = [], isLoading } = useQuery<Bale[]>({
     queryKey: ["/api/bales"],
-    refetchOnMount: "always", // Sempre buscar dados frescos ao montar
-    staleTime: 0, // Considerar dados sempre stale
+    staleTime: 30000, // 30 segundos de cache
   });
 
   const bales = allBales.filter(b => baleIds.includes(b.id));
@@ -341,21 +340,18 @@ export default function Etiqueta() {
 
   if (baleIds.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-background flex items-center justify-center p-4">
-        <Card className="max-w-md shadow-xl border-2 rounded-2xl overflow-hidden animate-fade-in-up">
-          <div className="bg-gradient-to-r from-red-500 to-orange-500 p-6 relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
-            </div>
-            <CardTitle className="text-xl text-white font-bold">Erro</CardTitle>
-          </div>
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <Card className="max-w-md shadow-sm border rounded-xl overflow-hidden animate-fade-in-up">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold text-gray-900">Erro</CardTitle>
+          </CardHeader>
           <CardContent className="p-6">
             <p className="text-sm text-muted-foreground mb-4">
               Nenhum fardo selecionado. Volte e tente novamente.
             </p>
             <Button 
               onClick={handleBack} 
-              className="w-full h-12 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 font-bold"
+              className="w-full h-12 rounded-lg bg-green-600 hover:bg-green-700 font-semibold"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar
@@ -368,9 +364,9 @@ export default function Etiqueta() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-background flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center space-y-4">
-          <Loader2 className="w-10 h-10 animate-spin mx-auto text-primary" />
+          <Loader2 className="w-10 h-10 animate-spin mx-auto text-green-600" />
           <p className="text-base text-muted-foreground font-semibold">Carregando etiquetas...</p>
         </div>
       </div>
@@ -379,21 +375,18 @@ export default function Etiqueta() {
 
   if (bales.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-background flex items-center justify-center p-4">
-        <Card className="max-w-md shadow-xl border-2 rounded-2xl overflow-hidden animate-fade-in-up">
-          <div className="bg-gradient-to-r from-yellow-500 to-orange-500 p-6 relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
-            </div>
-            <CardTitle className="text-xl text-white font-bold">Fardos não encontrados</CardTitle>
-          </div>
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <Card className="max-w-md shadow-sm border rounded-xl overflow-hidden animate-fade-in-up">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold text-gray-900">Fardos não encontrados</CardTitle>
+          </CardHeader>
           <CardContent className="p-6">
             <p className="text-sm text-muted-foreground mb-4">
               Os fardos selecionados não foram encontrados no sistema.
             </p>
             <Button 
               onClick={handleBack} 
-              className="w-full h-12 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 font-bold"
+              className="w-full h-12 rounded-lg bg-green-600 hover:bg-green-700 font-semibold"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar
@@ -406,9 +399,9 @@ export default function Etiqueta() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-background print:hidden pb-20 lg:pb-0">
-        {/* Header modernizado */}
-        <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b shadow-sm">
+      <div className="min-h-screen bg-white print:hidden pb-20 lg:pb-0">
+        {/* Header */}
+        <header className="sticky top-0 z-50 bg-white border-b shadow-sm">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between gap-4 py-3 sm:py-4">
               <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -417,19 +410,19 @@ export default function Etiqueta() {
                   size="icon"
                   onClick={handleBack}
                   data-testid="button-back"
-                  className="shrink-0 hover:scale-110 transition-transform duration-300"
+                  className="shrink-0"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
-                <div className="p-2 bg-gradient-to-br from-green-500 to-yellow-500 rounded-2xl shadow-lg shrink-0">
+                <div className="p-2 bg-green-100 rounded-xl shrink-0">
                   <img
                     src={logoProgresso}
                     alt="Grupo Progresso"
-                    className="h-6 w-6 sm:h-8 sm:w-8 transition-transform hover:scale-110 duration-300"
+                    className="h-6 w-6 sm:h-8 sm:w-8"
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-lg sm:text-xl font-bold truncate bg-gradient-to-r from-green-600 to-yellow-600 bg-clip-text text-transparent">
+                  <h1 className="text-lg sm:text-xl font-bold truncate text-gray-900">
                     Etiquetas dos Fardos
                   </h1>
                   <p className="text-xs sm:text-sm text-muted-foreground truncate">
@@ -445,19 +438,14 @@ export default function Etiqueta() {
         <main className="container mx-auto px-4 py-6 max-w-4xl space-y-6">
           
           {/* Preview das etiquetas */}
-          <Card className="shadow-xl border-2 rounded-2xl overflow-hidden animate-fade-in-up">
-            <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-6 relative overflow-hidden">
-              <div className="absolute inset-0 opacity-10">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
-              </div>
-              
-              <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <Card className="shadow-sm border rounded-xl overflow-hidden animate-fade-in-up">
+            <CardHeader className="bg-white border-b">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl shrink-0">
-                    <QrCode className="w-6 h-6 text-white" />
+                  <div className="p-2.5 bg-green-100 text-green-700 rounded-lg shrink-0">
+                    <QrCode className="w-6 h-6" />
                   </div>
-                  <CardTitle className="text-xl text-white font-bold">
+                  <CardTitle className="text-xl text-gray-900 font-bold">
                     Preview das Etiquetas
                   </CardTitle>
                 </div>
@@ -466,7 +454,7 @@ export default function Etiqueta() {
                   size="lg"
                   data-testid="button-print-labels"
                   disabled={qrDataUrls.size === 0}
-                  className="w-full lg:w-auto h-12 rounded-xl shadow-lg bg-white text-green-600 hover:bg-white/90 hover:scale-105 transition-all duration-300 font-bold shrink-0"
+                  className="w-full lg:w-auto h-12 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold shrink-0"
                 >
                   {Capacitor.isNativePlatform() ? (
                     <>
@@ -481,7 +469,7 @@ export default function Etiqueta() {
                   )}
                 </Button>
               </div>
-            </div>
+            </CardHeader>
             
             <CardContent className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -491,7 +479,7 @@ export default function Etiqueta() {
                   return (
                     <div 
                       key={bale.id} 
-                      className="border-2 border-primary/20 rounded-xl p-4 space-y-3 bg-gradient-to-br from-primary/5 to-primary/10 hover:scale-[1.02] transition-all duration-300 shadow-md animate-fade-in-up"
+                      className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white hover:shadow-sm transition-all duration-200 animate-fade-in-up"
                       style={{ animationDelay: `${index * 0.05}s` }}
                     >
                       {qrUrl ? (
@@ -519,10 +507,10 @@ export default function Etiqueta() {
           </Card>
 
           {/* Informações */}
-          <Card className="shadow-lg border-2 rounded-2xl bg-gradient-to-br from-muted/30 to-muted/10 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+          <Card className="shadow-sm border rounded-xl animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
             <CardContent className="pt-6 pb-6 px-6">
               <h3 className="font-bold text-base mb-4 flex items-center gap-2">
-                <Printer className="w-5 h-5 text-primary" />
+                <Printer className="w-5 h-5 text-green-700" />
                 Instruções de Impressão
               </h3>
               <ol className="text-sm text-muted-foreground space-y-3 list-decimal list-inside">

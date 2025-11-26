@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
     // Optional: Configure allowed navigation for security
     allowNavigation: [
-      'https://progresso-cotton-app-production.up.railway.app',
+      'https://cotton-manager-progresso.up.railway.app',
       'http://192.168.86.88:5000',
       'http://localhost:5000'
     ]

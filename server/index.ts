@@ -38,7 +38,7 @@ app.use(helmet({
       ],
       connectSrc: [
         "'self'",
-        "https://progresso-cotton-app-production.up.railway.app", // API in production
+        "https://cotton-manager-progresso.up.railway.app", // API in production
       ],
       fontSrc: [
         "'self'",
@@ -64,7 +64,7 @@ const allowedOrigins = [
   'ionic://localhost', // Ionic
   'http://localhost:3000', // Development web
   'http://localhost:5000', // Development web
-  'https://progresso-cotton-app-production.up.railway.app', // Production web
+  'https://cotton-manager-progresso.up.railway.app', // Production web
 ];
 
 // If CORS_ORIGIN is set in env, use it; otherwise use allowedOrigins

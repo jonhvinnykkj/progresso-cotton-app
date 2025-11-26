@@ -1,4 +1,4 @@
-const PROD_API_URL = 'https://progresso-cotton-app-production.up.railway.app';
+const PROD_API_URL = 'https://cotton-manager-progresso.up.railway.app';
 
 // API Configuration for different environments
 export const getApiUrl = (): string => {

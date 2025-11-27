@@ -23,6 +23,8 @@ const BaleDetails = lazy(() => import("@/pages/bale-details"));
 const Etiqueta = lazy(() => import("@/pages/etiqueta"));
 const SettingsPage = lazy(() => import("@/pages/settings"));
 const TalhaoStats = lazy(() => import("@/pages/talhao-stats"));
+const Talhoes = lazy(() => import("@/pages/talhoes"));
+const TalhaoDetail = lazy(() => import("@/pages/talhao-detail"));
 const UserManagement = lazy(() => import("@/pages/user-management"));
 const ReportsPage = lazy(() => import("@/pages/reports"));
 
@@ -150,7 +152,15 @@ function Router() {
       <Route path="/talhao-stats">
         <ProtectedRoute component={TalhaoStats} allowedRoles={["admin", "superadmin"]} />
       </Route>
-      
+
+      <Route path="/talhoes">
+        <ProtectedRoute component={Talhoes} />
+      </Route>
+
+      <Route path="/talhoes/:id">
+        <ProtectedRoute component={TalhaoDetail} />
+      </Route>
+
       <Route path="/reports">
         <ProtectedRoute component={ReportsPage} allowedRoles={["admin", "superadmin"]} />
       </Route>

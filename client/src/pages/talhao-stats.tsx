@@ -533,28 +533,37 @@ export default function TalhaoStats() {
           <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-neon-cyan/5" />
 
           <div className="relative">
-            {/* Header com título e botão voltar */}
-            <div className="flex items-center justify-between gap-4 mb-6">
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-neon-cyan flex items-center justify-center shadow-glow">
-                    <BarChart3 className="h-6 w-6 text-black" />
+            {/* Header com título e botão voltar - Mobile First */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setLocation("/dashboard")}
+                  className="rounded-xl border-border/50 hover:border-primary/50 sm:hidden h-10 w-10 flex-shrink-0"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+                <div className="relative flex-shrink-0">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-primary to-neon-cyan flex items-center justify-center shadow-glow">
+                    <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-black" />
                   </div>
                 </div>
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-display font-bold">
-                    <span className="gradient-text">Central de Estatísticas</span>
+                <div className="min-w-0">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-bold truncate">
+                    <span className="gradient-text">Estatísticas</span>
+                    <span className="gradient-text hidden sm:inline"> da Safra</span>
                   </h1>
-                  <p className="text-sm text-muted-foreground flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                    Dados em tempo real • Safra {selectedSafra}
+                  <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-primary animate-pulse flex-shrink-0" />
+                    <span className="truncate">Tempo real • {selectedSafra}</span>
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 self-end sm:self-auto">
                 <Select value={selectedSafra} onValueChange={setSelectedSafra}>
-                  <SelectTrigger className="w-28 h-9 rounded-lg bg-surface border-border/50 text-sm">
+                  <SelectTrigger className="w-24 sm:w-28 h-9 rounded-lg bg-surface border-border/50 text-sm">
                     <SelectValue placeholder="Safra" />
                   </SelectTrigger>
                   <SelectContent>
@@ -566,7 +575,7 @@ export default function TalhaoStats() {
                   variant="outline"
                   size="sm"
                   onClick={() => setLocation("/dashboard")}
-                  className="rounded-xl border-border/50 hover:border-primary/50"
+                  className="rounded-xl border-border/50 hover:border-primary/50 hidden sm:flex"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Voltar
@@ -590,7 +599,7 @@ export default function TalhaoStats() {
                     </div>
                     <span className="text-xs text-primary font-semibold uppercase tracking-wider">Total</span>
                   </div>
-                  <p className="text-4xl font-display font-bold text-glow mb-1">
+                  <p className="text-3xl sm:text-4xl font-display font-bold text-glow mb-1">
                     <AnimatedCounter value={globalStats?.total || 0} />
                   </p>
                   <p className="text-xs text-muted-foreground">fardos cadastrados</p>
@@ -616,12 +625,12 @@ export default function TalhaoStats() {
                     <div className="p-2 rounded-lg bg-neon-cyan/20 group-hover:bg-neon-cyan/30 transition-colors">
                       <TrendingUp className="w-4 h-4 text-neon-cyan" />
                     </div>
-                    <span className="text-xs text-neon-cyan font-semibold uppercase tracking-wider">Rolos @/ha</span>
+                    <span className="text-xs text-neon-cyan font-semibold uppercase tracking-wider">@/ha</span>
                   </div>
-                  <div className="flex items-center gap-3 mb-1">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-1">
                     <div className="flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase">Prevista</p>
-                      <p className="text-2xl font-display font-bold text-foreground">
+                      <p className="text-xl sm:text-2xl font-display font-bold text-foreground">
                         {totaisProdutividade.produtividadePrevistaMedia > 0
                           ? totaisProdutividade.produtividadePrevistaMedia.toFixed(1)
                           : '-'}
@@ -629,7 +638,7 @@ export default function TalhaoStats() {
                     </div>
                     <div className="flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase">Real</p>
-                      <p className="text-2xl font-display font-bold text-foreground">
+                      <p className="text-xl sm:text-2xl font-display font-bold text-foreground">
                         {totaisProdutividade.produtividadeRealMedia > 0
                           ? totaisProdutividade.produtividadeRealMedia.toFixed(1)
                           : '-'}
@@ -649,14 +658,14 @@ export default function TalhaoStats() {
                       {(((totaisProdutividade.produtividadeRealMedia - totaisProdutividade.produtividadePrevistaMedia) / totaisProdutividade.produtividadePrevistaMedia) * 100).toFixed(1)}%
                     </div>
                   )}
-                  <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border/30">
-                    <div className="flex-1">
-                      <p className="text-[10px] text-muted-foreground uppercase">Peso/Rolo Est.</p>
-                      <p className="text-sm font-bold text-foreground">2.00t</p>
+                  <div className="flex items-center gap-2 sm:gap-3 mt-2 pt-2 border-t border-border/30">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] text-muted-foreground uppercase truncate">Peso Est.</p>
+                      <p className="text-xs sm:text-sm font-bold text-foreground">2.00t</p>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-[10px] text-muted-foreground uppercase">Peso/Rolo Real</p>
-                      <p className="text-sm font-bold text-foreground">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] text-muted-foreground uppercase truncate">Peso Real</p>
+                      <p className="text-xs sm:text-sm font-bold text-foreground">
                         {totaisProdutividade.pesoMedioRealGlobal > 0
                           ? `${(totaisProdutividade.pesoMedioRealGlobal / 1000).toFixed(2)}t`
                           : '-'}
@@ -680,15 +689,15 @@ export default function TalhaoStats() {
                     </div>
                     <span className="text-xs text-neon-orange font-semibold uppercase tracking-wider">Volume</span>
                   </div>
-                  <p className="text-4xl font-display font-bold mb-1">
+                  <p className="text-3xl sm:text-4xl font-display font-bold mb-1">
                     {(totaisCarregamentos.totalPesoKg / 1000).toFixed(1)}
-                    <span className="text-lg text-neon-orange ml-1">ton</span>
+                    <span className="text-base sm:text-lg text-neon-orange ml-1">ton</span>
                   </p>
-                  <p className="text-xs text-muted-foreground">{totaisCarregamentos.totalCarregamentos} carregamentos</p>
+                  <p className="text-xs text-muted-foreground">{totaisCarregamentos.totalCarregamentos} carreg.</p>
                   <div className="flex items-center gap-2 mt-3">
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Truck className="w-3 h-3" />
-                      {(totaisCarregamentos.mediaPesoPorCarregamento / 1000).toFixed(1)} ton/carreg.
+                      <span className="truncate">{(totaisCarregamentos.mediaPesoPorCarregamento / 1000).toFixed(1)} t/carreg.</span>
                     </div>
                   </div>
                 </div>
@@ -699,66 +708,63 @@ export default function TalhaoStats() {
 
         {/* Tabs - Navegação Principal */}
         <Tabs defaultValue="visao-geral" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 gap-1.5 rounded-2xl glass-card p-2 h-auto">
-            {/* 1. Visão Geral - Primeiro contato */}
-            <TabsTrigger
-              value="visao-geral"
-              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 rounded-xl px-3 py-3 sm:py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-black data-[state=active]:shadow-glow hover:bg-primary/10"
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span className="hidden sm:inline">Visão Geral</span>
-              <span className="sm:hidden text-[10px]">Geral</span>
-            </TabsTrigger>
+          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
+            <TabsList className="inline-flex sm:grid sm:w-full sm:grid-cols-6 gap-1.5 rounded-2xl glass-card p-2 h-auto min-w-max sm:min-w-0">
+              {/* 1. Visão Geral - Primeiro contato */}
+              <TabsTrigger
+                value="visao-geral"
+                className="flex items-center justify-center gap-1.5 rounded-xl px-4 sm:px-3 py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-black data-[state=active]:shadow-glow hover:bg-primary/10 whitespace-nowrap"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span className="sm:inline">Geral</span>
+              </TabsTrigger>
 
-            {/* 2. Produção - Talhões e produtividade */}
-            <TabsTrigger
-              value="producao"
-              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 rounded-xl px-3 py-3 sm:py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-neon-cyan data-[state=active]:text-black data-[state=active]:shadow-glow-cyan hover:bg-neon-cyan/10"
-            >
-              <Wheat className="w-4 h-4" />
-              <span className="hidden sm:inline">Produção</span>
-              <span className="sm:hidden text-[10px]">Produção</span>
-            </TabsTrigger>
+              {/* 2. Produção - Talhões e produtividade */}
+              <TabsTrigger
+                value="producao"
+                className="flex items-center justify-center gap-1.5 rounded-xl px-4 sm:px-3 py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-neon-cyan data-[state=active]:text-black data-[state=active]:shadow-glow-cyan hover:bg-neon-cyan/10 whitespace-nowrap"
+              >
+                <Wheat className="w-4 h-4" />
+                <span>Produção</span>
+              </TabsTrigger>
 
-            {/* 3. Transporte - Carregamentos */}
-            <TabsTrigger
-              value="transporte"
-              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 rounded-xl px-3 py-3 sm:py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-neon-orange data-[state=active]:text-black data-[state=active]:shadow-glow-orange hover:bg-neon-orange/10"
-            >
-              <Truck className="w-4 h-4" />
-              <span className="hidden sm:inline">Transporte</span>
-              <span className="sm:hidden text-[10px]">Transp.</span>
-            </TabsTrigger>
+              {/* 3. Transporte - Carregamentos */}
+              <TabsTrigger
+                value="transporte"
+                className="flex items-center justify-center gap-1.5 rounded-xl px-4 sm:px-3 py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-neon-orange data-[state=active]:text-black data-[state=active]:shadow-glow-orange hover:bg-neon-orange/10 whitespace-nowrap"
+              >
+                <Truck className="w-4 h-4" />
+                <span>Transp.</span>
+              </TabsTrigger>
 
-            {/* 4. Beneficiamento - Pluma e fardinhos */}
-            <TabsTrigger
-              value="beneficiamento"
-              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 rounded-xl px-3 py-3 sm:py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-purple-500 data-[state=active]:text-black data-[state=active]:shadow-lg hover:bg-purple-500/10"
-            >
-              <Factory className="w-4 h-4" />
-              <span className="hidden sm:inline">Beneficiamento</span>
-              <span className="sm:hidden text-[10px]">Benef.</span>
-            </TabsTrigger>
+              {/* 4. Beneficiamento - Pluma e fardinhos */}
+              <TabsTrigger
+                value="beneficiamento"
+                className="flex items-center justify-center gap-1.5 rounded-xl px-4 sm:px-3 py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-purple-500 data-[state=active]:text-black data-[state=active]:shadow-lg hover:bg-purple-500/10 whitespace-nowrap"
+              >
+                <Factory className="w-4 h-4" />
+                <span>Benef.</span>
+              </TabsTrigger>
 
-            {/* 5. Análises - Gráficos e comparativos */}
-            <TabsTrigger
-              value="analises"
-              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 rounded-xl px-3 py-3 sm:py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-accent data-[state=active]:text-black data-[state=active]:shadow-lg hover:bg-accent/10"
-            >
-              <LineChart className="w-4 h-4" />
-              <span className="hidden sm:inline">Análises</span>
-              <span className="sm:hidden text-[10px]">Análises</span>
-            </TabsTrigger>
+              {/* 5. Análises - Gráficos e comparativos */}
+              <TabsTrigger
+                value="analises"
+                className="flex items-center justify-center gap-1.5 rounded-xl px-4 sm:px-3 py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-accent data-[state=active]:text-black data-[state=active]:shadow-lg hover:bg-accent/10 whitespace-nowrap"
+              >
+                <LineChart className="w-4 h-4" />
+                <span>Análises</span>
+              </TabsTrigger>
 
-            {/* 6. Mapa - Visualização espacial */}
-            <TabsTrigger
-              value="mapa"
-              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 rounded-xl px-3 py-3 sm:py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-emerald-500 data-[state=active]:text-black data-[state=active]:shadow-lg hover:bg-emerald-500/10"
-            >
-              <Map className="w-4 h-4" />
-              <span>Mapa</span>
-            </TabsTrigger>
-          </TabsList>
+              {/* 6. Mapa - Visualização espacial */}
+              <TabsTrigger
+                value="mapa"
+                className="flex items-center justify-center gap-1.5 rounded-xl px-4 sm:px-3 py-2.5 text-xs font-semibold transition-all duration-200 data-[state=active]:bg-emerald-500 data-[state=active]:text-black data-[state=active]:shadow-lg hover:bg-emerald-500/10 whitespace-nowrap"
+              >
+                <Map className="w-4 h-4" />
+                <span>Mapa</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* ==================== TAB: VISÃO GERAL ==================== */}
           <TabsContent value="visao-geral" className="space-y-6 mt-4">
@@ -1692,23 +1698,23 @@ export default function TalhaoStats() {
                   </div>
                 </div>
               </div>
-              <div className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="p-3 sm:p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {/* Insight 1: Melhor Talhão */}
                   {topTalhoes.length > 0 && (
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border border-yellow-500/20">
+                    <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border border-yellow-500/20">
                       <div className="flex items-center gap-2 mb-2">
-                        <Award className="w-5 h-5 text-yellow-500" />
-                        <span className="text-xs font-semibold text-yellow-500 uppercase">Destaque</span>
+                        <Award className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
+                        <span className="text-[10px] sm:text-xs font-semibold text-yellow-500 uppercase">Destaque</span>
                       </div>
-                      <p className="text-sm text-foreground mb-1">
-                        <span className="font-bold">Talhão {topTalhoes[0].talhao}</span> é o mais produtivo
+                      <p className="text-xs sm:text-sm text-foreground mb-1">
+                        <span className="font-bold">Talhão {topTalhoes[0].talhao}</span> mais produtivo
                       </p>
-                      <p className="text-2xl font-display font-bold text-foreground">
-                        {topTalhoes[0].arrobasPorHa.toFixed(0)} <span className="text-sm font-normal">@/ha</span>
+                      <p className="text-xl sm:text-2xl font-display font-bold text-foreground">
+                        {topTalhoes[0].arrobasPorHa.toFixed(0)} <span className="text-xs sm:text-sm font-normal">@/ha</span>
                       </p>
                       {topTalhoes.length > 1 && (
-                        <p className="text-xs text-muted-foreground mt-2">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
                           {((topTalhoes[0].arrobasPorHa - topTalhoes[topTalhoes.length - 1].arrobasPorHa) / topTalhoes[topTalhoes.length - 1].arrobasPorHa * 100).toFixed(0)}% acima do menor
                         </p>
                       )}
@@ -1717,7 +1723,7 @@ export default function TalhaoStats() {
 
                   {/* Insight 2: Progresso Beneficiamento */}
                   <div className={cn(
-                    "p-4 rounded-xl border",
+                    "p-3 sm:p-4 rounded-xl border",
                     taxaBeneficiamento >= 70
                       ? "bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20"
                       : taxaBeneficiamento >= 40
@@ -1726,25 +1732,25 @@ export default function TalhaoStats() {
                   )}>
                     <div className="flex items-center gap-2 mb-2">
                       <Factory className={cn(
-                        "w-5 h-5",
+                        "w-4 h-4 sm:w-5 sm:h-5",
                         taxaBeneficiamento >= 70 ? "text-green-500" : taxaBeneficiamento >= 40 ? "text-yellow-500" : "text-neon-orange"
                       )} />
                       <span className={cn(
-                        "text-xs font-semibold uppercase",
+                        "text-[10px] sm:text-xs font-semibold uppercase",
                         taxaBeneficiamento >= 70 ? "text-green-500" : taxaBeneficiamento >= 40 ? "text-yellow-500" : "text-neon-orange"
                       )}>Beneficiamento</span>
                     </div>
-                    <p className="text-sm text-foreground mb-1">
+                    <p className="text-xs sm:text-sm text-foreground mb-1">
                       {taxaBeneficiamento >= 70
                         ? "Excelente progresso!"
                         : taxaBeneficiamento >= 40
                           ? "Progresso moderado"
-                          : "Atenção: muitos rolos pendentes"}
+                          : "Muitos rolos pendentes"}
                     </p>
-                    <p className="text-2xl font-display font-bold text-foreground">
+                    <p className="text-xl sm:text-2xl font-display font-bold text-foreground">
                       {taxaBeneficiamento.toFixed(1)}%
                     </p>
-                    <p className="text-xs text-muted-foreground mt-2">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
                       {globalStats?.beneficiado || 0} de {globalStats?.total || 0} rolos
                     </p>
                   </div>
@@ -1752,32 +1758,32 @@ export default function TalhaoStats() {
                   {/* Insight 3: Produtividade Real vs Prevista */}
                   {totaisProdutividade.produtividadeRealMedia > 0 && totaisProdutividade.produtividadePrevistaMedia > 0 && (
                     <div className={cn(
-                      "p-4 rounded-xl border",
+                      "p-3 sm:p-4 rounded-xl border",
                       totaisProdutividade.produtividadeRealMedia >= totaisProdutividade.produtividadePrevistaMedia
                         ? "bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20"
                         : "bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-500/20"
                     )}>
                       <div className="flex items-center gap-2 mb-2">
                         {totaisProdutividade.produtividadeRealMedia >= totaisProdutividade.produtividadePrevistaMedia
-                          ? <ArrowUpRight className="w-5 h-5 text-green-500" />
-                          : <ArrowDownRight className="w-5 h-5 text-red-500" />}
+                          ? <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+                          : <ArrowDownRight className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />}
                         <span className={cn(
-                          "text-xs font-semibold uppercase",
+                          "text-[10px] sm:text-xs font-semibold uppercase",
                           totaisProdutividade.produtividadeRealMedia >= totaisProdutividade.produtividadePrevistaMedia
                             ? "text-green-500"
                             : "text-red-500"
-                        )}>Produtividade Real</span>
+                        )}>Prod. Real</span>
                       </div>
-                      <p className="text-sm text-foreground mb-1">
+                      <p className="text-xs sm:text-sm text-foreground mb-1">
                         {totaisProdutividade.produtividadeRealMedia >= totaisProdutividade.produtividadePrevistaMedia
                           ? "Acima da previsão!"
                           : "Abaixo do previsto"}
                       </p>
-                      <p className="text-2xl font-display font-bold text-foreground">
+                      <p className="text-xl sm:text-2xl font-display font-bold text-foreground">
                         {(((totaisProdutividade.produtividadeRealMedia - totaisProdutividade.produtividadePrevistaMedia) / totaisProdutividade.produtividadePrevistaMedia) * 100).toFixed(1)}%
                       </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Real: {totaisProdutividade.produtividadeRealMedia.toFixed(1)} vs Prev: {totaisProdutividade.produtividadePrevistaMedia.toFixed(1)} @/ha
+                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
+                        {totaisProdutividade.produtividadeRealMedia.toFixed(1)} vs {totaisProdutividade.produtividadePrevistaMedia.toFixed(1)} @/ha
                       </p>
                     </div>
                   )}
@@ -1785,7 +1791,7 @@ export default function TalhaoStats() {
                   {/* Insight 4: Tempo médio de beneficiamento */}
                   {tempoMedioBeneficiamento > 0 && (
                     <div className={cn(
-                      "p-4 rounded-xl border",
+                      "p-3 sm:p-4 rounded-xl border",
                       tempoMedioBeneficiamento <= 48
                         ? "bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20"
                         : tempoMedioBeneficiamento <= 96
@@ -1794,22 +1800,22 @@ export default function TalhaoStats() {
                     )}>
                       <div className="flex items-center gap-2 mb-2">
                         <Timer className={cn(
-                          "w-5 h-5",
+                          "w-4 h-4 sm:w-5 sm:h-5",
                           tempoMedioBeneficiamento <= 48 ? "text-green-500" : tempoMedioBeneficiamento <= 96 ? "text-yellow-500" : "text-red-500"
                         )} />
                         <span className={cn(
-                          "text-xs font-semibold uppercase",
+                          "text-[10px] sm:text-xs font-semibold uppercase",
                           tempoMedioBeneficiamento <= 48 ? "text-green-500" : tempoMedioBeneficiamento <= 96 ? "text-yellow-500" : "text-red-500"
                         )}>Velocidade</span>
                       </div>
-                      <p className="text-sm text-foreground mb-1">
-                        Tempo médio pátio → beneficiado
+                      <p className="text-xs sm:text-sm text-foreground mb-1">
+                        Tempo pátio → benef.
                       </p>
-                      <p className="text-2xl font-display font-bold text-foreground">
+                      <p className="text-xl sm:text-2xl font-display font-bold text-foreground">
                         {Math.floor(tempoMedioBeneficiamento / 24)}d {Math.floor(tempoMedioBeneficiamento % 24)}h
                       </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {tempoMedioBeneficiamento <= 48 ? "Ótimo tempo!" : tempoMedioBeneficiamento <= 96 ? "Tempo adequado" : "Considerar otimizar"}
+                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
+                        {tempoMedioBeneficiamento <= 48 ? "Ótimo!" : tempoMedioBeneficiamento <= 96 ? "Adequado" : "Otimizar"}
                       </p>
                     </div>
                   )}
@@ -1817,7 +1823,7 @@ export default function TalhaoStats() {
                   {/* Insight 5: Rendimento Pluma */}
                   {rendimentoCalculado > 0 && (
                     <div className={cn(
-                      "p-4 rounded-xl border",
+                      "p-3 sm:p-4 rounded-xl border",
                       rendimentoCalculado >= 40
                         ? "bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20"
                         : rendimentoCalculado >= 35
@@ -1826,40 +1832,40 @@ export default function TalhaoStats() {
                     )}>
                       <div className="flex items-center gap-2 mb-2">
                         <Percent className={cn(
-                          "w-5 h-5",
+                          "w-4 h-4 sm:w-5 sm:h-5",
                           rendimentoCalculado >= 40 ? "text-green-500" : rendimentoCalculado >= 35 ? "text-yellow-500" : "text-red-500"
                         )} />
                         <span className={cn(
-                          "text-xs font-semibold uppercase",
+                          "text-[10px] sm:text-xs font-semibold uppercase",
                           rendimentoCalculado >= 40 ? "text-green-500" : rendimentoCalculado >= 35 ? "text-yellow-500" : "text-red-500"
                         )}>Rendimento</span>
                       </div>
-                      <p className="text-sm text-foreground mb-1">
-                        Rendimento de pluma
+                      <p className="text-xs sm:text-sm text-foreground mb-1">
+                        Rendimento pluma
                       </p>
-                      <p className="text-2xl font-display font-bold text-foreground">
+                      <p className="text-xl sm:text-2xl font-display font-bold text-foreground">
                         {rendimentoCalculado.toFixed(1)}%
                       </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {rendimentoCalculado >= 40 ? "Acima da média!" : rendimentoCalculado >= 35 ? "Na média" : "Abaixo da média"}
+                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
+                        {rendimentoCalculado >= 40 ? "Acima da média!" : rendimentoCalculado >= 35 ? "Na média" : "Abaixo"}
                       </p>
                     </div>
                   )}
 
                   {/* Insight 6: Volume Produtivo */}
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-neon-cyan/10 to-neon-cyan/5 border border-neon-cyan/20">
+                  <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-neon-cyan/10 to-neon-cyan/5 border border-neon-cyan/20">
                     <div className="flex items-center gap-2 mb-2">
-                      <Activity className="w-5 h-5 text-neon-cyan" />
-                      <span className="text-xs font-semibold text-neon-cyan uppercase">Volume</span>
+                      <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-neon-cyan" />
+                      <span className="text-[10px] sm:text-xs font-semibold text-neon-cyan uppercase">Volume</span>
                     </div>
-                    <p className="text-sm text-foreground mb-1">
-                      Média diária (30 dias)
+                    <p className="text-xs sm:text-sm text-foreground mb-1">
+                      Média diária (30d)
                     </p>
-                    <p className="text-2xl font-display font-bold text-foreground">
-                      {fardosPorDia.toFixed(1)} <span className="text-sm font-normal">rolos/dia</span>
+                    <p className="text-xl sm:text-2xl font-display font-bold text-foreground">
+                      {fardosPorDia.toFixed(1)} <span className="text-xs sm:text-sm font-normal">r/dia</span>
                     </p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {talhoesAtivos} talhões em colheita ativa
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
+                      {talhoesAtivos} talhões ativos
                     </p>
                   </div>
                 </div>
@@ -1882,9 +1888,9 @@ export default function TalhaoStats() {
                   </div>
                 </div>
               </div>
-              <div className="p-5">
-                <ResponsiveContainer width="100%" height={280}>
-                  <AreaChart data={evolutionData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <div className="p-3 sm:p-5">
+                <ResponsiveContainer width="100%" height={220} className="sm:!h-[280px]">
+                  <AreaChart data={evolutionData} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorEvolution" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#00FF88" stopOpacity={0.4}/>
@@ -1892,8 +1898,8 @@ export default function TalhaoStats() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#888' }} />
-                    <YAxis tick={{ fontSize: 11, fill: '#888' }} />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#888' }} interval="preserveStartEnd" />
+                    <YAxis tick={{ fontSize: 9, fill: '#888' }} width={35} />
                     <RechartsTooltip
                       contentStyle={{
                         backgroundColor: 'rgba(0,0,0,0.95)',
@@ -1938,16 +1944,16 @@ export default function TalhaoStats() {
                     <h2 className="text-sm font-semibold">Distribuição por Status</h2>
                   </div>
                 </div>
-                <div className="p-5">
-                  <div className="flex items-center justify-center gap-8">
-                    <ResponsiveContainer width={180} height={180}>
+                <div className="p-3 sm:p-5">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
+                    <ResponsiveContainer width={140} height={140} className="sm:!w-[180px] sm:!h-[180px]">
                       <RechartsPieChart>
                         <Pie
                           data={pieChartData}
                           cx="50%"
                           cy="50%"
-                          innerRadius={50}
-                          outerRadius={80}
+                          innerRadius={35}
+                          outerRadius={60}
                           dataKey="value"
                           stroke="none"
                           label={({ percent }) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''}
@@ -1966,13 +1972,13 @@ export default function TalhaoStats() {
                         />
                       </RechartsPieChart>
                     </ResponsiveContainer>
-                    <div className="space-y-3">
+                    <div className="flex sm:flex-col gap-4 sm:gap-3 flex-wrap justify-center">
                       {pieChartData.map((item) => (
-                        <div key={item.name} className="flex items-center gap-3">
-                          <div className="w-4 h-4 rounded" style={{ backgroundColor: item.color }} />
+                        <div key={item.name} className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-3 h-3 sm:w-4 sm:h-4 rounded" style={{ backgroundColor: item.color }} />
                           <div>
-                            <p className="text-sm font-bold">{item.value}</p>
-                            <p className="text-xs text-muted-foreground">{item.name}</p>
+                            <p className="text-xs sm:text-sm font-bold">{item.value}</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground">{item.name}</p>
                           </div>
                         </div>
                       ))}
@@ -1992,16 +1998,16 @@ export default function TalhaoStats() {
                     <h2 className="text-sm font-semibold">Ranking por Produtividade (@/ha)</h2>
                   </div>
                 </div>
-                <div className="p-5">
-                  <ResponsiveContainer width="100%" height={200}>
+                <div className="p-3 sm:p-5">
+                  <ResponsiveContainer width="100%" height={180} className="sm:!h-[200px]">
                     <BarChart
                       layout="vertical"
                       data={topTalhoes.slice(0, 5)}
-                      margin={{ top: 0, right: 10, left: 0, bottom: 0 }}
+                      margin={{ top: 0, right: 5, left: -10, bottom: 0 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" horizontal={false} />
-                      <XAxis type="number" tick={{ fontSize: 10, fill: '#888' }} />
-                      <YAxis dataKey="talhao" type="category" tick={{ fontSize: 11, fill: '#888' }} width={40} />
+                      <XAxis type="number" tick={{ fontSize: 9, fill: '#888' }} />
+                      <YAxis dataKey="talhao" type="category" tick={{ fontSize: 10, fill: '#888' }} width={30} />
                       <RechartsTooltip
                         contentStyle={{
                           backgroundColor: 'rgba(0,0,0,0.9)',
@@ -2031,9 +2037,9 @@ export default function TalhaoStats() {
                   </div>
                 </div>
               </div>
-              <div className="p-5 overflow-x-auto">
+              <div className="p-3 sm:p-5 overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
                 {produtividadeComparativa.filter(t => t.temDadosReais).length > 0 ? (
-                  <ResponsiveContainer width="100%" height={280} minWidth={400}>
+                  <ResponsiveContainer width="100%" height={220} minWidth={350} className="sm:!h-[280px]">
                     <BarChart
                       data={produtividadeComparativa.filter(t => t.temDadosReais).map(t => ({
                         talhao: t.talhao,
@@ -2041,11 +2047,11 @@ export default function TalhaoStats() {
                         real: t.produtividadeRealArrobas,
                         diferenca: t.diferencaPercentual
                       }))}
-                      margin={{ top: 20, right: 10, left: -10, bottom: 0 }}
+                      margin={{ top: 20, right: 5, left: -20, bottom: 0 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                      <XAxis dataKey="talhao" tick={{ fontSize: 11, fill: '#888' }} />
-                      <YAxis tick={{ fontSize: 11, fill: '#888' }} />
+                      <XAxis dataKey="talhao" tick={{ fontSize: 9, fill: '#888' }} interval={0} />
+                      <YAxis tick={{ fontSize: 9, fill: '#888' }} width={35} />
                       <RechartsTooltip
                         contentStyle={{
                           backgroundColor: 'rgba(0,0,0,0.95)',
@@ -2074,9 +2080,9 @@ export default function TalhaoStats() {
                           return null;
                         }}
                       />
-                      <Legend wrapperStyle={{ fontSize: '11px' }} />
-                      <Bar dataKey="previsto" fill="#00FF88" name="Previsto (@/ha)" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="real" fill="#FFD700" name="Real (@/ha)" radius={[4, 4, 0, 0]} />
+                      <Legend wrapperStyle={{ fontSize: '9px' }} />
+                      <Bar dataKey="previsto" fill="#00FF88" name="Previsto" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="real" fill="#FFD700" name="Real" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
@@ -2385,15 +2391,15 @@ export default function TalhaoStats() {
         {/* Detail Modal */}
         <Dialog open={!!selectedTalhao} onOpenChange={() => setSelectedTalhao(null)}>
           <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto z-[9999] rounded-2xl glass-card border-border/50">
-            <DialogHeader className="pb-4 mb-2 border-b border-border/30">
-              <DialogTitle className="flex items-center gap-3 text-lg sm:text-2xl font-bold">
-                <div className="p-3 rounded-xl bg-primary/20">
-                  <MapPin className="w-6 h-6 text-primary" />
+            <DialogHeader className="pb-3 sm:pb-4 mb-2 border-b border-border/30">
+              <DialogTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-2xl font-bold">
+                <div className="p-2 sm:p-3 rounded-xl bg-primary/20">
+                  <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                 </div>
                 Talhão {selectedTalhao}
               </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground ml-14 mt-1">
-                Informações detalhadas e métricas de produtividade
+              <DialogDescription className="text-xs sm:text-sm text-muted-foreground ml-9 sm:ml-14 mt-1">
+                Informações detalhadas e métricas
               </DialogDescription>
             </DialogHeader>
 
@@ -2403,74 +2409,74 @@ export default function TalhaoStats() {
               const fardosPorHa = hectares > 0 ? (selectedTalhaoData.total / hectares).toFixed(2) : '0.00';
 
               return (
-                <div className="space-y-5">
+                <div className="space-y-4 sm:space-y-5">
                   {/* Cards Resumo - 2x2 */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
                     {/* Área */}
-                    <div className="glass-card p-4 rounded-xl">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="p-1.5 rounded-lg bg-primary/20">
-                          <MapPin className="w-4 h-4 text-primary" />
+                    <div className="glass-card p-3 sm:p-4 rounded-xl">
+                      <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                        <div className="p-1 sm:p-1.5 rounded-lg bg-primary/20">
+                          <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
                         </div>
-                        <span className="text-xs text-muted-foreground uppercase">Área</span>
+                        <span className="text-[10px] sm:text-xs text-muted-foreground uppercase">Área</span>
                       </div>
-                      <p className="text-2xl font-bold">{hectares.toFixed(1)} <span className="text-sm font-normal text-muted-foreground">ha</span></p>
+                      <p className="text-xl sm:text-2xl font-bold">{hectares.toFixed(1)} <span className="text-xs sm:text-sm font-normal text-muted-foreground">ha</span></p>
                     </div>
 
                     {/* Total Fardos */}
-                    <div className="glass-card p-4 rounded-xl">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="p-1.5 rounded-lg bg-neon-orange/20">
-                          <Package className="w-4 h-4 text-neon-orange" />
+                    <div className="glass-card p-3 sm:p-4 rounded-xl">
+                      <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                        <div className="p-1 sm:p-1.5 rounded-lg bg-neon-orange/20">
+                          <Package className="w-3 h-3 sm:w-4 sm:h-4 text-neon-orange" />
                         </div>
-                        <span className="text-xs text-muted-foreground uppercase">Fardos</span>
+                        <span className="text-[10px] sm:text-xs text-muted-foreground uppercase">Fardos</span>
                       </div>
-                      <p className="text-2xl font-display font-bold text-foreground">{selectedTalhaoData.total}</p>
-                      <p className="text-xs text-muted-foreground">{fardosPorHa} fardos/ha</p>
+                      <p className="text-xl sm:text-2xl font-display font-bold text-foreground">{selectedTalhaoData.total}</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">{fardosPorHa} f/ha</p>
                     </div>
                   </div>
 
                   {/* Produtividade Principal */}
-                  <div className="glass-card rounded-xl p-4 border border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-                    <h4 className="text-sm font-bold mb-4 flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-primary" />
+                  <div className="glass-card rounded-xl p-3 sm:p-4 border border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+                    <h4 className="text-xs sm:text-sm font-bold mb-3 sm:mb-4 flex items-center gap-2">
+                      <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                       Produtividade (@/ha)
                     </h4>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-4">
                       {/* Prevista */}
-                      <div className="p-4 bg-primary/10 rounded-xl border border-primary/20">
-                        <p className="text-xs text-muted-foreground uppercase mb-1">Prevista</p>
-                        <p className="text-3xl font-display font-bold text-foreground">
+                      <div className="p-2.5 sm:p-4 bg-primary/10 rounded-xl border border-primary/20">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">Prevista</p>
+                        <p className="text-2xl sm:text-3xl font-display font-bold text-foreground">
                           {talhaoProducao && talhaoProducao.produtividadePrevistoArrobas > 0
                             ? talhaoProducao.produtividadePrevistoArrobas.toFixed(1)
                             : '-'}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 hidden sm:block">
                           {selectedTalhaoData.total} fardos × 2t / {hectares.toFixed(0)}ha / 15
                         </p>
                       </div>
 
                       {/* Real */}
                       <div className={cn(
-                        "p-4 rounded-xl border",
+                        "p-2.5 sm:p-4 rounded-xl border",
                         talhaoProducao?.temDadosReais
                           ? "bg-neon-cyan/10 border-neon-cyan/20"
                           : "bg-surface border-border/30"
                       )}>
-                        <p className="text-xs text-muted-foreground uppercase mb-1">Real</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">Real</p>
                         <p className={cn(
-                          "text-3xl font-bold",
+                          "text-2xl sm:text-3xl font-bold",
                           talhaoProducao?.temDadosReais ? "text-neon-cyan" : "text-muted-foreground"
                         )}>
                           {talhaoProducao?.temDadosReais
                             ? talhaoProducao.produtividadeRealArrobas.toFixed(1)
                             : '-'}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                           {talhaoProducao?.temDadosReais
-                            ? `${talhaoProducao.qtdCarregamentos} carreg. pesados`
-                            : 'Aguardando pesagem'}
+                            ? `${talhaoProducao.qtdCarregamentos} carreg.`
+                            : 'Aguardando'}
                         </p>
                       </div>
                     </div>
@@ -2478,19 +2484,19 @@ export default function TalhaoStats() {
                     {/* Variação */}
                     {talhaoProducao?.temDadosReais && talhaoProducao.produtividadePrevistoArrobas > 0 && (
                       <div className={cn(
-                        "flex items-center justify-center gap-2 p-3 rounded-xl mt-4",
+                        "flex items-center justify-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-xl mt-3 sm:mt-4",
                         talhaoProducao.diferencaPercentual >= 0
                           ? "bg-green-500/10 text-green-500 border border-green-500/20"
                           : "bg-red-500/10 text-red-500 border border-red-500/20"
                       )}>
                         {talhaoProducao.diferencaPercentual >= 0
-                          ? <ArrowUpRight className="w-5 h-5" />
-                          : <ArrowDownRight className="w-5 h-5" />}
-                        <span className="text-lg font-bold">
+                          ? <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                          : <ArrowDownRight className="w-4 h-4 sm:w-5 sm:h-5" />}
+                        <span className="text-sm sm:text-lg font-bold">
                           {talhaoProducao.diferencaPercentual >= 0 ? '+' : ''}
                           {talhaoProducao.diferencaPercentual.toFixed(1)}%
                         </span>
-                        <span className="text-sm">
+                        <span className="text-xs sm:text-sm">
                           ({talhaoProducao.diferencaPercentual >= 0 ? '+' : ''}
                           {talhaoProducao.diferencaArrobas.toFixed(1)} @/ha)
                         </span>
@@ -2500,95 +2506,95 @@ export default function TalhaoStats() {
 
                   {/* Peso Médio por Fardo */}
                   {talhaoProducao && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="glass-card p-3 rounded-xl text-center">
-                        <p className="text-xs text-muted-foreground uppercase mb-1">Peso Estimado/Fardo</p>
-                        <p className="text-xl font-bold text-foreground">2.00 <span className="text-sm font-normal">t</span></p>
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                      <div className="glass-card p-2.5 sm:p-3 rounded-xl text-center">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">Peso Est./Fardo</p>
+                        <p className="text-lg sm:text-xl font-bold text-foreground">2.00 <span className="text-xs sm:text-sm font-normal">t</span></p>
                       </div>
-                      <div className="glass-card p-3 rounded-xl text-center">
-                        <p className="text-xs text-muted-foreground uppercase mb-1">Peso Real/Fardo</p>
+                      <div className="glass-card p-2.5 sm:p-3 rounded-xl text-center">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">Peso Real/Fardo</p>
                         <p className={cn(
-                          "text-xl font-bold",
+                          "text-lg sm:text-xl font-bold",
                           talhaoProducao.temDadosReais ? "text-neon-cyan" : "text-muted-foreground"
                         )}>
                           {talhaoProducao.temDadosReais && talhaoProducao.pesoMedioRealFardo > 0
                             ? `${(talhaoProducao.pesoMedioRealFardo / 1000).toFixed(2)}`
                             : '-'}
-                          {talhaoProducao.temDadosReais && <span className="text-sm font-normal"> t</span>}
+                          {talhaoProducao.temDadosReais && <span className="text-xs sm:text-sm font-normal"> t</span>}
                         </p>
                       </div>
                     </div>
                   )}
 
                   {/* Status dos Fardos */}
-                  <div className="glass-card rounded-xl p-4">
-                    <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
-                      <BarChart3 className="w-4 h-4 text-muted-foreground" />
+                  <div className="glass-card rounded-xl p-3 sm:p-4">
+                    <h4 className="text-xs sm:text-sm font-bold mb-2 sm:mb-3 flex items-center gap-2">
+                      <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                       Status dos Fardos
                     </h4>
                     <div className="space-y-2">
                       {/* Campo */}
-                      <div className="flex items-center gap-3">
-                        <div className="p-1.5 rounded bg-primary/20">
-                          <Package className="w-3 h-3 text-primary" />
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="p-1 sm:p-1.5 rounded bg-primary/20">
+                          <Package className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary" />
                         </div>
                         <div className="flex-1">
-                          <div className="flex justify-between text-sm mb-1">
+                          <div className="flex justify-between text-xs sm:text-sm mb-1">
                             <span>Campo</span>
                             <span className="font-bold">{selectedTalhaoData.campo}</span>
                           </div>
-                          <div className="h-2 bg-surface-hover rounded-full overflow-hidden">
+                          <div className="h-1.5 sm:h-2 bg-surface-hover rounded-full overflow-hidden">
                             <div
                               className="h-full bg-primary rounded-full transition-all"
                               style={{ width: `${selectedTalhaoData.total > 0 ? (selectedTalhaoData.campo / selectedTalhaoData.total) * 100 : 0}%` }}
                             />
                           </div>
                         </div>
-                        <span className="text-xs text-muted-foreground w-10 text-right">
+                        <span className="text-[10px] sm:text-xs text-muted-foreground w-8 sm:w-10 text-right">
                           {selectedTalhaoData.total > 0 ? ((selectedTalhaoData.campo / selectedTalhaoData.total) * 100).toFixed(0) : 0}%
                         </span>
                       </div>
 
                       {/* Pátio */}
-                      <div className="flex items-center gap-3">
-                        <div className="p-1.5 rounded bg-neon-orange/20">
-                          <Truck className="w-3 h-3 text-neon-orange" />
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="p-1 sm:p-1.5 rounded bg-neon-orange/20">
+                          <Truck className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-neon-orange" />
                         </div>
                         <div className="flex-1">
-                          <div className="flex justify-between text-sm mb-1">
+                          <div className="flex justify-between text-xs sm:text-sm mb-1">
                             <span>Pátio</span>
                             <span className="font-bold">{selectedTalhaoData.patio}</span>
                           </div>
-                          <div className="h-2 bg-surface-hover rounded-full overflow-hidden">
+                          <div className="h-1.5 sm:h-2 bg-surface-hover rounded-full overflow-hidden">
                             <div
                               className="h-full bg-neon-orange rounded-full transition-all"
                               style={{ width: `${selectedTalhaoData.total > 0 ? (selectedTalhaoData.patio / selectedTalhaoData.total) * 100 : 0}%` }}
                             />
                           </div>
                         </div>
-                        <span className="text-xs text-muted-foreground w-10 text-right">
+                        <span className="text-[10px] sm:text-xs text-muted-foreground w-8 sm:w-10 text-right">
                           {selectedTalhaoData.total > 0 ? ((selectedTalhaoData.patio / selectedTalhaoData.total) * 100).toFixed(0) : 0}%
                         </span>
                       </div>
 
                       {/* Beneficiado */}
-                      <div className="flex items-center gap-3">
-                        <div className="p-1.5 rounded bg-neon-cyan/20">
-                          <CheckCircle className="w-3 h-3 text-neon-cyan" />
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="p-1 sm:p-1.5 rounded bg-neon-cyan/20">
+                          <CheckCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-neon-cyan" />
                         </div>
                         <div className="flex-1">
-                          <div className="flex justify-between text-sm mb-1">
-                            <span>Beneficiado</span>
+                          <div className="flex justify-between text-xs sm:text-sm mb-1">
+                            <span>Benef.</span>
                             <span className="font-bold">{selectedTalhaoData.beneficiado}</span>
                           </div>
-                          <div className="h-2 bg-surface-hover rounded-full overflow-hidden">
+                          <div className="h-1.5 sm:h-2 bg-surface-hover rounded-full overflow-hidden">
                             <div
                               className="h-full bg-neon-cyan rounded-full transition-all"
                               style={{ width: `${selectedTalhaoData.total > 0 ? (selectedTalhaoData.beneficiado / selectedTalhaoData.total) * 100 : 0}%` }}
                             />
                           </div>
                         </div>
-                        <span className="text-xs text-muted-foreground w-10 text-right">
+                        <span className="text-[10px] sm:text-xs text-muted-foreground w-8 sm:w-10 text-right">
                           {selectedTalhaoData.total > 0 ? ((selectedTalhaoData.beneficiado / selectedTalhaoData.total) * 100).toFixed(0) : 0}%
                         </span>
                       </div>
@@ -2597,22 +2603,22 @@ export default function TalhaoStats() {
 
                   {/* Comparativo com Média */}
                   {talhaoProducao && totaisProdutividade.produtividadePrevistaMedia > 0 && (
-                    <div className="glass-card rounded-xl p-4 border border-border/30">
-                      <h4 className="text-sm font-bold mb-3 flex items-center gap-2 text-muted-foreground">
-                        <Target className="w-4 h-4" />
-                        Comparativo com Média Geral
+                    <div className="glass-card rounded-xl p-3 sm:p-4 border border-border/30">
+                      <h4 className="text-xs sm:text-sm font-bold mb-2 sm:mb-3 flex items-center gap-2 text-muted-foreground">
+                        <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        Comparativo com Média
                       </h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="p-3 bg-surface rounded-lg">
-                          <p className="text-xs text-muted-foreground uppercase">Este Talhão</p>
-                          <p className="text-xl font-bold text-foreground">
-                            {talhaoProducao.produtividadePrevistoArrobas.toFixed(1)} <span className="text-sm font-normal">@/ha</span>
+                      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                        <div className="p-2.5 sm:p-3 bg-surface rounded-lg">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground uppercase">Este Talhão</p>
+                          <p className="text-lg sm:text-xl font-bold text-foreground">
+                            {talhaoProducao.produtividadePrevistoArrobas.toFixed(1)} <span className="text-xs sm:text-sm font-normal">@/ha</span>
                           </p>
                         </div>
-                        <div className="p-3 bg-surface rounded-lg">
-                          <p className="text-xs text-muted-foreground uppercase">Média Geral</p>
-                          <p className="text-xl font-bold text-foreground">
-                            {totaisProdutividade.produtividadePrevistaMedia.toFixed(1)} <span className="text-sm font-normal">@/ha</span>
+                        <div className="p-2.5 sm:p-3 bg-surface rounded-lg">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground uppercase">Média Geral</p>
+                          <p className="text-lg sm:text-xl font-bold text-foreground">
+                            {totaisProdutividade.produtividadePrevistaMedia.toFixed(1)} <span className="text-xs sm:text-sm font-normal">@/ha</span>
                           </p>
                         </div>
                       </div>

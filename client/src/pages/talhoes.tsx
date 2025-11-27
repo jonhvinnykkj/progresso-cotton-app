@@ -144,22 +144,22 @@ export default function Talhoes() {
           </div>
 
           {/* KPIs */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="glass-card p-4 rounded-xl text-center">
-              <p className="text-3xl font-display font-bold text-foreground">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <div className="glass-card p-3 sm:p-4 rounded-xl text-center">
+              <p className="text-2xl sm:text-3xl font-display font-bold text-foreground">
                 <AnimatedCounter value={totais.totalFardos} />
               </p>
-              <p className="text-xs text-muted-foreground">Total de Fardos</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Fardos</p>
             </div>
-            <div className="glass-card p-4 rounded-xl text-center">
-              <p className="text-3xl font-display font-bold text-foreground">{totais.talhoesAtivos}</p>
-              <p className="text-xs text-muted-foreground">Talhões Ativos</p>
+            <div className="glass-card p-3 sm:p-4 rounded-xl text-center">
+              <p className="text-2xl sm:text-3xl font-display font-bold text-foreground">{totais.talhoesAtivos}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Ativos</p>
             </div>
-            <div className="glass-card p-4 rounded-xl text-center">
-              <p className="text-3xl font-display font-bold text-foreground">
+            <div className="glass-card p-3 sm:p-4 rounded-xl text-center">
+              <p className="text-2xl sm:text-3xl font-display font-bold text-foreground">
                 {totais.totalHectares.toFixed(0)}
               </p>
-              <p className="text-xs text-muted-foreground">Hectares</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Hectares</p>
             </div>
           </div>
 

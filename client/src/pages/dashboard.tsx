@@ -357,56 +357,56 @@ export default function Dashboard() {
                 </span>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {/* Campo */}
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 w-28">
-                    <div className="p-1.5 rounded bg-primary/20">
-                      <Package className="w-3.5 h-3.5 text-primary" />
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <div className="flex items-center gap-1.5 sm:gap-2 w-20 sm:w-28">
+                    <div className="p-1 sm:p-1.5 rounded bg-primary/20">
+                      <Package className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary" />
                     </div>
-                    <span className="text-sm">Campo</span>
+                    <span className="text-xs sm:text-sm">Campo</span>
                   </div>
-                  <div className="flex-1 h-3 bg-surface-hover rounded-full overflow-hidden">
+                  <div className="flex-1 h-2.5 sm:h-3 bg-surface-hover rounded-full overflow-hidden">
                     <div
                       className="h-full bg-primary rounded-full transition-all duration-500"
                       style={{ width: `${stats?.total ? (stats.campo / stats.total) * 100 : 0}%` }}
                     />
                   </div>
-                  <span className="text-sm font-semibold w-16 text-right text-foreground">{stats?.campo || 0}</span>
+                  <span className="text-xs sm:text-sm font-semibold w-12 sm:w-16 text-right text-foreground">{stats?.campo || 0}</span>
                 </div>
 
                 {/* Pátio */}
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 w-28">
-                    <div className="p-1.5 rounded bg-neon-orange/20">
-                      <Truck className="w-3.5 h-3.5 text-neon-orange" />
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <div className="flex items-center gap-1.5 sm:gap-2 w-20 sm:w-28">
+                    <div className="p-1 sm:p-1.5 rounded bg-neon-orange/20">
+                      <Truck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-neon-orange" />
                     </div>
-                    <span className="text-sm">Pátio</span>
+                    <span className="text-xs sm:text-sm">Pátio</span>
                   </div>
-                  <div className="flex-1 h-3 bg-surface-hover rounded-full overflow-hidden">
+                  <div className="flex-1 h-2.5 sm:h-3 bg-surface-hover rounded-full overflow-hidden">
                     <div
                       className="h-full bg-neon-orange rounded-full transition-all duration-500"
                       style={{ width: `${stats?.total ? (stats.patio / stats.total) * 100 : 0}%` }}
                     />
                   </div>
-                  <span className="text-sm font-semibold w-16 text-right text-foreground">{stats?.patio || 0}</span>
+                  <span className="text-xs sm:text-sm font-semibold w-12 sm:w-16 text-right text-foreground">{stats?.patio || 0}</span>
                 </div>
 
                 {/* Beneficiado */}
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 w-28">
-                    <div className="p-1.5 rounded bg-neon-cyan/20">
-                      <CheckCircle className="w-3.5 h-3.5 text-neon-cyan" />
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <div className="flex items-center gap-1.5 sm:gap-2 w-20 sm:w-28">
+                    <div className="p-1 sm:p-1.5 rounded bg-neon-cyan/20">
+                      <CheckCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-neon-cyan" />
                     </div>
-                    <span className="text-sm">Beneficiado</span>
+                    <span className="text-xs sm:text-sm">Benef.</span>
                   </div>
-                  <div className="flex-1 h-3 bg-surface-hover rounded-full overflow-hidden">
+                  <div className="flex-1 h-2.5 sm:h-3 bg-surface-hover rounded-full overflow-hidden">
                     <div
                       className="h-full bg-neon-cyan rounded-full transition-all duration-500"
                       style={{ width: `${stats?.total ? (stats.beneficiado / stats.total) * 100 : 0}%` }}
                     />
                   </div>
-                  <span className="text-sm font-semibold w-16 text-right text-foreground">{stats?.beneficiado || 0}</span>
+                  <span className="text-xs sm:text-sm font-semibold w-12 sm:w-16 text-right text-foreground">{stats?.beneficiado || 0}</span>
                 </div>
               </div>
 

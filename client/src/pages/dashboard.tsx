@@ -228,7 +228,7 @@ export default function Dashboard() {
 
   // Períodos disponíveis
   const periodos = [
-    { label: '1D', dias: 1 },
+    { label: '24H', dias: 1 },
     { label: '7D', dias: 7 },
     { label: '14D', dias: 14 },
     { label: '30D', dias: 30 },
@@ -244,9 +244,12 @@ export default function Dashboard() {
 
     // Determinar intervalo e número de pontos baseado no período
     let pontos: number;
-    let intervalo: 'dia' | 'semana' | 'mes';
+    let intervalo: 'hora' | 'dia' | 'semana' | 'mes';
 
-    if (dias <= 30) {
+    if (dias === 1) {
+      pontos = 24; // 24 horas
+      intervalo = 'hora';
+    } else if (dias <= 30) {
       pontos = Math.max(dias, 2); // mínimo 2 pontos para o gráfico
       intervalo = 'dia';
     } else if (dias <= 365) {
@@ -263,7 +266,9 @@ export default function Dashboard() {
 
     for (let i = pontos - 1; i >= 0; i--) {
       const date = new Date();
-      if (intervalo === 'dia') {
+      if (intervalo === 'hora') {
+        date.setHours(date.getHours() - i);
+      } else if (intervalo === 'dia') {
         date.setDate(date.getDate() - i);
       } else if (intervalo === 'semana') {
         date.setDate(date.getDate() - (i * 7));
@@ -276,7 +281,7 @@ export default function Dashboard() {
       const valor = valorBase + variacao;
 
       historico.push({
-        data: date.toISOString().split('T')[0],
+        data: date.toISOString(),
         valor: Math.round(valor * 100) / 100,
       });
     }
@@ -621,7 +626,7 @@ export default function Dashboard() {
               <p className="text-xl font-bold text-foreground tracking-tight">
                 {cotacaoData?.cottonUSD ? cotacaoData.cottonUSD.toFixed(1) : '-'}<span className="text-sm text-muted-foreground font-normal">¢/lb</span>
               </p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Algodão ICE</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">CBOT/ICE</p>
             </button>
 
             {/* Pluma */}
@@ -683,10 +688,10 @@ export default function Dashboard() {
           <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground/60">
             <span className={cn(
               "flex items-center gap-1.5",
-              cotacaoFonte === 'Alpha Vantage' ? "text-green-500/70" : "text-yellow-500/70"
+              cotacaoFonte?.includes('ICE') || cotacaoFonte?.includes('CBOT') ? "text-green-500/70" : "text-yellow-500/70"
             )}>
               <span className="w-1.5 h-1.5 rounded-full bg-current" />
-              {cotacaoFonte === 'Alpha Vantage' ? 'Cotações atualizadas' : 'Aguardando API'}
+              {cotacaoFonte?.includes('ICE') || cotacaoFonte?.includes('CBOT') ? 'Bolsa de Chicago' : 'Aguardando API'}
             </span>
             <span>•</span>
             <span>
@@ -1024,11 +1029,17 @@ export default function Dashboard() {
                       <XAxis
                         dataKey="data"
                         tick={{ fill: '#888', fontSize: 10 }}
-                        tickFormatter={(value) => {
+                        tickFormatter={(value, index) => {
                           const date = new Date(value);
+                          // 24H - mostrar horas
+                          if (historicoModal.periodo === 1) {
+                            return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                          }
+                          // Até 30 dias - mostrar dia/mês
                           if (historicoModal.periodo <= 30) {
                             return `${date.getDate()}/${date.getMonth() + 1}`;
                           }
+                          // Acima de 30 dias - mostrar mês/ano
                           return `${date.getMonth() + 1}/${date.getFullYear().toString().slice(-2)}`;
                         }}
                       />
@@ -1055,6 +1066,14 @@ export default function Dashboard() {
                         }}
                         labelFormatter={(label) => {
                           const date = new Date(label);
+                          if (historicoModal.periodo === 1) {
+                            return date.toLocaleString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            });
+                          }
                           return date.toLocaleDateString('pt-BR');
                         }}
                       />

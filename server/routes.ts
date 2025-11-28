@@ -1488,14 +1488,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           cottonUSD: cottonData.price,
           usdBrl: usdBrlRate,
           dataAtualizacao: new Date().toISOString(),
-          fonte: 'Alpha Vantage',
+          fonte: 'ICE Futures (CBOT)',
           variacaoDolar: variacaoDolar ?? undefined,
           variacaoAlgodao: variacaoAlgodao,
           variacaoPluma: variacaoAlgodao, // mesma variação do algodão
           variacaoCaroco: variacaoAlgodao // mesma variação do algodão
         };
 
-        console.log(`Cotton price updated: ${cottonData.price} cents/lb -> R$ ${plumaPrice}/@ (USD/BRL: ${usdBrlRate}, var: ${variacaoAlgodao}%)`);
+        console.log(`Cotton price (ICE Futures): ${cottonData.price} cents/lb -> R$ ${plumaPrice}/@ (USD/BRL: ${usdBrlRate}, var: ${variacaoAlgodao}%)`);
       } else {
         // Se API falhou mas temos cache válido, retornar cache
         if (cotacaoCache.pluma > 0) {
@@ -1520,30 +1520,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Fetching historico: tipo=${tipo}, dias=${dias}`);
 
       if (tipo === 'dolar') {
-        // Buscar histórico do dólar da AwesomeAPI
-        const url = `https://economia.awesomeapi.com.br/json/daily/USD-BRL/${dias}`;
-        console.log('Fetching dolar from:', url);
+        // Para 1 dia (24h), buscar dados mais granulares
+        if (dias === 1) {
+          // Buscar últimas 24 cotações (aproximadamente por hora)
+          const url = 'https://economia.awesomeapi.com.br/json/USD-BRL/24';
+          console.log('Fetching dolar 24h from:', url);
 
-        const response = await fetch(url);
-        const data = await response.json();
+          const response = await fetch(url);
+          const data = await response.json();
 
-        console.log('AwesomeAPI response type:', typeof data, Array.isArray(data) ? `array[${data.length}]` : 'not array');
+          if (Array.isArray(data) && data.length > 0) {
+            const historico = data.map((item: any) => {
+              const date = new Date(parseInt(item.timestamp) * 1000);
+              return {
+                data: date.toISOString(),
+                dataFormatada: `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`,
+                valor: parseFloat(item.bid),
+                variacao: parseFloat(item.pctChange || 0)
+              };
+            }).reverse();
 
-        if (Array.isArray(data) && data.length > 0) {
-          const historico = data.map((item: any) => ({
-            data: new Date(parseInt(item.timestamp) * 1000).toISOString().split('T')[0],
-            valor: parseFloat(item.bid),
-            variacao: parseFloat(item.pctChange || 0)
-          })).reverse();
-
-          return res.json({ tipo: 'dolar', historico, periodo: `${dias} dias` });
+            return res.json({ tipo: 'dolar', historico, periodo: '24 horas', fonte: 'AwesomeAPI' });
+          }
         } else {
-          console.log('AwesomeAPI data invalid:', data);
+          // Buscar histórico diário do dólar da AwesomeAPI
+          const url = `https://economia.awesomeapi.com.br/json/daily/USD-BRL/${dias}`;
+          console.log('Fetching dolar from:', url);
+
+          const response = await fetch(url);
+          const data = await response.json();
+
+          console.log('AwesomeAPI response type:', typeof data, Array.isArray(data) ? `array[${data.length}]` : 'not array');
+
+          if (Array.isArray(data) && data.length > 0) {
+            const historico = data.map((item: any) => ({
+              data: new Date(parseInt(item.timestamp) * 1000).toISOString().split('T')[0],
+              valor: parseFloat(item.bid),
+              variacao: parseFloat(item.pctChange || 0)
+            })).reverse();
+
+            return res.json({ tipo: 'dolar', historico, periodo: `${dias} dias`, fonte: 'AwesomeAPI' });
+          } else {
+            console.log('AwesomeAPI data invalid:', data);
+          }
         }
       } else if (tipo === 'algodao' || tipo === 'pluma' || tipo === 'caroco') {
-        // Buscar histórico do algodão da Alpha Vantage
+        // Buscar histórico do algodão - ICE Cotton Futures (Bolsa de Chicago/NY)
         const url = `https://www.alphavantage.co/query?function=COTTON&interval=monthly&apikey=${ALPHA_VANTAGE_API_KEY}`;
-        console.log('Fetching cotton from Alpha Vantage');
+        console.log('Fetching cotton from ICE Futures (via Alpha Vantage)');
 
         const [cottonResponse, dolarResponse] = await Promise.all([
           fetch(url),
@@ -1587,7 +1611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 });
               }
             }
-            return res.json({ tipo, historico, dolarMedio, fonte: 'cache' });
+            return res.json({ tipo, historico, dolarMedio, fonte: 'ICE Futures (cache)' });
           }
         }
 
@@ -1604,7 +1628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               unidade: 'cents/lb'
             })).reverse();
 
-            return res.json({ tipo: 'algodao', historico, periodo: `${meses} meses` });
+            return res.json({ tipo: 'algodao', historico, periodo: `${meses} meses`, fonte: 'ICE Cotton Futures' });
           } else {
             const historico = cottonData['data'].slice(0, meses).map((item: any) => {
               const centsLb = parseFloat(item.value);
@@ -1618,7 +1642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
             }).reverse();
 
-            return res.json({ tipo, historico, dolarMedio, periodo: `${meses} meses` });
+            return res.json({ tipo, historico, dolarMedio, periodo: `${meses} meses`, fonte: 'ICE Cotton Futures' });
           }
         } else {
           console.log('Cotton data invalid:', Object.keys(cottonData));

@@ -1454,59 +1454,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return Math.round(brlPerArroba * 100) / 100; // 2 casas decimais
   }
 
-  // Função para verificar se deve atualizar baseado nos horários 8h, 12h, 18h
-  function deveAtualizarCotacao(): boolean {
-    const agora = new Date();
-    const ultimaAtualizacao = new Date(cotacaoCache.dataAtualizacao);
-
-    // Horários de atualização (em horas)
-    const horariosAtualizacao = [8, 12, 18];
-
-    // Pegar o horário de atualização mais recente que já passou
-    const horaAtual = agora.getHours();
-    const dataHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
-
-    // Encontrar o último horário de atualização que já passou
-    let ultimoHorarioAtualizacao: Date | null = null;
-
-    for (const hora of horariosAtualizacao) {
-      const horarioHoje = new Date(dataHoje);
-      horarioHoje.setHours(hora, 0, 0, 0);
-
-      if (horarioHoje <= agora) {
-        ultimoHorarioAtualizacao = horarioHoje;
-      }
-    }
-
-    // Se não passou nenhum horário hoje, pegar o último de ontem (18h)
-    if (!ultimoHorarioAtualizacao) {
-      ultimoHorarioAtualizacao = new Date(dataHoje);
-      ultimoHorarioAtualizacao.setDate(ultimoHorarioAtualizacao.getDate() - 1);
-      ultimoHorarioAtualizacao.setHours(18, 0, 0, 0);
-    }
-
-    // Se a última atualização foi antes do último horário programado, deve atualizar
-    const deveAtualizar = ultimaAtualizacao < ultimoHorarioAtualizacao;
-
-    if (deveAtualizar) {
-      console.log(`Cotação deve atualizar: última em ${ultimaAtualizacao.toLocaleString('pt-BR')}, próximo horário era ${ultimoHorarioAtualizacao.toLocaleString('pt-BR')}`);
-    }
-
-    return deveAtualizar;
-  }
-
-  // GET: Buscar cotação atual
-  app.get("/api/cotacao-algodao", authenticateToken, async (req, res) => {
+  // Função para atualizar cotação (usada pelo scheduler e pelo endpoint)
+  async function atualizarCotacaoCache(): Promise<boolean> {
     try {
-      // Verificar se deve atualizar baseado nos horários 8h, 12h, 18h
-      const precisaAtualizar = deveAtualizarCotacao();
+      console.log(`[Cotação] Iniciando atualização às ${new Date().toLocaleString('pt-BR')}`);
 
-      // Se não precisa atualizar e fonte é API, retornar cache
-      if (!precisaAtualizar && cotacaoCache.fonte === 'ICE Futures (NY)') {
-        return res.json(cotacaoCache);
-      }
-
-      // Tentar buscar de Alpha Vantage e variações
       const [cottonData, usdBrlRate, variacaoDolar] = await Promise.all([
         fetchCottonPrice(),
         fetchUsdBrlRate(),
@@ -1514,12 +1466,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ]);
 
       if (cottonData && usdBrlRate) {
-        // Calcular preço em R$/@ para pluma
         const plumaPrice = convertToReaisPerArroba(cottonData.price, usdBrlRate);
-        // Caroço é aproximadamente 27% do valor da pluma (proporção de mercado)
         const carocoPrice = Math.round(plumaPrice * 0.27 * 100) / 100;
-
-        // Variação do algodão afeta pluma e caroço proporcionalmente
         const variacaoAlgodao = cottonData.variacao;
 
         cotacaoCache = {
@@ -1531,22 +1479,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fonte: 'ICE Futures (NY)',
           variacaoDolar: variacaoDolar ?? undefined,
           variacaoAlgodao: variacaoAlgodao,
-          variacaoPluma: variacaoAlgodao, // mesma variação do algodão
-          variacaoCaroco: variacaoAlgodao // mesma variação do algodão
+          variacaoPluma: variacaoAlgodao,
+          variacaoCaroco: variacaoAlgodao
         };
 
-        console.log(`Cotton price (ICE Futures NY): ${cottonData.price} cents/lb -> R$ ${plumaPrice}/@ (USD/BRL: ${usdBrlRate}, var: ${variacaoAlgodao}%)`);
+        console.log(`[Cotação] ✅ Atualizada: Pluma R$ ${plumaPrice}/@ | Dólar R$ ${usdBrlRate} | Algodão ${cottonData.price} ¢/lb`);
+        return true;
       } else {
-        // Se API falhou mas temos cache válido, retornar cache
-        if (cotacaoCache.pluma > 0) {
-          return res.json(cotacaoCache);
-        }
+        console.log('[Cotação] ⚠️ APIs indisponíveis, mantendo cache anterior');
+        return false;
+      }
+    } catch (error) {
+      console.error('[Cotação] ❌ Erro na atualização:', error);
+      return false;
+    }
+  }
+
+  // Scheduler automático para atualizar às 8h, 12h e 18h (horário de Brasília)
+  function agendarProximaAtualizacao() {
+    const agora = new Date();
+    const horariosAtualizacao = [8, 12, 18];
+
+    // Encontrar o próximo horário de atualização
+    let proximaAtualizacao: Date | null = null;
+
+    for (const hora of horariosAtualizacao) {
+      const horarioHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), hora, 0, 0, 0);
+      if (horarioHoje > agora) {
+        proximaAtualizacao = horarioHoje;
+        break;
+      }
+    }
+
+    // Se não tem mais horários hoje, agendar para 8h de amanhã
+    if (!proximaAtualizacao) {
+      proximaAtualizacao = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + 1, 8, 0, 0, 0);
+    }
+
+    const msAteProxima = proximaAtualizacao.getTime() - agora.getTime();
+
+    console.log(`[Cotação] ⏰ Próxima atualização agendada para ${proximaAtualizacao.toLocaleString('pt-BR')} (em ${Math.round(msAteProxima / 60000)} minutos)`);
+
+    setTimeout(async () => {
+      await atualizarCotacaoCache();
+      agendarProximaAtualizacao(); // Agendar a próxima
+    }, msAteProxima);
+  }
+
+  // Iniciar o scheduler e fazer primeira atualização
+  console.log('[Cotação] 🚀 Iniciando scheduler de cotações (8h, 12h, 18h)');
+  atualizarCotacaoCache(); // Atualizar imediatamente ao iniciar o servidor
+  agendarProximaAtualizacao(); // Agendar próximas atualizações
+
+  // GET: Buscar cotação atual (sempre retorna cache, atualização é automática pelo scheduler)
+  app.get("/api/cotacao-algodao", authenticateToken, async (req, res) => {
+    try {
+      // Se ainda não tem dados da API (servidor acabou de iniciar), aguardar primeira atualização
+      if (cotacaoCache.fonte !== 'ICE Futures (NY)' && cotacaoCache.pluma === 140) {
+        await atualizarCotacaoCache();
       }
 
       res.json(cotacaoCache);
     } catch (error) {
       console.error("Error fetching cotton price:", error);
-      // Em caso de erro, retornar cache existente
       res.json(cotacaoCache);
     }
   });

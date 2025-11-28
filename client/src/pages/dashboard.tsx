@@ -224,12 +224,14 @@ export default function Dashboard() {
 
   // Períodos disponíveis
   const periodos = [
+    { label: '1D', dias: 1 },
     { label: '7D', dias: 7 },
     { label: '14D', dias: 14 },
-    { label: '1M', dias: 30 },
-    { label: '3M', dias: 90 },
+    { label: '30D', dias: 30 },
+    { label: '4M', dias: 120 },
     { label: '6M', dias: 180 },
     { label: '1A', dias: 365 },
+    { label: '10A', dias: 3650 },
   ];
 
   // Query para buscar histórico
@@ -277,7 +279,21 @@ export default function Dashboard() {
   // Função para gerar histórico local quando API falha
   const gerarHistoricoLocal = (tipo: string, dias: number) => {
     const historico = [];
-    const pontos = tipo === 'dolar' ? Math.min(dias, 30) : Math.min(Math.ceil(dias / 30), 12);
+
+    // Determinar intervalo e número de pontos baseado no período
+    let pontos: number;
+    let intervalo: 'dia' | 'semana' | 'mes';
+
+    if (dias <= 30) {
+      pontos = dias;
+      intervalo = 'dia';
+    } else if (dias <= 365) {
+      pontos = Math.ceil(dias / 7); // semanal
+      intervalo = 'semana';
+    } else {
+      pontos = Math.ceil(dias / 30); // mensal
+      intervalo = 'mes';
+    }
 
     const valorBase = tipo === 'dolar' ? (cotacaoData?.usdBrl || 5.5) :
                       tipo === 'algodao' ? (cotacaoData?.cottonUSD || 70) :
@@ -285,8 +301,10 @@ export default function Dashboard() {
 
     for (let i = pontos - 1; i >= 0; i--) {
       const date = new Date();
-      if (tipo === 'dolar') {
+      if (intervalo === 'dia') {
         date.setDate(date.getDate() - i);
+      } else if (intervalo === 'semana') {
+        date.setDate(date.getDate() - (i * 7));
       } else {
         date.setMonth(date.getMonth() - i);
       }

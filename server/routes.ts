@@ -1475,7 +1475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/cotacao-algodao/historico", authenticateToken, async (req, res) => {
     try {
       const tipo = req.query.tipo as string || 'dolar';
-      const dias = Math.min(parseInt(req.query.dias as string) || 30, 365);
+      const dias = Math.min(parseInt(req.query.dias as string) || 30, 3650); // máximo 10 anos
 
       console.log(`Fetching historico: tipo=${tipo}, dias=${dias}`);
 

@@ -234,48 +234,6 @@ export default function Dashboard() {
     { label: '10A', dias: 3650 },
   ];
 
-  // Query para buscar histórico
-  const { data: historicoData, isLoading: historicoLoading, refetch: refetchHistorico, error: historicoError } = useQuery({
-    queryKey: ["/api/cotacao-algodao/historico", historicoModal.tipo, historicoModal.periodo],
-    queryFn: async () => {
-      if (!historicoModal.tipo) return null;
-      const url = API_URL
-        ? `${API_URL}/api/cotacao-algodao/historico?tipo=${historicoModal.tipo}&dias=${historicoModal.periodo}`
-        : `/api/cotacao-algodao/historico?tipo=${historicoModal.tipo}&dias=${historicoModal.periodo}`;
-      console.log('Fetching historico:', url);
-
-      try {
-        const response = await fetch(url, {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        });
-
-        if (!response.ok) {
-          console.error('Historico fetch failed:', response.status);
-          // Tentar gerar dados locais como fallback
-          return gerarHistoricoLocal(historicoModal.tipo!, historicoModal.periodo);
-        }
-
-        const data = await response.json();
-        console.log('Historico data:', data);
-
-        // Se a API retornou array vazio, gerar dados locais
-        if (!data.historico || data.historico.length === 0) {
-          return gerarHistoricoLocal(historicoModal.tipo!, historicoModal.periodo);
-        }
-
-        return data;
-      } catch (error) {
-        console.error('Historico fetch error:', error);
-        // Em caso de erro de rede, gerar dados locais
-        return gerarHistoricoLocal(historicoModal.tipo!, historicoModal.periodo);
-      }
-    },
-    enabled: historicoModal.open && !!historicoModal.tipo,
-    staleTime: 60000, // 1 minuto
-    retry: 1,
-  });
-
   // Função para gerar histórico local quando API falha
   const gerarHistoricoLocal = (tipo: string, dias: number) => {
     const historico = [];
@@ -285,7 +243,7 @@ export default function Dashboard() {
     let intervalo: 'dia' | 'semana' | 'mes';
 
     if (dias <= 30) {
-      pontos = dias;
+      pontos = Math.max(dias, 2); // mínimo 2 pontos para o gráfico
       intervalo = 'dia';
     } else if (dias <= 365) {
       pontos = Math.ceil(dias / 7); // semanal
@@ -327,6 +285,50 @@ export default function Dashboard() {
     };
   };
 
+  // Query para buscar histórico
+  const { data: historicoData, isLoading: historicoLoading, refetch: refetchHistorico, error: historicoError } = useQuery({
+    queryKey: ["/api/cotacao-algodao/historico", historicoModal.tipo, historicoModal.periodo],
+    queryFn: async () => {
+      const tipo = historicoModal.tipo;
+      const dias = historicoModal.periodo;
+
+      if (!tipo) return null;
+
+      const url = API_URL
+        ? `${API_URL}/api/cotacao-algodao/historico?tipo=${tipo}&dias=${dias}`
+        : `/api/cotacao-algodao/historico?tipo=${tipo}&dias=${dias}`;
+      console.log('Fetching historico:', url, 'dias:', dias);
+
+      try {
+        const response = await fetch(url, {
+          headers: getAuthHeaders(),
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          console.error('Historico fetch failed:', response.status);
+          return gerarHistoricoLocal(tipo, dias);
+        }
+
+        const data = await response.json();
+        console.log('Historico data received:', data?.historico?.length, 'pontos');
+
+        if (!data.historico || data.historico.length === 0) {
+          return gerarHistoricoLocal(tipo, dias);
+        }
+
+        return data;
+      } catch (error) {
+        console.error('Historico fetch error:', error);
+        return gerarHistoricoLocal(tipo, dias);
+      }
+    },
+    enabled: historicoModal.open && !!historicoModal.tipo,
+    staleTime: 0, // Sempre buscar dados frescos quando período muda
+    gcTime: 0, // Não manter cache antigo
+    retry: 1,
+  });
+
   const abrirHistorico = (tipo: 'dolar' | 'algodao' | 'pluma' | 'caroco', titulo: string) => {
     setHistoricoModal({ open: true, tipo, titulo, periodo: 30 });
   };
@@ -346,9 +348,11 @@ export default function Dashboard() {
     // - Perdas/impurezas: ~3%
     const rendimentoPluma = 0.40;
     const rendimentoCaroco = 0.57;
+    const perdaImpurezas = 0.03;
 
     const pesoArrobasPluma = pesoArrobasBruto * rendimentoPluma;
     const pesoArrobasCaroco = pesoArrobasBruto * rendimentoCaroco;
+    const pesoArrobasPerdas = pesoArrobasBruto * perdaImpurezas;
 
     // Valores em R$
     const valorPlumaBRL = pesoArrobasPluma * cotacaoPluma;
@@ -364,6 +368,8 @@ export default function Dashboard() {
       arrobasBruto: pesoArrobasBruto,
       arrobasPluma: pesoArrobasPluma,
       arrobasCaroco: pesoArrobasCaroco,
+      arrobasPerdas: pesoArrobasPerdas,
+      percentualPerdas: perdaImpurezas * 100,
       valorPlumaBRL,
       valorCarocoBRL,
       valorTotalBRL,
@@ -515,27 +521,37 @@ export default function Dashboard() {
                     </p>
                   </div>
 
-                  {/* Breakdown Pluma/Caroço */}
-                  <div className="flex gap-3 sm:gap-4">
-                    <div className="flex-1 sm:flex-none sm:w-36 p-3 rounded-xl bg-white/5 backdrop-blur border border-white/10">
+                  {/* Breakdown Pluma/Caroço/Perdas */}
+                  <div className="flex gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
+                    <div className="flex-1 min-w-[100px] sm:w-32 p-3 rounded-xl bg-white/5 backdrop-blur border border-white/10">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-purple-300">Pluma</span>
+                        <span className="text-xs text-purple-300 font-medium">Pluma</span>
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-300">40%</span>
                       </div>
-                      <p className="text-lg font-bold text-white">
+                      <p className="text-base sm:text-lg font-bold text-white tracking-tight">
                         R$ {(valorEstimado.valorPlumaBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
                       </p>
                       <p className="text-[10px] text-white/50">{valorEstimado.arrobasPluma.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @</p>
                     </div>
-                    <div className="flex-1 sm:flex-none sm:w-36 p-3 rounded-xl bg-white/5 backdrop-blur border border-white/10">
+                    <div className="flex-1 min-w-[100px] sm:w-32 p-3 rounded-xl bg-white/5 backdrop-blur border border-white/10">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-orange-300">Caroço</span>
+                        <span className="text-xs text-orange-300 font-medium">Caroço</span>
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/30 text-orange-300">57%</span>
                       </div>
-                      <p className="text-lg font-bold text-white">
+                      <p className="text-base sm:text-lg font-bold text-white tracking-tight">
                         R$ {(valorEstimado.valorCarocoBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
                       </p>
                       <p className="text-[10px] text-white/50">{valorEstimado.arrobasCaroco.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @</p>
+                    </div>
+                    <div className="flex-1 min-w-[100px] sm:w-32 p-3 rounded-xl bg-white/5 backdrop-blur border border-red-500/20">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-red-300 font-medium">Perdas</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/30 text-red-300">3%</span>
+                      </div>
+                      <p className="text-base sm:text-lg font-bold text-red-200 tracking-tight">
+                        {valorEstimado.arrobasPerdas.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @
+                      </p>
+                      <p className="text-[10px] text-white/50">impurezas</p>
                     </div>
                   </div>
                 </div>
@@ -556,10 +572,11 @@ export default function Dashboard() {
                 </div>
                 <BarChart3 className="w-3 h-3 text-muted-foreground/50 group-hover:text-green-500 transition-colors" />
               </div>
-              <p className="text-2xl font-bold text-foreground">
+              <p className="text-xl font-bold text-foreground tracking-tight">
+                <span className="text-sm text-muted-foreground font-normal">R$ </span>
                 {cotacaoData?.usdBrl ? cotacaoData.usdBrl.toFixed(2) : '-'}
               </p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Dólar</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">USD/BRL</p>
             </button>
 
             {/* Algodão */}
@@ -590,10 +607,11 @@ export default function Dashboard() {
                 </div>
                 <BarChart3 className="w-3 h-3 text-muted-foreground/50 group-hover:text-purple-500 transition-colors" />
               </div>
-              <p className="text-2xl font-bold text-foreground">
-                {cotacaoPluma.toFixed(0)}<span className="text-sm text-muted-foreground">/@</span>
+              <p className="text-xl font-bold text-foreground tracking-tight">
+                <span className="text-sm text-muted-foreground font-normal">R$ </span>
+                {cotacaoPluma.toFixed(2)}<span className="text-sm text-muted-foreground font-normal">/@</span>
               </p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Pluma R$</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Pluma</p>
             </button>
 
             {/* Caroço */}
@@ -607,10 +625,11 @@ export default function Dashboard() {
                 </div>
                 <BarChart3 className="w-3 h-3 text-muted-foreground/50 group-hover:text-orange-500 transition-colors" />
               </div>
-              <p className="text-2xl font-bold text-foreground">
-                {cotacaoCaroco.toFixed(0)}<span className="text-sm text-muted-foreground">/@</span>
+              <p className="text-xl font-bold text-foreground tracking-tight">
+                <span className="text-sm text-muted-foreground font-normal">R$ </span>
+                {cotacaoCaroco.toFixed(2)}<span className="text-sm text-muted-foreground font-normal">/@</span>
               </p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Caroço R$</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Caroço</p>
             </button>
           </div>
 

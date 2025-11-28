@@ -342,8 +342,10 @@ export default function Dashboard() {
     setHistoricoModal({ open: true, tipo, titulo, periodo: 30 });
   };
 
-  const mudarPeriodo = (dias: number) => {
+  const mudarPeriodo = async (dias: number) => {
     setHistoricoModal(prev => ({ ...prev, periodo: dias }));
+    // Forçar refetch após mudar o período
+    setTimeout(() => refetchHistorico(), 100);
   };
 
   // Cálculo do valor estimado da produção
@@ -574,113 +576,122 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Cotações em linha - Compacto e clicável */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* Cotações - Cards modernos */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Dólar */}
             <button
               onClick={() => abrirHistorico('dolar', 'Dólar (USD/BRL)')}
-              className="group p-4 rounded-xl bg-surface border border-border/50 hover:border-green-500/50 hover:bg-green-500/5 transition-all text-left"
+              className="group relative overflow-hidden p-4 rounded-2xl bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent border border-green-500/20 hover:border-green-500/40 hover:shadow-lg hover:shadow-green-500/10 transition-all text-left"
             >
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-1.5 rounded-lg bg-green-500/10">
-                  <DollarSign className="w-3.5 h-3.5 text-green-500" />
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-green-500/20">
+                    <DollarSign className="w-4 h-4 text-green-400" />
+                  </div>
+                  <span className="text-xs font-medium text-green-400/80">USD/BRL</span>
                 </div>
-                {cotacaoData?.variacaoDolar !== undefined && (
-                  <span className={cn(
-                    "text-[10px] font-medium px-1.5 py-0.5 rounded",
-                    cotacaoData.variacaoDolar >= 0
-                      ? "text-green-400 bg-green-500/10"
-                      : "text-red-400 bg-red-500/10"
-                  )} title="Variação últimos 30 dias">
-                    {cotacaoData.variacaoDolar >= 0 ? '+' : ''}{cotacaoData.variacaoDolar.toFixed(2)}% <span className="opacity-60">30d</span>
-                  </span>
-                )}
+                <BarChart3 className="w-4 h-4 text-green-500/30 group-hover:text-green-400 transition-colors" />
               </div>
-              <p className="text-xl font-bold text-foreground tracking-tight">
-                <span className="text-sm text-muted-foreground font-normal">R$ </span>
-                {cotacaoData?.usdBrl ? cotacaoData.usdBrl.toFixed(2) : '-'}
+              <p className="text-2xl font-bold text-foreground mb-1">
+                R$ {cotacaoData?.usdBrl ? cotacaoData.usdBrl.toFixed(2) : '-'}
               </p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">USD/BRL</p>
+              {cotacaoData?.variacaoDolar !== undefined && (
+                <div className={cn(
+                  "flex items-center gap-1 text-xs font-medium",
+                  cotacaoData.variacaoDolar >= 0 ? "text-green-400" : "text-red-400"
+                )}>
+                  <TrendingUp className={cn("w-3 h-3", cotacaoData.variacaoDolar < 0 && "rotate-180")} />
+                  <span>{cotacaoData.variacaoDolar >= 0 ? '+' : ''}{cotacaoData.variacaoDolar.toFixed(2)}%</span>
+                  <span className="text-muted-foreground/60 font-normal">30 dias</span>
+                </div>
+              )}
             </button>
 
-            {/* Algodão */}
+            {/* Algodão ICE */}
             <button
-              onClick={() => abrirHistorico('algodao', 'Algodão (ICE)')}
-              className="group p-4 rounded-xl bg-surface border border-border/50 hover:border-amber-500/50 hover:bg-amber-500/5 transition-all text-left"
+              onClick={() => abrirHistorico('algodao', 'Algodão (ICE Futures)')}
+              className="group relative overflow-hidden p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/10 transition-all text-left"
             >
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-1.5 rounded-lg bg-amber-500/10">
-                  <Wheat className="w-3.5 h-3.5 text-amber-500" />
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-amber-500/20">
+                    <Wheat className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <span className="text-xs font-medium text-amber-400/80">ICE Futures</span>
                 </div>
-                {cotacaoData?.variacaoAlgodao !== undefined && (
-                  <span className={cn(
-                    "text-[10px] font-medium px-1.5 py-0.5 rounded",
-                    cotacaoData.variacaoAlgodao >= 0
-                      ? "text-green-400 bg-green-500/10"
-                      : "text-red-400 bg-red-500/10"
-                  )} title="Variação mensal">
-                    {cotacaoData.variacaoAlgodao >= 0 ? '+' : ''}{cotacaoData.variacaoAlgodao.toFixed(2)}% <span className="opacity-60">mês</span>
-                  </span>
-                )}
+                <BarChart3 className="w-4 h-4 text-amber-500/30 group-hover:text-amber-400 transition-colors" />
               </div>
-              <p className="text-xl font-bold text-foreground tracking-tight">
-                {cotacaoData?.cottonUSD ? cotacaoData.cottonUSD.toFixed(1) : '-'}<span className="text-sm text-muted-foreground font-normal">¢/lb</span>
+              <p className="text-2xl font-bold text-foreground mb-1">
+                {cotacaoData?.cottonUSD ? cotacaoData.cottonUSD.toFixed(2) : '-'} <span className="text-sm font-normal text-muted-foreground">¢/lb</span>
               </p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">ICE Futures</p>
+              {cotacaoData?.variacaoAlgodao !== undefined && (
+                <div className={cn(
+                  "flex items-center gap-1 text-xs font-medium",
+                  cotacaoData.variacaoAlgodao >= 0 ? "text-green-400" : "text-red-400"
+                )}>
+                  <TrendingUp className={cn("w-3 h-3", cotacaoData.variacaoAlgodao < 0 && "rotate-180")} />
+                  <span>{cotacaoData.variacaoAlgodao >= 0 ? '+' : ''}{cotacaoData.variacaoAlgodao.toFixed(2)}%</span>
+                  <span className="text-muted-foreground/60 font-normal">mês</span>
+                </div>
+              )}
             </button>
 
             {/* Pluma */}
             <button
               onClick={() => abrirHistorico('pluma', 'Pluma (R$/@)')}
-              className="group p-4 rounded-xl bg-surface border border-border/50 hover:border-purple-500/50 hover:bg-purple-500/5 transition-all text-left"
+              className="group relative overflow-hidden p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent border border-purple-500/20 hover:border-purple-500/40 hover:shadow-lg hover:shadow-purple-500/10 transition-all text-left"
             >
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-1.5 rounded-lg bg-purple-500/10">
-                  <Wheat className="w-3.5 h-3.5 text-purple-500" />
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-purple-500/20">
+                    <Wheat className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <span className="text-xs font-medium text-purple-400/80">Pluma</span>
                 </div>
-                {cotacaoData?.variacaoPluma !== undefined && (
-                  <span className={cn(
-                    "text-[10px] font-medium px-1.5 py-0.5 rounded",
-                    cotacaoData.variacaoPluma >= 0
-                      ? "text-green-400 bg-green-500/10"
-                      : "text-red-400 bg-red-500/10"
-                  )} title="Variação mensal">
-                    {cotacaoData.variacaoPluma >= 0 ? '+' : ''}{cotacaoData.variacaoPluma.toFixed(2)}% <span className="opacity-60">mês</span>
-                  </span>
-                )}
+                <BarChart3 className="w-4 h-4 text-purple-500/30 group-hover:text-purple-400 transition-colors" />
               </div>
-              <p className="text-xl font-bold text-foreground tracking-tight">
-                <span className="text-sm text-muted-foreground font-normal">R$ </span>
-                {cotacaoPluma.toFixed(2)}<span className="text-sm text-muted-foreground font-normal">/@</span>
+              <p className="text-2xl font-bold text-foreground mb-1">
+                R$ {cotacaoPluma.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">/@</span>
               </p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Pluma</p>
+              {cotacaoData?.variacaoPluma !== undefined && (
+                <div className={cn(
+                  "flex items-center gap-1 text-xs font-medium",
+                  cotacaoData.variacaoPluma >= 0 ? "text-green-400" : "text-red-400"
+                )}>
+                  <TrendingUp className={cn("w-3 h-3", cotacaoData.variacaoPluma < 0 && "rotate-180")} />
+                  <span>{cotacaoData.variacaoPluma >= 0 ? '+' : ''}{cotacaoData.variacaoPluma.toFixed(2)}%</span>
+                  <span className="text-muted-foreground/60 font-normal">mês</span>
+                </div>
+              )}
             </button>
 
             {/* Caroço */}
             <button
               onClick={() => abrirHistorico('caroco', 'Caroço (R$/@)')}
-              className="group p-4 rounded-xl bg-surface border border-border/50 hover:border-orange-500/50 hover:bg-orange-500/5 transition-all text-left"
+              className="group relative overflow-hidden p-4 rounded-2xl bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-transparent border border-orange-500/20 hover:border-orange-500/40 hover:shadow-lg hover:shadow-orange-500/10 transition-all text-left"
             >
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-1.5 rounded-lg bg-orange-500/10">
-                  <Package className="w-3.5 h-3.5 text-orange-500" />
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-orange-500/20">
+                    <Package className="w-4 h-4 text-orange-400" />
+                  </div>
+                  <span className="text-xs font-medium text-orange-400/80">Caroço</span>
                 </div>
-                {cotacaoData?.variacaoCaroco !== undefined && (
-                  <span className={cn(
-                    "text-[10px] font-medium px-1.5 py-0.5 rounded",
-                    cotacaoData.variacaoCaroco >= 0
-                      ? "text-green-400 bg-green-500/10"
-                      : "text-red-400 bg-red-500/10"
-                  )} title="Variação mensal">
-                    {cotacaoData.variacaoCaroco >= 0 ? '+' : ''}{cotacaoData.variacaoCaroco.toFixed(2)}% <span className="opacity-60">mês</span>
-                  </span>
-                )}
+                <BarChart3 className="w-4 h-4 text-orange-500/30 group-hover:text-orange-400 transition-colors" />
               </div>
-              <p className="text-xl font-bold text-foreground tracking-tight">
-                <span className="text-sm text-muted-foreground font-normal">R$ </span>
-                {cotacaoCaroco.toFixed(2)}<span className="text-sm text-muted-foreground font-normal">/@</span>
+              <p className="text-2xl font-bold text-foreground mb-1">
+                R$ {cotacaoCaroco.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">/@</span>
               </p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Caroço</p>
+              {cotacaoData?.variacaoCaroco !== undefined && (
+                <div className={cn(
+                  "flex items-center gap-1 text-xs font-medium",
+                  cotacaoData.variacaoCaroco >= 0 ? "text-green-400" : "text-red-400"
+                )}>
+                  <TrendingUp className={cn("w-3 h-3", cotacaoData.variacaoCaroco < 0 && "rotate-180")} />
+                  <span>{cotacaoData.variacaoCaroco >= 0 ? '+' : ''}{cotacaoData.variacaoCaroco.toFixed(2)}%</span>
+                  <span className="text-muted-foreground/60 font-normal">mês</span>
+                </div>
+              )}
             </button>
           </div>
 
@@ -966,22 +977,35 @@ export default function Dashboard() {
           </DialogHeader>
 
           {/* Filtros de Período */}
-          <div className="flex items-center justify-center gap-1 p-1 bg-surface rounded-lg">
+          <div className="flex flex-wrap items-center justify-center gap-2 p-2 bg-surface/50 rounded-xl border border-border/30">
             {periodos.map((p) => (
               <button
                 key={p.dias}
                 onClick={() => mudarPeriodo(p.dias)}
+                disabled={historicoLoading}
                 className={cn(
-                  "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                  "px-4 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-50",
                   historicoModal.periodo === p.dias
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-surface-hover"
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-hover border border-transparent hover:border-border/50"
                 )}
               >
                 {p.label}
               </button>
             ))}
           </div>
+
+          {/* Indicador do período selecionado */}
+          <p className="text-center text-xs text-muted-foreground">
+            {historicoModal.periodo === 1 && "Mostrando últimas 24 horas"}
+            {historicoModal.periodo === 7 && "Mostrando últimos 7 dias"}
+            {historicoModal.periodo === 14 && "Mostrando últimos 14 dias"}
+            {historicoModal.periodo === 30 && "Mostrando últimos 30 dias"}
+            {historicoModal.periodo === 120 && "Mostrando últimos 4 meses"}
+            {historicoModal.periodo === 180 && "Mostrando últimos 6 meses"}
+            {historicoModal.periodo === 365 && "Mostrando último ano"}
+            {historicoModal.periodo === 3650 && "Mostrando últimos 10 anos"}
+          </p>
 
           <div className="mt-2">
             {historicoLoading ? (

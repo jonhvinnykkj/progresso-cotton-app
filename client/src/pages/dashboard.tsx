@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { useAuth } from "@/lib/auth-context";
@@ -52,6 +52,7 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user } = useAuth();
   useRealtime(isAuthenticated);
+  const queryClient = useQueryClient();
 
   // Safra e talhões dinâmicos
   const { data: settingsData } = useSettings();
@@ -295,18 +296,17 @@ export default function Dashboard() {
   };
 
   // Query para buscar histórico
-  const { data: historicoData, isLoading: historicoLoading, refetch: refetchHistorico, error: historicoError } = useQuery({
+  const { data: historicoData, isLoading: historicoLoading, error: historicoError } = useQuery({
     queryKey: ["/api/cotacao-algodao/historico", historicoModal.tipo, historicoModal.periodo],
-    queryFn: async () => {
-      const tipo = historicoModal.tipo;
-      const dias = historicoModal.periodo;
+    queryFn: async ({ queryKey }) => {
+      const [, tipo, dias] = queryKey as [string, string, number];
 
       if (!tipo) return null;
 
       const url = API_URL
         ? `${API_URL}/api/cotacao-algodao/historico?tipo=${tipo}&dias=${dias}`
         : `/api/cotacao-algodao/historico?tipo=${tipo}&dias=${dias}`;
-      console.log('Fetching historico:', url, 'dias:', dias);
+      console.log('Fetching historico:', url, 'tipo:', tipo, 'dias:', dias);
 
       try {
         const response = await fetch(url, {
@@ -320,7 +320,7 @@ export default function Dashboard() {
         }
 
         const data = await response.json();
-        console.log('Historico data received:', data?.historico?.length, 'pontos');
+        console.log('Historico data received:', data?.historico?.length, 'pontos para', dias, 'dias');
 
         if (!data.historico || data.historico.length === 0) {
           return gerarHistoricoLocal(tipo, dias);
@@ -333,8 +333,9 @@ export default function Dashboard() {
       }
     },
     enabled: historicoModal.open && !!historicoModal.tipo,
-    staleTime: 0, // Sempre buscar dados frescos quando período muda
-    gcTime: 0, // Não manter cache antigo
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: true,
     retry: 1,
   });
 
@@ -342,10 +343,11 @@ export default function Dashboard() {
     setHistoricoModal({ open: true, tipo, titulo, periodo: 30 });
   };
 
-  const mudarPeriodo = async (dias: number) => {
+  const mudarPeriodo = (dias: number) => {
+    // Primeiro invalida todas as queries de histórico para limpar cache
+    queryClient.removeQueries({ queryKey: ["/api/cotacao-algodao/historico"] });
+    // Atualiza o estado do período
     setHistoricoModal(prev => ({ ...prev, periodo: dias }));
-    // Forçar refetch após mudar o período
-    setTimeout(() => refetchHistorico(), 100);
   };
 
   // Cálculo do valor estimado da produção

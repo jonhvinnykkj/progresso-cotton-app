@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { useAuth } from "@/lib/auth-context";
@@ -52,7 +52,6 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user } = useAuth();
   useRealtime(isAuthenticated);
-  const queryClient = useQueryClient();
 
   // Safra e talhões dinâmicos
   const { data: settingsData } = useSettings();
@@ -295,61 +294,43 @@ export default function Dashboard() {
     };
   };
 
-  // Contador para forçar refetch quando período muda
-  const [fetchKey, setFetchKey] = useState(0);
-
-  // Query para buscar histórico
+  // Query para buscar histórico (dados pré-carregados no servidor às 8h, 12h, 18h)
   const { data: historicoData, isLoading: historicoLoading, error: historicoError } = useQuery({
-    queryKey: ["/api/cotacao-algodao/historico", historicoModal.tipo, historicoModal.periodo, fetchKey],
+    queryKey: ["/api/cotacao-algodao/historico", historicoModal.tipo, historicoModal.periodo],
     queryFn: async () => {
       const tipo = historicoModal.tipo;
       const dias = historicoModal.periodo;
 
       if (!tipo) return null;
 
-      // Adiciona timestamp para evitar cache do browser
-      const timestamp = Date.now();
       const url = API_URL
-        ? `${API_URL}/api/cotacao-algodao/historico?tipo=${tipo}&dias=${dias}&_t=${timestamp}`
-        : `/api/cotacao-algodao/historico?tipo=${tipo}&dias=${dias}&_t=${timestamp}`;
-
-      console.log('🔄 Fetching historico:', { tipo, dias, timestamp });
+        ? `${API_URL}/api/cotacao-algodao/historico?tipo=${tipo}&dias=${dias}`
+        : `/api/cotacao-algodao/historico?tipo=${tipo}&dias=${dias}`;
 
       try {
         const response = await fetch(url, {
-          headers: {
-            ...getAuthHeaders(),
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          },
+          headers: getAuthHeaders(),
           credentials: "include",
         });
 
         if (!response.ok) {
-          console.error('❌ Historico fetch failed:', response.status);
           return gerarHistoricoLocal(tipo, dias);
         }
 
         const data = await response.json();
-        console.log('✅ Historico received:', data?.historico?.length, 'pontos para', dias, 'dias');
 
         if (!data.historico || data.historico.length === 0) {
-          console.log('⚠️ No data, using local fallback');
           return gerarHistoricoLocal(tipo, dias);
         }
 
         return data;
       } catch (error) {
-        console.error('❌ Historico fetch error:', error);
+        console.error('Historico fetch error:', error);
         return gerarHistoricoLocal(tipo, dias);
       }
     },
     enabled: historicoModal.open && !!historicoModal.tipo,
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: false,
-    retry: 1,
+    staleTime: 5 * 60 * 1000, // 5 minutos - dados são atualizados às 8h, 12h, 18h
   });
 
   const abrirHistorico = (tipo: 'dolar' | 'algodao' | 'pluma' | 'caroco', titulo: string) => {
@@ -357,10 +338,6 @@ export default function Dashboard() {
   };
 
   const mudarPeriodo = (dias: number) => {
-    console.log('🔄 Mudando período para:', dias, 'dias');
-    // Incrementa fetchKey para forçar nova query
-    setFetchKey(prev => prev + 1);
-    // Atualiza o estado do período
     setHistoricoModal(prev => ({ ...prev, periodo: dias }));
   };
 

@@ -1336,6 +1336,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     fonte: 'manual'
   };
 
+  // Cache de histórico (pré-carregado nos horários 8h, 12h, 18h)
+  let historicoCache: {
+    dolar: { data: string; valor: number; variacao?: number }[];
+    algodao: { data: string; valor: number }[];
+    pluma: { data: string; valor: number; centsLb?: number }[];
+    caroco: { data: string; valor: number; centsLb?: number }[];
+    dolarMedio: number;
+    dataAtualizacao: string;
+  } = {
+    dolar: [],
+    algodao: [],
+    pluma: [],
+    caroco: [],
+    dolarMedio: 0,
+    dataAtualizacao: new Date().toISOString()
+  };
+
   // Função para buscar variação mensal do dólar
   async function fetchDolarVariacao(): Promise<number | null> {
     try {
@@ -1454,6 +1471,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return Math.round(brlPerArroba * 100) / 100; // 2 casas decimais
   }
 
+  // Função para atualizar histórico (chamada junto com a cotação)
+  async function atualizarHistoricoCache(): Promise<boolean> {
+    try {
+      console.log('[Histórico] Iniciando atualização do cache de histórico...');
+
+      // Buscar histórico do dólar (últimos 365 dias)
+      const dolarResponse = await fetch('https://economia.awesomeapi.com.br/json/daily/USD-BRL/365');
+      const dolarData = await dolarResponse.json();
+
+      if (Array.isArray(dolarData) && dolarData.length > 0) {
+        historicoCache.dolar = dolarData.map((item: any) => ({
+          data: new Date(parseInt(item.timestamp) * 1000).toISOString(),
+          valor: parseFloat(item.bid),
+          variacao: parseFloat(item.pctChange || 0)
+        })).reverse(); // Mais antigo primeiro
+
+        // Calcular dólar médio
+        historicoCache.dolarMedio = dolarData.reduce((acc: number, item: any) => acc + parseFloat(item.bid), 0) / dolarData.length;
+
+        console.log(`[Histórico] ✅ Dólar: ${historicoCache.dolar.length} dias carregados`);
+      }
+
+      // Buscar histórico do algodão (Alpha Vantage - mensal)
+      const cottonResponse = await fetch(`https://www.alphavantage.co/query?function=COTTON&interval=monthly&apikey=${ALPHA_VANTAGE_API_KEY}`);
+      const cottonData = await cottonResponse.json();
+
+      if (cottonData['data'] && Array.isArray(cottonData['data'])) {
+        const cottonHistory = cottonData['data'];
+
+        // Algodão em cents/lb
+        historicoCache.algodao = cottonHistory.map((item: any) => ({
+          data: item.date,
+          valor: parseFloat(item.value)
+        })).reverse();
+
+        // Pluma e Caroço em R$/@ (convertido)
+        const dolarMedio = historicoCache.dolarMedio || cotacaoCache.usdBrl || 5.5;
+
+        historicoCache.pluma = cottonHistory.map((item: any) => {
+          const centsLb = parseFloat(item.value);
+          const reaisArroba = convertToReaisPerArroba(centsLb, dolarMedio);
+          return {
+            data: item.date,
+            valor: Math.round(reaisArroba * 100) / 100,
+            centsLb
+          };
+        }).reverse();
+
+        historicoCache.caroco = cottonHistory.map((item: any) => {
+          const centsLb = parseFloat(item.value);
+          const reaisArroba = convertToReaisPerArroba(centsLb, dolarMedio) * 0.27;
+          return {
+            data: item.date,
+            valor: Math.round(reaisArroba * 100) / 100,
+            centsLb
+          };
+        }).reverse();
+
+        console.log(`[Histórico] ✅ Algodão: ${historicoCache.algodao.length} meses carregados`);
+      } else {
+        console.log('[Histórico] ⚠️ Alpha Vantage indisponível:', cottonData['Note'] || 'erro desconhecido');
+      }
+
+      historicoCache.dataAtualizacao = new Date().toISOString();
+      console.log(`[Histórico] ✅ Cache atualizado às ${new Date().toLocaleString('pt-BR')}`);
+      return true;
+    } catch (error) {
+      console.error('[Histórico] ❌ Erro ao atualizar cache:', error);
+      return false;
+    }
+  }
+
   // Função para atualizar cotação (usada pelo scheduler e pelo endpoint)
   async function atualizarCotacaoCache(): Promise<boolean> {
     try {
@@ -1521,14 +1610,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`[Cotação] ⏰ Próxima atualização agendada para ${proximaAtualizacao.toLocaleString('pt-BR')} (em ${Math.round(msAteProxima / 60000)} minutos)`);
 
     setTimeout(async () => {
-      await atualizarCotacaoCache();
+      await atualizarTudo(); // Atualiza cotação + histórico
       agendarProximaAtualizacao(); // Agendar a próxima
     }, msAteProxima);
   }
 
+  // Função que atualiza tudo (cotação + histórico)
+  async function atualizarTudo() {
+    await atualizarCotacaoCache();
+    await atualizarHistoricoCache();
+  }
+
   // Iniciar o scheduler e fazer primeira atualização
-  console.log('[Cotação] 🚀 Iniciando scheduler de cotações (8h, 12h, 18h)');
-  atualizarCotacaoCache(); // Atualizar imediatamente ao iniciar o servidor
+  console.log('[Cotação] 🚀 Iniciando scheduler de cotações e histórico (8h, 12h, 18h)');
+  atualizarTudo(); // Atualizar imediatamente ao iniciar o servidor
   agendarProximaAtualizacao(); // Agendar próximas atualizações
 
   // GET: Buscar cotação atual (sempre retorna cache, atualização é automática pelo scheduler)
@@ -1546,159 +1641,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET: Buscar histórico de cotações
+  // GET: Buscar histórico de cotações (retorna dados do cache pré-carregado)
   app.get("/api/cotacao-algodao/historico", authenticateToken, async (req, res) => {
     try {
       const tipo = req.query.tipo as string || 'dolar';
-      const dias = Math.min(parseInt(req.query.dias as string) || 30, 3650); // máximo 10 anos
+      const dias = Math.min(parseInt(req.query.dias as string) || 30, 3650);
 
-      console.log(`Fetching historico: tipo=${tipo}, dias=${dias}`);
+      console.log(`[Histórico] Buscando do cache: tipo=${tipo}, dias=${dias}`);
+
+      // Função para filtrar por período
+      const filtrarPorDias = (dados: any[], dias: number) => {
+        if (dias >= 365) return dados; // Retorna tudo
+
+        const dataLimite = new Date();
+        dataLimite.setDate(dataLimite.getDate() - dias);
+
+        return dados.filter(item => {
+          const itemDate = new Date(item.data);
+          return itemDate >= dataLimite;
+        });
+      };
 
       if (tipo === 'dolar') {
-        // Para 1 dia (24h), buscar dados mais granulares
-        if (dias === 1) {
-          // Buscar últimas 24 cotações (aproximadamente por hora)
-          const url = 'https://economia.awesomeapi.com.br/json/USD-BRL/24';
-          console.log('Fetching dolar 24h from:', url);
-
-          const response = await fetch(url);
-          const data = await response.json();
-
-          if (Array.isArray(data) && data.length > 0) {
-            const historico = data.map((item: any) => {
-              const date = new Date(parseInt(item.timestamp) * 1000);
-              return {
-                data: date.toISOString(),
-                dataFormatada: `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`,
-                valor: parseFloat(item.bid),
-                variacao: parseFloat(item.pctChange || 0)
-              };
-            }).reverse();
-
-            return res.json({ tipo: 'dolar', historico, periodo: '24 horas', fonte: 'AwesomeAPI' });
-          }
-        } else {
-          // Buscar histórico diário do dólar da AwesomeAPI
-          const url = `https://economia.awesomeapi.com.br/json/daily/USD-BRL/${dias}`;
-          console.log('Fetching dolar from:', url);
-
-          const response = await fetch(url);
-          const data = await response.json();
-
-          console.log('AwesomeAPI response type:', typeof data, Array.isArray(data) ? `array[${data.length}]` : 'not array');
-
-          if (Array.isArray(data) && data.length > 0) {
-            const historico = data.map((item: any) => ({
-              data: new Date(parseInt(item.timestamp) * 1000).toISOString().split('T')[0],
-              valor: parseFloat(item.bid),
-              variacao: parseFloat(item.pctChange || 0)
-            })).reverse();
-
-            return res.json({ tipo: 'dolar', historico, periodo: `${dias} dias`, fonte: 'AwesomeAPI' });
-          } else {
-            console.log('AwesomeAPI data invalid:', data);
-          }
-        }
-      } else if (tipo === 'algodao' || tipo === 'pluma' || tipo === 'caroco') {
-        // Buscar histórico do algodão - ICE Cotton Futures (Bolsa de Chicago/NY)
-        const url = `https://www.alphavantage.co/query?function=COTTON&interval=monthly&apikey=${ALPHA_VANTAGE_API_KEY}`;
-        console.log('Fetching cotton from ICE Futures (via Alpha Vantage)');
-
-        const [cottonResponse, dolarResponse] = await Promise.all([
-          fetch(url),
-          fetch('https://economia.awesomeapi.com.br/json/daily/USD-BRL/30')
-        ]);
-
-        const cottonData = await cottonResponse.json();
-        const dolarData = await dolarResponse.json();
-
-        // Verificar se Alpha Vantage retornou erro
-        if (cottonData['Error Message'] || cottonData['Note']) {
-          console.log('Alpha Vantage error:', cottonData['Note'] || cottonData['Error Message']);
-          // Retornar dados simulados baseados no cache atual se API falhar
-          if (cotacaoCache.cottonUSD > 0) {
-            const meses = Math.min(Math.ceil(dias / 30), 12);
-            const historico = [];
-            const dolarMedio = Array.isArray(dolarData)
-              ? dolarData.reduce((acc: number, item: any) => acc + parseFloat(item.bid), 0) / dolarData.length
-              : cotacaoCache.usdBrl;
-
-            for (let i = meses - 1; i >= 0; i--) {
-              const date = new Date();
-              date.setMonth(date.getMonth() - i);
-              const variacao = (Math.random() - 0.5) * 10; // Simulação de variação
-              const centsLb = cotacaoCache.cottonUSD + variacao;
-
-              if (tipo === 'algodao') {
-                historico.push({
-                  data: date.toISOString().split('T')[0].substring(0, 7),
-                  valor: Math.round(centsLb * 100) / 100,
-                  unidade: 'cents/lb'
-                });
-              } else {
-                const reaisArroba = convertToReaisPerArroba(centsLb, dolarMedio);
-                const valorFinal = tipo === 'caroco' ? reaisArroba * 0.27 : reaisArroba;
-                historico.push({
-                  data: date.toISOString().split('T')[0].substring(0, 7),
-                  valor: Math.round(valorFinal * 100) / 100,
-                  centsLb: Math.round(centsLb * 100) / 100,
-                  unidade: 'R$/@'
-                });
-              }
-            }
-            return res.json({ tipo, historico, dolarMedio, fonte: 'ICE Futures (cache)' });
-          }
+        if (historicoCache.dolar.length === 0) {
+          return res.json({ tipo: 'dolar', historico: [], message: 'Cache ainda não carregado, aguarde próxima atualização' });
         }
 
-        if (cottonData['data'] && Array.isArray(cottonData['data'])) {
-          const meses = Math.min(Math.ceil(dias / 30), 12);
-          const dolarMedio = Array.isArray(dolarData)
-            ? dolarData.reduce((acc: number, item: any) => acc + parseFloat(item.bid), 0) / dolarData.length
-            : cotacaoCache.usdBrl || 5.5;
-
-          if (tipo === 'algodao') {
-            const historico = cottonData['data'].slice(0, meses).map((item: any) => ({
-              data: item.date,
-              valor: parseFloat(item.value),
-              unidade: 'cents/lb'
-            })).reverse();
-
-            return res.json({ tipo: 'algodao', historico, periodo: `${meses} meses`, fonte: 'ICE Cotton Futures' });
-          } else {
-            const historico = cottonData['data'].slice(0, meses).map((item: any) => {
-              const centsLb = parseFloat(item.value);
-              const reaisArroba = convertToReaisPerArroba(centsLb, dolarMedio);
-              const valorFinal = tipo === 'caroco' ? reaisArroba * 0.27 : reaisArroba;
-              return {
-                data: item.date,
-                valor: Math.round(valorFinal * 100) / 100,
-                centsLb: centsLb,
-                unidade: 'R$/@'
-              };
-            }).reverse();
-
-            return res.json({ tipo, historico, dolarMedio, periodo: `${meses} meses`, fonte: 'ICE Cotton Futures' });
-          }
-        } else {
-          console.log('Cotton data invalid:', Object.keys(cottonData));
-        }
+        const historico = filtrarPorDias(historicoCache.dolar, dias);
+        return res.json({
+          tipo: 'dolar',
+          historico,
+          periodo: `${dias} dias`,
+          fonte: 'AwesomeAPI (cache)',
+          atualizadoEm: historicoCache.dataAtualizacao
+        });
       }
 
-      // Fallback - retornar dados do cache se disponíveis
-      if (cotacaoCache.pluma > 0) {
-        const historico = [{
-          data: new Date().toISOString().split('T')[0],
-          valor: tipo === 'dolar' ? cotacaoCache.usdBrl :
-                 tipo === 'algodao' ? cotacaoCache.cottonUSD :
-                 tipo === 'caroco' ? cotacaoCache.caroco : cotacaoCache.pluma,
-          unidade: tipo === 'dolar' ? 'BRL' : tipo === 'algodao' ? 'cents/lb' : 'R$/@'
-        }];
-        return res.json({ tipo, historico, fonte: 'cache_atual', message: 'Apenas valor atual disponível' });
+      if (tipo === 'algodao') {
+        if (historicoCache.algodao.length === 0) {
+          return res.json({ tipo: 'algodao', historico: [], message: 'Cache ainda não carregado' });
+        }
+
+        // Para algodão, filtrar por meses
+        const meses = Math.ceil(dias / 30);
+        const historico = historicoCache.algodao.slice(-meses);
+        return res.json({
+          tipo: 'algodao',
+          historico,
+          periodo: `${meses} meses`,
+          fonte: 'ICE Futures (cache)',
+          atualizadoEm: historicoCache.dataAtualizacao
+        });
       }
 
-      res.json({ tipo, historico: [], message: 'Dados não disponíveis' });
+      if (tipo === 'pluma') {
+        if (historicoCache.pluma.length === 0) {
+          return res.json({ tipo: 'pluma', historico: [], message: 'Cache ainda não carregado' });
+        }
+
+        const meses = Math.ceil(dias / 30);
+        const historico = historicoCache.pluma.slice(-meses);
+        return res.json({
+          tipo: 'pluma',
+          historico,
+          dolarMedio: historicoCache.dolarMedio,
+          periodo: `${meses} meses`,
+          fonte: 'ICE Futures (cache)',
+          atualizadoEm: historicoCache.dataAtualizacao
+        });
+      }
+
+      if (tipo === 'caroco') {
+        if (historicoCache.caroco.length === 0) {
+          return res.json({ tipo: 'caroco', historico: [], message: 'Cache ainda não carregado' });
+        }
+
+        const meses = Math.ceil(dias / 30);
+        const historico = historicoCache.caroco.slice(-meses);
+        return res.json({
+          tipo: 'caroco',
+          historico,
+          dolarMedio: historicoCache.dolarMedio,
+          periodo: `${meses} meses`,
+          fonte: 'ICE Futures (cache)',
+          atualizadoEm: historicoCache.dataAtualizacao
+        });
+      }
+
+      res.json({ tipo, historico: [], message: 'Tipo não reconhecido' });
     } catch (error) {
-      console.error("Error fetching historical data:", error);
+      console.error("[Histórico] Erro:", error);
       res.status(500).json({ error: "Erro ao buscar histórico", details: String(error) });
     }
   });

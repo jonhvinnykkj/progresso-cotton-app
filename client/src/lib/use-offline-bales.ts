@@ -100,8 +100,12 @@ export function useOfflineBales() {
         });
       } else {
         // Online update successful
-        queryClient.invalidateQueries({ queryKey: ["/api/bales"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/bales/stats"] });
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = query.queryKey[0];
+            return key === '/api/bales' || key === '/api/bales/stats' || key === '/api/bales/stats-by-talhao';
+          }
+        });
         toast({
           variant: "success",
           title: "Status atualizado",

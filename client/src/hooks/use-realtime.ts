@@ -18,10 +18,16 @@ export function useRealtime(isAuthenticated: boolean) {
         clearTimeout(debounceRef.current);
       }
       debounceRef.current = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['/api/bales'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/bales/stats'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/bales/stats-by-talhao'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/bales/stats-by-safra'] });
+        // Usar predicate para invalidar queries que começam com o prefixo (inclui variações com safra)
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = query.queryKey[0];
+            return key === '/api/bales' ||
+                   key === '/api/bales/stats' ||
+                   key === '/api/bales/stats-by-talhao' ||
+                   key === '/api/bales/stats-by-safra';
+          }
+        });
       }, 300);
     });
 

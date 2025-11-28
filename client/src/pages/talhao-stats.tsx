@@ -36,6 +36,15 @@ import {
   LayoutDashboard,
   Map,
   LineChart,
+  AlertTriangle,
+  Clock,
+  Download,
+  Share2,
+  Zap,
+  TrendingDown,
+  CircleAlert,
+  CheckCircle2,
+  CalendarClock,
 } from "lucide-react";
 import { Page, PageContent } from "@/components/layout/page";
 import {
@@ -61,8 +70,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -94,6 +109,8 @@ export default function TalhaoStats() {
   useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTalhao, setSelectedTalhao] = useState<string | null>(null);
+  const [periodoFiltro, setPeriodoFiltro] = useState<"7d" | "14d" | "30d" | "all">("14d");
+  const beneficiamentoCardRef = useRef<HTMLDivElement>(null);
 
   // Safra e talhões dinâmicos
   const { data: settingsData } = useSettings();
@@ -102,8 +119,21 @@ export default function TalhaoStats() {
   const selectedSafra = safraAtiva?.nome || "";
 
   const { data: talhaoStatsData, isLoading } = useQuery<Record<string, TalhaoStats>>({
-    queryKey: ["/api/bales/stats-by-talhao"],
+    queryKey: ["/api/bales/stats-by-talhao", selectedSafra],
+    queryFn: async () => {
+      const encodedSafra = encodeURIComponent(selectedSafra);
+      const url = API_URL
+        ? `${API_URL}/api/bales/stats-by-talhao?safra=${encodedSafra}`
+        : `/api/bales/stats-by-talhao?safra=${encodedSafra}`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return {};
+      return response.json();
+    },
     staleTime: 60000,
+    enabled: !!selectedSafra,
   });
 
   const talhaoStats = talhaoStatsData ? Object.values(talhaoStatsData) : [];
@@ -114,8 +144,21 @@ export default function TalhaoStats() {
   });
 
   const { data: allBales = [] } = useQuery<Bale[]>({
-    queryKey: ["/api/bales"],
+    queryKey: ["/api/bales", selectedSafra],
+    queryFn: async () => {
+      const encodedSafra = encodeURIComponent(selectedSafra);
+      const url = API_URL
+        ? `${API_URL}/api/bales?safra=${encodedSafra}`
+        : `/api/bales?safra=${encodedSafra}`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
     staleTime: 30000,
+    enabled: !!selectedSafra,
   });
 
   const { data: globalStats } = useQuery<{
@@ -124,8 +167,21 @@ export default function TalhaoStats() {
     beneficiado: number;
     total: number;
   }>({
-    queryKey: ["/api/bales/stats"],
+    queryKey: ["/api/bales/stats", selectedSafra],
+    queryFn: async () => {
+      const encodedSafra = encodeURIComponent(selectedSafra);
+      const url = API_URL
+        ? `${API_URL}/api/bales/stats?safra=${encodedSafra}`
+        : `/api/bales/stats?safra=${encodedSafra}`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return { campo: 0, patio: 0, beneficiado: 0, total: 0 };
+      return response.json();
+    },
     staleTime: 30000,
+    enabled: !!selectedSafra,
   });
 
   // Query para buscar totais de peso bruto por talhão (soma dos carregamentos)
@@ -370,6 +426,7 @@ export default function TalhaoStats() {
 
     return {
       totalPesoKg,
+      totalPesoToneladas: totalPesoKg / 1000,
       totalCarregamentos,
       talhoesComCarregamentos,
       mediaPesoPorCarregamento: totalCarregamentos > 0 ? totalPesoKg / totalCarregamentos : 0,
@@ -468,11 +525,184 @@ export default function TalhaoStats() {
     };
   }, [fardinhos]);
 
-  // Rendimento calculado (peso pluma / peso bruto)
+  // Peso médio por fardinho (peso pluma total / total de fardinhos)
+  const pesoMedioPorFardinho = useMemo(() => {
+    if (totaisFardinhos.totalFardinhos === 0 || totaisLotes.totalPesoPluma === 0) return 0;
+    return totaisLotes.totalPesoPluma / totaisFardinhos.totalFardinhos;
+  }, [totaisFardinhos.totalFardinhos, totaisLotes.totalPesoPluma]);
+
+  // Rendimento calculado (peso pluma / peso bruto) - movido para cima para uso nos alertas
   const rendimentoCalculado = useMemo(() => {
     if (totaisCarregamentos.totalPesoKg === 0 || totaisLotes.totalPesoPluma === 0) return 0;
     return (totaisLotes.totalPesoPluma / totaisCarregamentos.totalPesoKg) * 100;
   }, [totaisCarregamentos.totalPesoKg, totaisLotes.totalPesoPluma]);
+
+  // ========== NOVOS RECURSOS ==========
+
+  // Dados de fardinhos por dia (sparkline) - baseado no período selecionado
+  const fardinhosEvolucao = useMemo(() => {
+    const diasPeriodo = periodoFiltro === "7d" ? 7 : periodoFiltro === "14d" ? 14 : periodoFiltro === "30d" ? 30 : 60;
+    const days: Record<string, { date: string; fardinhos: number; pluma: number }> = {};
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - diasPeriodo);
+
+    // Inicializar dias
+    for (let i = diasPeriodo - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const key = date.toISOString().split('T')[0];
+      const label = `${date.getDate()}/${date.getMonth() + 1}`;
+      days[key] = { date: label, fardinhos: 0, pluma: 0 };
+    }
+
+    // Somar fardinhos por dia
+    fardinhos
+      .filter(f => new Date(f.dataRegistro) >= startDate)
+      .forEach(f => {
+        const key = new Date(f.dataRegistro).toISOString().split('T')[0];
+        if (days[key]) {
+          days[key].fardinhos += f.quantidade || 0;
+        }
+      });
+
+    // Somar peso pluma por dia
+    lotes
+      .filter(l => new Date(l.dataProcessamento) >= startDate)
+      .forEach(l => {
+        const key = new Date(l.dataProcessamento).toISOString().split('T')[0];
+        if (days[key]) {
+          days[key].pluma += parseFloat(l.pesoPluma) || 0;
+        }
+      });
+
+    return Object.values(days);
+  }, [fardinhos, lotes, periodoFiltro]);
+
+  // Projeção de conclusão do beneficiamento
+  const projecaoConclusao = useMemo(() => {
+    const totalFardosParaBeneficiar = (globalStats?.campo || 0) + (globalStats?.patio || 0);
+    const fardosBeneficiados = globalStats?.beneficiado || 0;
+
+    if (totalFardosParaBeneficiar === 0 || fardosBeneficiados === 0) {
+      return { diasRestantes: null, dataEstimada: null, velocidadeMedia: 0 };
+    }
+
+    // Calcular velocidade média de beneficiamento (fardos/dia) dos últimos 14 dias
+    const quatorzeDiasAtras = new Date();
+    quatorzeDiasAtras.setDate(quatorzeDiasAtras.getDate() - 14);
+
+    const fardosBeneficiadosRecentes = allBales.filter(b =>
+      b.status === "beneficiado" &&
+      b.processedAt &&
+      new Date(b.processedAt) >= quatorzeDiasAtras
+    ).length;
+
+    const velocidadeMedia = fardosBeneficiadosRecentes / 14; // fardos por dia
+
+    if (velocidadeMedia === 0) {
+      return { diasRestantes: null, dataEstimada: null, velocidadeMedia: 0 };
+    }
+
+    const diasRestantes = Math.ceil(totalFardosParaBeneficiar / velocidadeMedia);
+    const dataEstimada = new Date();
+    dataEstimada.setDate(dataEstimada.getDate() + diasRestantes);
+
+    return {
+      diasRestantes,
+      dataEstimada,
+      velocidadeMedia: Math.round(velocidadeMedia * 10) / 10,
+    };
+  }, [globalStats, allBales]);
+
+  // Alertas inteligentes
+  const alertasInteligentes = useMemo(() => {
+    const alertas: Array<{
+      tipo: "warning" | "danger" | "success" | "info";
+      titulo: string;
+      mensagem: string;
+      valor?: string;
+    }> = [];
+
+    // Alerta: Rendimento abaixo da média (< 38%)
+    if (rendimentoCalculado > 0 && rendimentoCalculado < 38) {
+      alertas.push({
+        tipo: "warning",
+        titulo: "Rendimento Baixo",
+        mensagem: "O rendimento de pluma está abaixo da média esperada (38-42%)",
+        valor: `${rendimentoCalculado.toFixed(1)}%`,
+      });
+    }
+
+    // Alerta: Rendimento excelente (> 42%)
+    if (rendimentoCalculado > 42) {
+      alertas.push({
+        tipo: "success",
+        titulo: "Rendimento Excelente",
+        mensagem: "O rendimento de pluma está acima da média!",
+        valor: `${rendimentoCalculado.toFixed(1)}%`,
+      });
+    }
+
+    // Alerta: Muitos fardos no campo
+    const percentualCampo = globalStats?.total ? ((globalStats.campo || 0) / globalStats.total) * 100 : 0;
+    if (percentualCampo > 50 && (globalStats?.campo || 0) > 100) {
+      alertas.push({
+        tipo: "warning",
+        titulo: "Fardos Acumulados no Campo",
+        mensagem: `${percentualCampo.toFixed(0)}% dos fardos ainda estão no campo`,
+        valor: `${globalStats?.campo || 0} fardos`,
+      });
+    }
+
+    // Alerta: Beneficiamento lento
+    if (projecaoConclusao.diasRestantes && projecaoConclusao.diasRestantes > 60) {
+      alertas.push({
+        tipo: "danger",
+        titulo: "Beneficiamento Lento",
+        mensagem: "No ritmo atual, levará mais de 60 dias para concluir",
+        valor: `${projecaoConclusao.diasRestantes} dias`,
+      });
+    }
+
+    // Alerta: Produtividade real vs prevista
+    if (totaisProdutividade.produtividadeRealMedia > 0 && totaisProdutividade.produtividadePrevistaMedia > 0) {
+      const diff = ((totaisProdutividade.produtividadeRealMedia - totaisProdutividade.produtividadePrevistaMedia) / totaisProdutividade.produtividadePrevistaMedia) * 100;
+      if (diff < -10) {
+        alertas.push({
+          tipo: "warning",
+          titulo: "Produtividade Abaixo do Previsto",
+          mensagem: "A produtividade real está abaixo da estimativa inicial",
+          valor: `${diff.toFixed(1)}%`,
+        });
+      } else if (diff > 10) {
+        alertas.push({
+          tipo: "success",
+          titulo: "Produtividade Acima do Previsto",
+          mensagem: "Excelente! A produtividade real superou a estimativa",
+          valor: `+${diff.toFixed(1)}%`,
+        });
+      }
+    }
+
+    // Alerta: Sem registros de fardinhos
+    if (totaisLotes.totalPesoPluma > 0 && totaisFardinhos.totalFardinhos === 0) {
+      alertas.push({
+        tipo: "info",
+        titulo: "Fardinhos Não Registrados",
+        mensagem: "Há peso de pluma registrado mas sem fardinhos cadastrados",
+      });
+    }
+
+    return alertas;
+  }, [rendimentoCalculado, globalStats, projecaoConclusao, totaisProdutividade, totaisLotes.totalPesoPluma, totaisFardinhos.totalFardinhos]);
+
+  // Média de fardinhos por dia (para tendência)
+  const mediaFardinhosPorDia = useMemo(() => {
+    const diasComDados = fardinhosEvolucao.filter(d => d.fardinhos > 0);
+    if (diasComDados.length === 0) return 0;
+    const total = diasComDados.reduce((acc, d) => acc + d.fardinhos, 0);
+    return total / diasComDados.length;
+  }, [fardinhosEvolucao]);
 
   // Dados para gráfico de pizza (distribuição de status)
   const pieChartData = useMemo(() => [
@@ -689,8 +919,8 @@ export default function TalhaoStats() {
                     <span className="text-xs text-neon-orange font-semibold uppercase tracking-wider">Peso Bruto</span>
                   </div>
                   <p className="text-xl sm:text-2xl font-display font-bold mb-1">
-                    {totaisCarregamentos.totalPesoKg.toLocaleString('pt-BR')}
-                    <span className="text-sm sm:text-base text-neon-orange ml-1">kg</span>
+                    {totaisCarregamentos.totalPesoToneladas.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}
+                    <span className="text-sm sm:text-base text-neon-orange ml-1">t</span>
                   </p>
                   <p className="text-xs text-muted-foreground">{totaisCarregamentos.totalCarregamentos} carregamentos</p>
                   <div className="flex items-center gap-2 mt-3">
@@ -933,96 +1163,94 @@ export default function TalhaoStats() {
               )}
             </div>
 
-            {/* Grid de KPIs Secundários */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {/* Progresso Beneficiamento */}
-              <div className="glass-card p-4 rounded-xl">
-                <div className="flex items-center gap-2 mb-2">
-                  <Factory className="w-4 h-4 text-neon-cyan" />
-                  <span className="text-xs text-muted-foreground">Beneficiamento</span>
-                </div>
-                <p className="text-2xl font-display font-bold text-foreground">{taxaBeneficiamento.toFixed(1)}%</p>
-                <div className="h-1.5 rounded-full bg-surface overflow-hidden mt-2">
-                  <div
-                    className="h-full bg-neon-cyan rounded-full"
-                    style={{ width: `${taxaBeneficiamento}%` }}
-                  />
-                </div>
+            {/* Métricas Chave */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Peso Bruto */}
+              <div className="p-4 rounded-xl bg-surface/50 border border-border/30">
+                <p className="text-xs text-muted-foreground mb-1">Peso Bruto</p>
+                <p className="text-2xl font-bold">{totaisCarregamentos.totalPesoToneladas.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} <span className="text-sm font-normal text-muted-foreground">t</span></p>
               </div>
-
-              {/* Volume Total */}
-              <div className="glass-card p-4 rounded-xl">
-                <div className="flex items-center gap-2 mb-2">
-                  <Truck className="w-4 h-4 text-neon-orange" />
-                  <span className="text-xs text-muted-foreground">Peso Bruto</span>
-                </div>
-                <p className="text-lg font-display font-bold text-foreground">{totaisCarregamentos.totalPesoKg.toLocaleString('pt-BR')}</p>
-                <p className="text-xs text-muted-foreground">kg transportados</p>
-              </div>
-
-              {/* Rendimento Pluma */}
-              <div className="glass-card p-4 rounded-xl">
-                <div className="flex items-center gap-2 mb-2">
-                  <Percent className="w-4 h-4 text-purple-500" />
-                  <span className="text-xs text-muted-foreground">Rendimento Pluma</span>
-                </div>
-                <p className="text-2xl font-bold text-purple-500">
-                  {rendimentoCalculado > 0 ? `${rendimentoCalculado.toFixed(1)}%` : '-'}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {rendimentoCalculado >= 40 ? 'Excelente' : rendimentoCalculado >= 35 ? 'Bom' : '-'}
-                </p>
-              </div>
-
-              {/* Melhor Talhão */}
-              <div className="glass-card p-4 rounded-xl">
-                <div className="flex items-center gap-2 mb-2">
-                  <Award className="w-4 h-4 text-yellow-500" />
-                  <span className="text-xs text-muted-foreground">Melhor Talhão</span>
-                </div>
-                <p className="text-2xl font-bold text-yellow-500">{topTalhoes[0]?.talhao || '-'}</p>
-                <p className="text-xs text-muted-foreground">
-                  {topTalhoes[0] ? `${topTalhoes[0].arrobasPorHa.toFixed(0)} @/ha` : '-'}
-                </p>
+              {/* Rendimento */}
+              <div className="p-4 rounded-xl bg-surface/50 border border-border/30">
+                <p className="text-xs text-muted-foreground mb-1">Rendimento Pluma</p>
+                <p className="text-2xl font-bold">{rendimentoCalculado > 0 ? `${rendimentoCalculado.toFixed(1)}%` : '-'}</p>
               </div>
             </div>
 
-            {/* Top 5 Talhões */}
-            <div className="glass-card rounded-xl overflow-hidden">
-              <div className="p-4 border-b border-border/30">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/20">
-                    <Award className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Top 5 Talhões</h3>
-                    <p className="text-xs text-muted-foreground">Maior produtividade (@/ha)</p>
-                  </div>
+            {/* Seção de Beneficiamento */}
+            <div className="glass-card p-5 rounded-xl">
+              <div className="flex items-center gap-3 mb-4">
+                <Factory className="w-5 h-5 text-purple-400" />
+                <h3 className="font-semibold">Beneficiamento</h3>
+              </div>
+
+              {/* Grid simplificado */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="text-center p-3 rounded-lg bg-surface/50">
+                  <p className="text-2xl font-bold">{totaisLotes.totalPesoPluma > 0 ? totaisLotes.totalPesoPluma.toLocaleString('pt-BR') : '-'}</p>
+                  <p className="text-xs text-muted-foreground">Peso Pluma (kg)</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-surface/50">
+                  <p className="text-2xl font-bold">{totaisFardinhos.totalFardinhos > 0 ? totaisFardinhos.totalFardinhos.toLocaleString('pt-BR') : '-'}</p>
+                  <p className="text-xs text-muted-foreground">Fardinhos</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-surface/50">
+                  <p className="text-2xl font-bold">{pesoMedioPorFardinho > 0 ? pesoMedioPorFardinho.toFixed(1) : '-'}</p>
+                  <p className="text-xs text-muted-foreground">Peso/Fardinho (kg)</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-surface/50">
+                  <p className="text-2xl font-bold">{totaisLotes.totalLotes > 0 ? totaisLotes.totalLotes : '-'}</p>
+                  <p className="text-xs text-muted-foreground">Lotes</p>
                 </div>
               </div>
-              <div className="divide-y divide-border/30">
-                {topTalhoes.map((t, index) => (
-                  <div key={t.talhao} className="flex items-center justify-between p-4 hover:bg-surface/50 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <span className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
-                        index === 0 ? "bg-yellow-500/20 text-yellow-500" :
-                        index === 1 ? "bg-gray-400/20 text-gray-400" :
-                        index === 2 ? "bg-amber-600/20 text-amber-600" :
-                        "bg-surface text-muted-foreground"
-                      )}>
-                        {index + 1}º
-                      </span>
-                      <div>
-                        <p className="font-semibold">{t.talhao}</p>
-                        <p className="text-xs text-muted-foreground">{t.hectares.toFixed(1)} ha • {t.total} fardos</p>
+
+              {/* Barra de progresso simples */}
+              {totaisCarregamentos.totalPesoKg > 0 && totaisLotes.totalPesoPluma > 0 && (
+                <div className="mt-4">
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                    <span>Conversão Bruto → Pluma</span>
+                    <span className="font-medium">{((totaisLotes.totalPesoPluma / totaisCarregamentos.totalPesoKg) * 100).toFixed(1)}%</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-surface overflow-hidden">
+                    <div
+                      className="h-full bg-purple-500 rounded-full"
+                      style={{ width: `${Math.min(100, (totaisLotes.totalPesoPluma / totaisCarregamentos.totalPesoKg) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Estado vazio */}
+              {totaisLotes.totalPesoPluma === 0 && totaisFardinhos.totalFardinhos === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Sem dados de beneficiamento</p>
+              )}
+            </div>
+
+            {/* Top 5 Talhões - Com cores de ranking */}
+            {topTalhoes.length > 0 && (
+              <div className="glass-card p-5 rounded-xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <Award className="w-5 h-5 text-yellow-500" />
+                  <h3 className="font-semibold">Top 5 Talhões por Produtividade</h3>
+                </div>
+                <div className="space-y-2">
+                  {topTalhoes.map((t, index) => {
+                    const rankColors = ['text-yellow-500', 'text-gray-400', 'text-amber-600', 'text-muted-foreground', 'text-muted-foreground'];
+                    const bgColors = ['bg-yellow-500/10', 'bg-gray-400/10', 'bg-amber-600/10', 'bg-surface/50', 'bg-surface/50'];
+                    return (
+                      <div key={t.talhao} className={cn("flex items-center justify-between p-3 rounded-lg", bgColors[index])}>
+                        <div className="flex items-center gap-3">
+                          <span className={cn("font-bold w-6 text-center", rankColors[index])}>{index + 1}º</span>
+                          <span className="font-medium">{t.talhao}</span>
+                          <span className="text-xs text-muted-foreground">{t.hectares.toFixed(0)} ha</span>
+                        </div>
+                        <span className="font-bold text-primary">{t.arrobasPorHa.toFixed(0)} @/ha</span>
                       </div>
-                    </div>
-                    <span className="text-lg font-bold text-foreground">{t.arrobasPorHa.toFixed(0)} @/ha</span>
-                  </div>
-                ))}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
           </TabsContent>
 
           {/* ==================== TAB: PRODUÇÃO (antigo talhao) ==================== */}
@@ -1238,8 +1466,8 @@ export default function TalhaoStats() {
                     <Scale className="w-4 h-4 text-primary" />
                   </div>
                 </div>
-                <p className="text-lg font-display font-bold text-foreground">{totaisCarregamentos.totalPesoKg.toLocaleString('pt-BR')}</p>
-                <p className="text-xs text-muted-foreground">Peso Bruto (kg)</p>
+                <p className="text-lg font-display font-bold text-foreground">{totaisCarregamentos.totalPesoToneladas.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}</p>
+                <p className="text-xs text-muted-foreground">Peso Bruto (t)</p>
               </div>
               <div className="glass-card p-4 rounded-xl">
                 <div className="flex items-center gap-2 mb-2">
@@ -1340,7 +1568,7 @@ export default function TalhaoStats() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-display font-bold text-foreground">{totaisCarregamentos.totalPesoKg.toLocaleString('pt-BR')} kg</p>
+                          <p className="text-lg font-display font-bold text-foreground">{totaisCarregamentos.totalPesoToneladas.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} t</p>
                           <p className="text-xs text-muted-foreground">
                             Média: {Math.round(totaisCarregamentos.mediaPesoPorCarregamento).toLocaleString('pt-BR')} kg/carreg.
                           </p>
@@ -1509,7 +1737,7 @@ export default function TalhaoStats() {
           {/* Tab: Beneficiamento */}
           <TabsContent value="beneficiamento" className="space-y-4 mt-4">
             {/* KPIs de Beneficiamento */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
               <div className="glass-card p-4 rounded-xl border border-purple-500/20 hover:border-purple-500/40 transition-colors">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="p-1.5 rounded-lg bg-purple-500/20">
@@ -1577,6 +1805,19 @@ export default function TalhaoStats() {
                 </p>
                 <p className="text-xs text-muted-foreground">Rendimento</p>
               </div>
+
+              <div className="glass-card p-4 rounded-xl border border-amber-500/20 hover:border-amber-500/40 transition-colors">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={cn("p-1.5 rounded-lg", pesoMedioPorFardinho > 0 ? "bg-amber-500/20" : "bg-muted/20")}>
+                    <Scale className={cn("w-4 h-4", pesoMedioPorFardinho > 0 ? "text-amber-400" : "text-muted-foreground")} />
+                  </div>
+                </div>
+                <p className={cn("text-lg font-bold", pesoMedioPorFardinho > 0 ? "text-amber-400" : "text-muted-foreground")}>
+                  {pesoMedioPorFardinho > 0 ? `${pesoMedioPorFardinho.toFixed(1)}` : "-"}
+                  {pesoMedioPorFardinho > 0 && <span className="text-xs ml-1">kg</span>}
+                </p>
+                <p className="text-xs text-muted-foreground">Peso/Fardinho</p>
+              </div>
             </div>
 
             {/* Barra de Progresso do Beneficiamento */}
@@ -1595,11 +1836,101 @@ export default function TalhaoStats() {
                   />
                 </div>
                 <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                  <span>Bruto: {totaisCarregamentos.totalPesoKg.toLocaleString('pt-BR')} kg</span>
+                  <span>Bruto: {totaisCarregamentos.totalPesoToneladas.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} t</span>
                   <span>Pluma: {totaisLotes.totalPesoPluma.toLocaleString('pt-BR')} kg</span>
                 </div>
               </div>
             )}
+
+            {/* Grid de Gráficos de Evolução */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Evolução dos Lotes */}
+              {lotes.length > 0 && (
+                <div className="glass-card p-4 rounded-xl">
+                  <h3 className="font-semibold mb-4 flex items-center gap-2">
+                    <Wheat className="w-4 h-4 text-purple-400" />
+                    Evolução dos Lotes
+                  </h3>
+                  <div className="h-[180px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={(() => {
+                          const lotesAgrupados = lotes.reduce((acc, lote) => {
+                            const data = new Date(lote.dataProcessamento).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                            if (!acc[data]) acc[data] = { peso: 0, qtd: 0 };
+                            acc[data].peso += parseFloat(lote.pesoPluma);
+                            acc[data].qtd += 1;
+                            return acc;
+                          }, {} as Record<string, { peso: number; qtd: number }>);
+                          return Object.entries(lotesAgrupados)
+                            .map(([data, vals]) => ({ data, peso: vals.peso, qtd: vals.qtd }))
+                            .slice(-14);
+                        })()}
+                        margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient id="colorLotes" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                        <XAxis dataKey="data" tick={{ fontSize: 10, fill: '#666' }} />
+                        <YAxis tick={{ fontSize: 10, fill: '#666' }} width={40} />
+                        <RechartsTooltip
+                          contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
+                          formatter={(value: number) => [`${value.toLocaleString('pt-BR')} kg`]}
+                        />
+                        <Area type="monotone" dataKey="peso" stroke="#a855f7" fill="url(#colorLotes)" strokeWidth={2} name="Peso Pluma" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+
+              {/* Evolução dos Fardinhos */}
+              {fardinhos.length > 0 && (
+                <div className="glass-card p-4 rounded-xl">
+                  <h3 className="font-semibold mb-4 flex items-center gap-2">
+                    <Boxes className="w-4 h-4 text-neon-cyan" />
+                    Evolução dos Fardinhos
+                  </h3>
+                  <div className="h-[180px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={(() => {
+                          const fardinhosAgrupados = fardinhos.reduce((acc, f) => {
+                            const data = new Date(f.dataRegistro).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                            if (!acc[data]) acc[data] = 0;
+                            acc[data] += f.quantidade;
+                            return acc;
+                          }, {} as Record<string, number>);
+                          return Object.entries(fardinhosAgrupados)
+                            .map(([data, qtd]) => ({ data, qtd }))
+                            .slice(-14);
+                        })()}
+                        margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient id="colorFardinhos" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#00D4FF" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#00D4FF" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                        <XAxis dataKey="data" tick={{ fontSize: 10, fill: '#666' }} />
+                        <YAxis tick={{ fontSize: 10, fill: '#666' }} width={30} />
+                        <RechartsTooltip
+                          contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
+                          formatter={(value: number) => [`${value} fardinhos`]}
+                        />
+                        <Area type="monotone" dataKey="qtd" stroke="#00D4FF" fill="url(#colorFardinhos)" strokeWidth={2} name="Fardinhos" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Lista de Lotes */}
             <div className="glass-card rounded-2xl overflow-hidden">
@@ -1682,338 +2013,106 @@ export default function TalhaoStats() {
           </TabsContent>
 
           {/* ==================== TAB: ANÁLISES (reformulada) ==================== */}
-          <TabsContent value="analises" className="space-y-6 mt-4">
-            {/* ===== INSIGHTS PRINCIPAIS ===== */}
-            <div className="glass-card rounded-2xl overflow-hidden border border-primary/20">
-              <div className="relative p-4 border-b border-border/30">
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent" />
-                <div className="relative flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-primary/20">
-                    <Sparkles className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-semibold">Insights da Safra</h2>
-                    <p className="text-xs text-muted-foreground">Análise automática dos seus dados</p>
-                  </div>
-                </div>
+          <TabsContent value="analises" className="space-y-4 mt-4">
+            {/* Resumo Numérico */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="p-4 rounded-xl bg-surface/50 border border-border/30 text-center">
+                <p className="text-2xl font-bold">{globalStats?.total || 0}</p>
+                <p className="text-xs text-muted-foreground">Total Fardos</p>
               </div>
-              <div className="p-3 sm:p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {/* Insight 1: Melhor Talhão */}
-                  {topTalhoes.length > 0 && (
-                    <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border border-yellow-500/20">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Award className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
-                        <span className="text-[10px] sm:text-xs font-semibold text-yellow-500 uppercase">Destaque</span>
-                      </div>
-                      <p className="text-xs sm:text-sm text-foreground mb-1">
-                        <span className="font-bold">Talhão {topTalhoes[0].talhao}</span> mais produtivo
-                      </p>
-                      <p className="text-xl sm:text-2xl font-display font-bold text-foreground">
-                        {topTalhoes[0].arrobasPorHa.toFixed(0)} <span className="text-xs sm:text-sm font-normal">@/ha</span>
-                      </p>
-                      {topTalhoes.length > 1 && (
-                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
-                          {((topTalhoes[0].arrobasPorHa - topTalhoes[topTalhoes.length - 1].arrobasPorHa) / topTalhoes[topTalhoes.length - 1].arrobasPorHa * 100).toFixed(0)}% acima do menor
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Insight 2: Progresso Beneficiamento */}
-                  <div className={cn(
-                    "p-3 sm:p-4 rounded-xl border",
-                    taxaBeneficiamento >= 70
-                      ? "bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20"
-                      : taxaBeneficiamento >= 40
-                        ? "bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border-yellow-500/20"
-                        : "bg-gradient-to-br from-neon-orange/10 to-neon-orange/5 border-neon-orange/20"
-                  )}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Factory className={cn(
-                        "w-4 h-4 sm:w-5 sm:h-5",
-                        taxaBeneficiamento >= 70 ? "text-green-500" : taxaBeneficiamento >= 40 ? "text-yellow-500" : "text-neon-orange"
-                      )} />
-                      <span className={cn(
-                        "text-[10px] sm:text-xs font-semibold uppercase",
-                        taxaBeneficiamento >= 70 ? "text-green-500" : taxaBeneficiamento >= 40 ? "text-yellow-500" : "text-neon-orange"
-                      )}>Beneficiamento</span>
-                    </div>
-                    <p className="text-xs sm:text-sm text-foreground mb-1">
-                      {taxaBeneficiamento >= 70
-                        ? "Excelente progresso!"
-                        : taxaBeneficiamento >= 40
-                          ? "Progresso moderado"
-                          : "Muitos rolos pendentes"}
-                    </p>
-                    <p className="text-xl sm:text-2xl font-display font-bold text-foreground">
-                      {taxaBeneficiamento.toFixed(1)}%
-                    </p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
-                      {globalStats?.beneficiado || 0} de {globalStats?.total || 0} rolos
-                    </p>
-                  </div>
-
-                  {/* Insight 3: Produtividade Real vs Prevista */}
-                  {totaisProdutividade.produtividadeRealMedia > 0 && totaisProdutividade.produtividadePrevistaMedia > 0 && (
-                    <div className={cn(
-                      "p-3 sm:p-4 rounded-xl border",
-                      totaisProdutividade.produtividadeRealMedia >= totaisProdutividade.produtividadePrevistaMedia
-                        ? "bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20"
-                        : "bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-500/20"
-                    )}>
-                      <div className="flex items-center gap-2 mb-2">
-                        {totaisProdutividade.produtividadeRealMedia >= totaisProdutividade.produtividadePrevistaMedia
-                          ? <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-                          : <ArrowDownRight className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />}
-                        <span className={cn(
-                          "text-[10px] sm:text-xs font-semibold uppercase",
-                          totaisProdutividade.produtividadeRealMedia >= totaisProdutividade.produtividadePrevistaMedia
-                            ? "text-green-500"
-                            : "text-red-500"
-                        )}>Prod. Real</span>
-                      </div>
-                      <p className="text-xs sm:text-sm text-foreground mb-1">
-                        {totaisProdutividade.produtividadeRealMedia >= totaisProdutividade.produtividadePrevistaMedia
-                          ? "Acima da previsão!"
-                          : "Abaixo do previsto"}
-                      </p>
-                      <p className="text-xl sm:text-2xl font-display font-bold text-foreground">
-                        {(((totaisProdutividade.produtividadeRealMedia - totaisProdutividade.produtividadePrevistaMedia) / totaisProdutividade.produtividadePrevistaMedia) * 100).toFixed(1)}%
-                      </p>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
-                        {totaisProdutividade.produtividadeRealMedia.toFixed(1)} vs {totaisProdutividade.produtividadePrevistaMedia.toFixed(1)} @/ha
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Insight 4: Tempo médio de beneficiamento */}
-                  {tempoMedioBeneficiamento > 0 && (
-                    <div className={cn(
-                      "p-3 sm:p-4 rounded-xl border",
-                      tempoMedioBeneficiamento <= 48
-                        ? "bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20"
-                        : tempoMedioBeneficiamento <= 96
-                          ? "bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border-yellow-500/20"
-                          : "bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-500/20"
-                    )}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Timer className={cn(
-                          "w-4 h-4 sm:w-5 sm:h-5",
-                          tempoMedioBeneficiamento <= 48 ? "text-green-500" : tempoMedioBeneficiamento <= 96 ? "text-yellow-500" : "text-red-500"
-                        )} />
-                        <span className={cn(
-                          "text-[10px] sm:text-xs font-semibold uppercase",
-                          tempoMedioBeneficiamento <= 48 ? "text-green-500" : tempoMedioBeneficiamento <= 96 ? "text-yellow-500" : "text-red-500"
-                        )}>Velocidade</span>
-                      </div>
-                      <p className="text-xs sm:text-sm text-foreground mb-1">
-                        Tempo pátio → benef.
-                      </p>
-                      <p className="text-xl sm:text-2xl font-display font-bold text-foreground">
-                        {Math.floor(tempoMedioBeneficiamento / 24)}d {Math.floor(tempoMedioBeneficiamento % 24)}h
-                      </p>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
-                        {tempoMedioBeneficiamento <= 48 ? "Ótimo!" : tempoMedioBeneficiamento <= 96 ? "Adequado" : "Otimizar"}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Insight 5: Rendimento Pluma */}
-                  {rendimentoCalculado > 0 && (
-                    <div className={cn(
-                      "p-3 sm:p-4 rounded-xl border",
-                      rendimentoCalculado >= 40
-                        ? "bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20"
-                        : rendimentoCalculado >= 35
-                          ? "bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border-yellow-500/20"
-                          : "bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-500/20"
-                    )}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Percent className={cn(
-                          "w-4 h-4 sm:w-5 sm:h-5",
-                          rendimentoCalculado >= 40 ? "text-green-500" : rendimentoCalculado >= 35 ? "text-yellow-500" : "text-red-500"
-                        )} />
-                        <span className={cn(
-                          "text-[10px] sm:text-xs font-semibold uppercase",
-                          rendimentoCalculado >= 40 ? "text-green-500" : rendimentoCalculado >= 35 ? "text-yellow-500" : "text-red-500"
-                        )}>Rendimento</span>
-                      </div>
-                      <p className="text-xs sm:text-sm text-foreground mb-1">
-                        Rendimento pluma
-                      </p>
-                      <p className="text-xl sm:text-2xl font-display font-bold text-foreground">
-                        {rendimentoCalculado.toFixed(1)}%
-                      </p>
-                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
-                        {rendimentoCalculado >= 40 ? "Acima da média!" : rendimentoCalculado >= 35 ? "Na média" : "Abaixo"}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Insight 6: Volume Produtivo */}
-                  <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-neon-cyan/10 to-neon-cyan/5 border border-neon-cyan/20">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-neon-cyan" />
-                      <span className="text-[10px] sm:text-xs font-semibold text-neon-cyan uppercase">Volume</span>
-                    </div>
-                    <p className="text-xs sm:text-sm text-foreground mb-1">
-                      Média diária (30d)
-                    </p>
-                    <p className="text-xl sm:text-2xl font-display font-bold text-foreground">
-                      {fardosPorDia.toFixed(1)} <span className="text-xs sm:text-sm font-normal">r/dia</span>
-                    </p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
-                      {talhoesAtivos} talhões ativos
-                    </p>
-                  </div>
-                </div>
+              <div className="p-4 rounded-xl bg-surface/50 border border-border/30 text-center">
+                <p className="text-2xl font-bold">{taxaBeneficiamento.toFixed(0)}%</p>
+                <p className="text-xs text-muted-foreground">Beneficiado</p>
+              </div>
+              <div className="p-4 rounded-xl bg-surface/50 border border-border/30 text-center">
+                <p className="text-2xl font-bold">{rendimentoCalculado > 0 ? `${rendimentoCalculado.toFixed(1)}%` : '-'}</p>
+                <p className="text-xs text-muted-foreground">Rendimento</p>
+              </div>
+              <div className="p-4 rounded-xl bg-surface/50 border border-border/30 text-center">
+                <p className="text-2xl font-bold">{fardosPorDia.toFixed(1)}</p>
+                <p className="text-xs text-muted-foreground">Fardos/dia</p>
               </div>
             </div>
 
-            {/* ===== GRÁFICO PRINCIPAL: EVOLUÇÃO TEMPORAL ===== */}
-            <div className="glass-card rounded-2xl overflow-hidden">
-              <div className="relative p-4 border-b border-border/30">
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent" />
-                <div className="relative flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-primary/20">
-                      <Activity className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-semibold">Evolução da Colheita</h2>
-                      <p className="text-xs text-muted-foreground">Rolos criados nos últimos 14 dias</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="p-3 sm:p-5">
-                <ResponsiveContainer width="100%" height={220} className="sm:!h-[280px]">
-                  <AreaChart data={evolutionData} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
+            {/* Gráfico: Evolução Temporal */}
+            <div className="glass-card p-4 rounded-xl">
+              <h3 className="font-semibold mb-4">Evolução da Colheita (14 dias)</h3>
+              <div className="h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={evolutionData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorEvolution" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#00FF88" stopOpacity={0.4}/>
+                        <stop offset="5%" stopColor="#00FF88" stopOpacity={0.3}/>
                         <stop offset="95%" stopColor="#00FF88" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#888' }} interval="preserveStartEnd" />
-                    <YAxis tick={{ fontSize: 9, fill: '#888' }} width={35} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} />
+                    <YAxis tick={{ fontSize: 10, fill: '#666' }} width={30} />
                     <RechartsTooltip
-                      contentStyle={{
-                        backgroundColor: 'rgba(0,0,0,0.95)',
-                        border: '1px solid rgba(0,255,136,0.3)',
-                        borderRadius: '12px',
-                        padding: '12px'
-                      }}
-                      content={({ active, payload, label }) => {
-                        if (active && payload && payload.length) {
-                          const data = payload[0].payload;
-                          return (
-                            <div className="glass-card p-3 rounded-lg border border-primary/30">
-                              <p className="font-semibold text-sm mb-2">{label}</p>
-                              <div className="space-y-1">
-                                <p className="text-xs"><span className="text-primary">●</span> Total: <span className="font-bold">{data.total}</span></p>
-                                <p className="text-xs"><span className="text-primary">●</span> Campo: {data.campo}</p>
-                                <p className="text-xs"><span className="text-neon-orange">●</span> Pátio: {data.patio}</p>
-                                <p className="text-xs"><span className="text-neon-cyan">●</span> Benef.: {data.beneficiado}</p>
-                              </div>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
+                      contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
                     />
-                    <Area type="monotone" dataKey="total" stroke="#00FF88" fill="url(#colorEvolution)" strokeWidth={3} />
+                    <Area type="monotone" dataKey="total" stroke="#00FF88" fill="url(#colorEvolution)" strokeWidth={2} name="Total" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* ===== GRID 2x2: DISTRIBUIÇÃO E RANKING ===== */}
+            {/* Grid 2 colunas: Pizza e Barras */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Distribuição por Status (Donut) */}
-              <div className="glass-card rounded-2xl overflow-hidden">
-                <div className="relative p-4 border-b border-border/30">
-                  <div className="absolute inset-0 bg-gradient-to-r from-neon-cyan/10 via-neon-cyan/5 to-transparent" />
-                  <div className="relative flex items-center gap-2">
-                    <div className="p-2 rounded-xl bg-neon-cyan/20">
-                      <PieChart className="w-4 h-4 text-neon-cyan" />
-                    </div>
-                    <h2 className="text-sm font-semibold">Distribuição por Status</h2>
-                  </div>
-                </div>
-                <div className="p-3 sm:p-5">
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
-                    <ResponsiveContainer width={140} height={140} className="sm:!w-[180px] sm:!h-[180px]">
+              {/* Distribuição por Status */}
+              <div className="glass-card p-4 rounded-xl">
+                <h3 className="font-semibold mb-4">Distribuição por Status</h3>
+                <div className="flex items-center justify-center gap-6">
+                  <div className="h-[150px] w-[150px]">
+                    <ResponsiveContainer width="100%" height="100%">
                       <RechartsPieChart>
                         <Pie
                           data={pieChartData}
                           cx="50%"
                           cy="50%"
-                          innerRadius={35}
-                          outerRadius={60}
+                          innerRadius={40}
+                          outerRadius={65}
                           dataKey="value"
                           stroke="none"
-                          label={({ percent }) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''}
-                          labelLine={false}
                         >
                           {pieChartData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
                         <RechartsTooltip
-                          contentStyle={{
-                            backgroundColor: 'rgba(0,0,0,0.9)',
-                            border: '1px solid rgba(0,255,136,0.3)',
-                            borderRadius: '8px'
-                          }}
+                          contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
                         />
                       </RechartsPieChart>
                     </ResponsiveContainer>
-                    <div className="flex sm:flex-col gap-4 sm:gap-3 flex-wrap justify-center">
-                      {pieChartData.map((item) => (
-                        <div key={item.name} className="flex items-center gap-2 sm:gap-3">
-                          <div className="w-3 h-3 sm:w-4 sm:h-4 rounded" style={{ backgroundColor: item.color }} />
-                          <div>
-                            <p className="text-xs sm:text-sm font-bold">{item.value}</p>
-                            <p className="text-[10px] sm:text-xs text-muted-foreground">{item.name}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {pieChartData.map((item) => (
+                      <div key={item.name} className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: item.color }} />
+                        <span className="text-sm">{item.name}: <strong>{item.value}</strong></span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* Ranking de Talhões (Horizontal Bar) */}
-              <div className="glass-card rounded-2xl overflow-hidden">
-                <div className="relative p-4 border-b border-border/30">
-                  <div className="absolute inset-0 bg-gradient-to-r from-accent/10 via-accent/5 to-transparent" />
-                  <div className="relative flex items-center gap-2">
-                    <div className="p-2 rounded-xl bg-accent/20">
-                      <Award className="w-4 h-4 text-accent" />
-                    </div>
-                    <h2 className="text-sm font-semibold">Ranking por Produtividade (@/ha)</h2>
-                  </div>
-                </div>
-                <div className="p-3 sm:p-5">
-                  <ResponsiveContainer width="100%" height={180} className="sm:!h-[200px]">
+              {/* Ranking de Talhões */}
+              <div className="glass-card p-4 rounded-xl">
+                <h3 className="font-semibold mb-4">Ranking por Produtividade</h3>
+                <div className="h-[180px]">
+                  <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       layout="vertical"
                       data={topTalhoes.slice(0, 5)}
-                      margin={{ top: 0, right: 5, left: -10, bottom: 0 }}
+                      margin={{ top: 0, right: 10, left: 0, bottom: 0 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" horizontal={false} />
-                      <XAxis type="number" tick={{ fontSize: 9, fill: '#888' }} />
-                      <YAxis dataKey="talhao" type="category" tick={{ fontSize: 10, fill: '#888' }} width={30} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 10, fill: '#666' }} />
+                      <YAxis dataKey="talhao" type="category" tick={{ fontSize: 11, fill: '#888' }} width={35} />
                       <RechartsTooltip
-                        contentStyle={{
-                          backgroundColor: 'rgba(0,0,0,0.9)',
-                          border: '1px solid rgba(255,215,0,0.3)',
-                          borderRadius: '8px'
-                        }}
-                        formatter={(value: number) => [`${value.toFixed(1)} @/ha`, 'Produtividade']}
+                        contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
+                        formatter={(value: number) => [`${value.toFixed(0)} @/ha`]}
                       />
                       <Bar dataKey="arrobasPorHa" fill="#FFD700" radius={[0, 4, 4, 0]} />
                     </BarChart>
@@ -2094,59 +2193,135 @@ export default function TalhaoStats() {
               </div>
             </div>
 
-            {/* ===== COMPARATIVO POR SAFRA ===== */}
-            {safraStats.length > 1 && (
-              <div className="glass-card rounded-2xl overflow-hidden">
-                <div className="relative p-4 border-b border-border/30">
-                  <div className="absolute inset-0 bg-gradient-to-r from-neon-orange/10 via-neon-orange/5 to-transparent" />
-                  <div className="relative flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-neon-orange/20">
-                      <Calendar className="w-5 h-5 text-neon-orange" />
+            {/* ===== PRODUÇÃO POR TALHÃO ===== */}
+            <div className="glass-card p-4 rounded-xl">
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-primary" />
+                Produção por Talhão
+              </h3>
+              <div className="h-[220px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={talhaoStats.slice(0, 10).map(t => ({
+                      talhao: t.talhao,
+                      total: t.total,
+                      campo: t.campo,
+                      patio: t.patio,
+                      beneficiado: t.beneficiado
+                    }))}
+                    margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="talhao" tick={{ fontSize: 10, fill: '#666' }} />
+                    <YAxis tick={{ fontSize: 10, fill: '#666' }} width={35} />
+                    <RechartsTooltip
+                      contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: '10px' }} />
+                    <Bar dataKey="campo" stackId="a" fill="#00FF88" name="Campo" />
+                    <Bar dataKey="patio" stackId="a" fill="#FF9500" name="Pátio" />
+                    <Bar dataKey="beneficiado" stackId="a" fill="#00D4FF" name="Beneficiado" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* ===== GRID: RENDIMENTO E BENEFICIAMENTO ===== */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Rendimento por Talhão */}
+              <div className="glass-card p-4 rounded-xl">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <Percent className="w-4 h-4 text-green-500" />
+                  Taxa de Beneficiamento por Talhão
+                </h3>
+                <div className="h-[180px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      layout="vertical"
+                      data={talhaoStats
+                        .filter(t => t.total > 0)
+                        .map(t => ({
+                          talhao: t.talhao,
+                          taxa: ((t.beneficiado / t.total) * 100)
+                        }))
+                        .sort((a, b) => b.taxa - a.taxa)
+                        .slice(0, 6)}
+                      margin={{ top: 0, right: 10, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                      <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10, fill: '#666' }} unit="%" />
+                      <YAxis dataKey="talhao" type="category" tick={{ fontSize: 11, fill: '#888' }} width={35} />
+                      <RechartsTooltip
+                        contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
+                        formatter={(value: number) => [`${value.toFixed(1)}%`, 'Taxa']}
+                      />
+                      <Bar dataKey="taxa" fill="#00D4FF" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Peso Médio por Fardinho */}
+              <div className="glass-card p-4 rounded-xl">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <Scale className="w-4 h-4 text-purple-400" />
+                  Métricas de Beneficiamento
+                </h3>
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-surface/50 border border-purple-500/20">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Peso Médio/Fardinho</span>
+                      <span className="text-2xl font-bold text-purple-400">
+                        {pesoMedioPorFardinho > 0 ? `${pesoMedioPorFardinho.toFixed(1)} kg` : '-'}
+                      </span>
                     </div>
-                    <div>
-                      <h2 className="text-base font-semibold">Comparativo por Safra</h2>
-                      <p className="text-xs text-muted-foreground">Análise comparativa entre safras</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-surface/50 border border-green-500/20">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Rendimento Pluma</span>
+                      <span className="text-2xl font-bold text-green-500">
+                        {rendimentoCalculado > 0 ? `${rendimentoCalculado.toFixed(2)}%` : '-'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-xl bg-surface/50 border border-neon-cyan/20">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Total Fardinhos</span>
+                      <span className="text-2xl font-bold text-neon-cyan">{totaisFardinhos.totalFardinhos}</span>
                     </div>
                   </div>
                 </div>
-                <div className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {safraStats.map((stat) => {
-                      const progressBeneficiado = stat.total > 0 ? (stat.beneficiado / stat.total) * 100 : 0;
-                      return (
-                        <div
-                          key={stat.safra}
-                          className="p-4 rounded-xl bg-surface border border-border/30 hover:border-neon-orange/40 transition-colors"
-                        >
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-5 h-5 text-neon-orange" />
-                              <span className="font-semibold">Safra {stat.safra}</span>
-                            </div>
-                            <span className="text-xl font-bold text-foreground">{stat.total}</span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2 text-center text-xs mb-3">
-                            <div className="p-2 rounded-lg bg-primary/10">
-                              <p className="font-bold text-foreground">{stat.campo}</p>
-                              <p className="text-muted-foreground">Campo</p>
-                            </div>
-                            <div className="p-2 rounded-lg bg-neon-orange/10">
-                              <p className="font-bold text-foreground">{stat.patio}</p>
-                              <p className="text-muted-foreground">Pátio</p>
-                            </div>
-                            <div className="p-2 rounded-lg bg-neon-cyan/10">
-                              <p className="font-bold text-foreground">{stat.beneficiado}</p>
-                              <p className="text-muted-foreground">Benef.</p>
-                            </div>
-                          </div>
-                          <div className="h-2 bg-surface-hover rounded-full overflow-hidden">
-                            <div className="h-full bg-neon-cyan rounded-full transition-all" style={{ width: `${progressBeneficiado}%` }} />
-                          </div>
-                          <p className="text-[10px] text-muted-foreground mt-1">{progressBeneficiado.toFixed(0)}% beneficiado</p>
-                        </div>
-                      );
-                    })}
-                  </div>
+              </div>
+            </div>
+
+            {/* ===== COMPARATIVO POR SAFRA (somente se houver mais de uma) ===== */}
+            {safraStats.length > 1 && (
+              <div className="glass-card p-4 rounded-xl">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-neon-orange" />
+                  Comparativo entre Safras
+                </h3>
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={safraStats.map(s => ({
+                        safra: `Safra ${s.safra}`,
+                        total: s.total,
+                        beneficiado: s.beneficiado
+                      }))}
+                      margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis dataKey="safra" tick={{ fontSize: 10, fill: '#666' }} />
+                      <YAxis tick={{ fontSize: 10, fill: '#666' }} width={35} />
+                      <RechartsTooltip
+                        contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
+                      />
+                      <Legend wrapperStyle={{ fontSize: '10px' }} />
+                      <Bar dataKey="total" fill="#FF9500" name="Total Fardos" />
+                      <Bar dataKey="beneficiado" fill="#00D4FF" name="Beneficiados" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             )}

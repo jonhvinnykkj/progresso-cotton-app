@@ -40,24 +40,51 @@ export default function Talhoes() {
   const { data: settingsData } = useSettings();
   const talhoesSafra = settingsData?.talhoesSafra || [];
   const safraAtiva = settingsData?.safraAtiva;
+  const selectedSafra = safraAtiva?.nome || "";
 
   const { data: talhaoStatsData } = useQuery<Record<string, TalhaoStats>>({
-    queryKey: ["/api/bales/stats-by-talhao"],
+    queryKey: ["/api/bales/stats-by-talhao", selectedSafra],
+    queryFn: async () => {
+      const encodedSafra = encodeURIComponent(selectedSafra);
+      const url = API_URL
+        ? `${API_URL}/api/bales/stats-by-talhao?safra=${encodedSafra}`
+        : `/api/bales/stats-by-talhao?safra=${encodedSafra}`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return {};
+      return response.json();
+    },
+    enabled: !!selectedSafra,
     staleTime: 60000,
   });
 
   const talhaoStats = talhaoStatsData ? Object.values(talhaoStatsData) : [];
 
   const { data: bales = [] } = useQuery<Bale[]>({
-    queryKey: ["/api/bales"],
+    queryKey: ["/api/bales", selectedSafra],
+    queryFn: async () => {
+      const encodedSafra = encodeURIComponent(selectedSafra);
+      const url = API_URL
+        ? `${API_URL}/api/bales?safra=${encodedSafra}`
+        : `/api/bales?safra=${encodedSafra}`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!selectedSafra,
     staleTime: 30000,
   });
 
   const { data: pesoBrutoTotais = [] } = useQuery<{ talhao: string; pesoBrutoTotal: number; quantidadeCarregamentos: number }[]>({
-    queryKey: ["/api/carregamentos-totais", safraAtiva?.nome || ""],
+    queryKey: ["/api/carregamentos-totais", selectedSafra],
     queryFn: async () => {
-      if (!safraAtiva?.nome) return [];
-      const safraEncoded = encodeURIComponent(safraAtiva.nome);
+      if (!selectedSafra) return [];
+      const safraEncoded = encodeURIComponent(selectedSafra);
       const url = API_URL
         ? `${API_URL}/api/carregamentos-totais/${safraEncoded}`
         : `/api/carregamentos-totais/${safraEncoded}`;
@@ -68,7 +95,7 @@ export default function Talhoes() {
       if (!response.ok) return [];
       return response.json();
     },
-    enabled: !!safraAtiva?.nome,
+    enabled: !!selectedSafra,
     staleTime: 60000,
   });
 

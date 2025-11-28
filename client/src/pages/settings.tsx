@@ -55,9 +55,12 @@ export default function SettingsPage() {
         description: data.message || `${data.deletedCount} fardo(s) deletado(s) com sucesso`,
       });
 
-      queryClient.invalidateQueries({ queryKey: ["/api/bales"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/bales/stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/bales/stats-by-talhao"] });
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return key === '/api/bales' || key === '/api/bales/stats' || key === '/api/bales/stats-by-talhao';
+        }
+      });
 
       setShowDeleteDialog(false);
     } catch (error) {

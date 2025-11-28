@@ -151,9 +151,13 @@ export function useOfflineSync() {
           description: `${successCount} operação(ões) sincronizada(s), ${errorCount} falharam.`,
         });
 
-        // Atualizar cache
-        queryClient.invalidateQueries({ queryKey: ['/api/bales'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/bales/stats'] });
+        // Atualizar cache (inclui variações com safra no queryKey)
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = query.queryKey[0];
+            return key === '/api/bales' || key === '/api/bales/stats' || key === '/api/bales/stats-by-talhao';
+          }
+        });
       }
     } catch {
       // Sync error - will retry later

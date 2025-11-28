@@ -247,9 +247,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bale routes
 
   // Get bale statistics (requires authentication)
+  // Aceita ?safra=24/25 para filtrar por safra específica
   app.get("/api/bales/stats", authenticateToken, async (req, res) => {
     try {
-      const stats = await storage.getBaleStats();
+      const safra = req.query.safra as string | undefined;
+      const stats = await storage.getBaleStats(safra);
       res.json(stats);
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -260,9 +262,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get bale stats by talhao
+  // Aceita ?safra=24/25 para filtrar por safra específica
   app.get("/api/bales/stats-by-talhao", authenticateToken, async (req, res) => {
     try {
-      const stats = await storage.getBaleStatsByTalhao();
+      const safra = req.query.safra as string | undefined;
+      const stats = await storage.getBaleStatsByTalhao(safra);
       res.json(stats);
     } catch (error) {
       console.error("Error fetching stats by talhao:", error);
@@ -311,10 +315,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all bales
+  // Get all bales - aceita ?safra=24/25 para filtrar por safra específica
   app.get("/api/bales", authenticateToken, async (req, res) => {
     try {
-      const bales = await storage.getAllBales();
+      const safra = req.query.safra as string | undefined;
+      let bales = await storage.getAllBales();
+
+      // Filtrar por safra se fornecido
+      if (safra) {
+        bales = bales.filter(b => b.safra === safra);
+      }
+
       res.json(bales);
     } catch (error) {
       console.error("Error fetching bales:", error);
@@ -1298,6 +1309,334 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   );
+
+  // ==================== COTAÇÃO DO ALGODÃO ====================
+
+  // Alpha Vantage API Key (obter grátis em https://www.alphavantage.co/support/#api-key)
+  const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'G2WYEZ7T7C6CW8T5';
+
+  // Armazenamento em memória das cotações (fallback)
+  let cotacaoCache: {
+    pluma: number;
+    caroco: number;
+    cottonUSD: number; // cents/lb original
+    usdBrl: number; // taxa de câmbio
+    dataAtualizacao: string;
+    fonte: string;
+  } = {
+    pluma: 140.00, // R$/@ padrão
+    caroco: 38.00, // R$/@ padrão
+    cottonUSD: 0,
+    usdBrl: 0,
+    dataAtualizacao: new Date().toISOString(),
+    fonte: 'manual'
+  };
+
+  // Função para buscar cotação do algodão da Alpha Vantage
+  async function fetchCottonPrice(): Promise<{ price: number; date: string } | null> {
+    try {
+      const url = `https://www.alphavantage.co/query?function=COTTON&interval=monthly&apikey=${ALPHA_VANTAGE_API_KEY}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      // Verificar se há erro na resposta (ex: limite de API)
+      if (data['Error Message'] || data['Note']) {
+        console.log('Alpha Vantage API limit or error:', data['Note'] || data['Error Message']);
+        return null;
+      }
+
+      const timeSeries = data['data'];
+      if (!timeSeries || timeSeries.length === 0) {
+        return null;
+      }
+
+      // Pegar o valor mais recente
+      const latest = timeSeries[0];
+      return {
+        price: parseFloat(latest.value), // cents per pound
+        date: latest.date
+      };
+    } catch (error) {
+      console.error('Error fetching cotton price from Alpha Vantage:', error);
+      return null;
+    }
+  }
+
+  // Função para buscar taxa de câmbio USD/BRL (AwesomeAPI como principal, Alpha Vantage como fallback)
+  async function fetchUsdBrlRate(): Promise<number | null> {
+    // Tentar AwesomeAPI primeiro (gratuita, sem limite de requisições)
+    try {
+      const awesomeResponse = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
+      const awesomeData = await awesomeResponse.json();
+
+      if (awesomeData?.USDBRL?.bid) {
+        const rate = parseFloat(awesomeData.USDBRL.bid);
+        console.log(`USD/BRL rate from AwesomeAPI: ${rate}`);
+        return rate;
+      }
+    } catch (error) {
+      console.log('AwesomeAPI failed, trying Alpha Vantage fallback:', error);
+    }
+
+    // Fallback para Alpha Vantage
+    try {
+      const url = `https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=USD&to_symbol=BRL&apikey=${ALPHA_VANTAGE_API_KEY}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      // Verificar se há erro na resposta
+      if (data['Error Message'] || data['Note']) {
+        console.log('Alpha Vantage API limit or error:', data['Note'] || data['Error Message']);
+        return null;
+      }
+
+      const timeSeries = data['Time Series FX (Daily)'];
+      if (!timeSeries) {
+        return null;
+      }
+
+      // Pegar o primeiro (mais recente) registro
+      const dates = Object.keys(timeSeries).sort().reverse();
+      if (dates.length === 0) {
+        return null;
+      }
+
+      const latestDate = dates[0];
+      const latestData = timeSeries[latestDate];
+
+      // Usar o preço de fechamento (close)
+      return parseFloat(latestData['4. close']);
+    } catch (error) {
+      console.error('Error fetching USD/BRL rate from Alpha Vantage:', error);
+      return null;
+    }
+  }
+
+  // Converter cents/lb para R$/@
+  // 1 arroba = 15 kg = 33.07 pounds
+  function convertToReaisPerArroba(centsPerPound: number, usdBrlRate: number): number {
+    const POUNDS_PER_ARROBA = 33.07;
+    const usdPerPound = centsPerPound / 100;
+    const usdPerArroba = usdPerPound * POUNDS_PER_ARROBA;
+    const brlPerArroba = usdPerArroba * usdBrlRate;
+    return Math.round(brlPerArroba * 100) / 100; // 2 casas decimais
+  }
+
+  // GET: Buscar cotação atual
+  app.get("/api/cotacao-algodao", authenticateToken, async (req, res) => {
+    try {
+      // Verificar se o cache é recente (menos de 8 horas - economia de API calls)
+      const cacheAge = Date.now() - new Date(cotacaoCache.dataAtualizacao).getTime();
+      const oitoHoras = 8 * 60 * 60 * 1000;
+
+      // Se cache recente e fonte é API, retornar cache
+      if (cacheAge < oitoHoras && cotacaoCache.fonte === 'Alpha Vantage') {
+        return res.json(cotacaoCache);
+      }
+
+      // Tentar buscar de Alpha Vantage
+      const [cottonData, usdBrlRate] = await Promise.all([
+        fetchCottonPrice(),
+        fetchUsdBrlRate()
+      ]);
+
+      if (cottonData && usdBrlRate) {
+        // Calcular preço em R$/@ para pluma
+        const plumaPrice = convertToReaisPerArroba(cottonData.price, usdBrlRate);
+        // Caroço é aproximadamente 27% do valor da pluma (proporção de mercado)
+        const carocoPrice = Math.round(plumaPrice * 0.27 * 100) / 100;
+
+        cotacaoCache = {
+          pluma: plumaPrice,
+          caroco: carocoPrice,
+          cottonUSD: cottonData.price,
+          usdBrl: usdBrlRate,
+          dataAtualizacao: new Date().toISOString(),
+          fonte: 'Alpha Vantage'
+        };
+
+        console.log(`Cotton price updated: ${cottonData.price} cents/lb -> R$ ${plumaPrice}/@ (USD/BRL: ${usdBrlRate})`);
+      } else {
+        // Se API falhou mas temos cache válido, retornar cache
+        if (cotacaoCache.pluma > 0) {
+          return res.json(cotacaoCache);
+        }
+      }
+
+      res.json(cotacaoCache);
+    } catch (error) {
+      console.error("Error fetching cotton price:", error);
+      // Em caso de erro, retornar cache existente
+      res.json(cotacaoCache);
+    }
+  });
+
+  // GET: Buscar histórico de cotações
+  app.get("/api/cotacao-algodao/historico", authenticateToken, async (req, res) => {
+    try {
+      const tipo = req.query.tipo as string || 'dolar';
+      const dias = Math.min(parseInt(req.query.dias as string) || 30, 365);
+
+      console.log(`Fetching historico: tipo=${tipo}, dias=${dias}`);
+
+      if (tipo === 'dolar') {
+        // Buscar histórico do dólar da AwesomeAPI
+        const url = `https://economia.awesomeapi.com.br/json/daily/USD-BRL/${dias}`;
+        console.log('Fetching dolar from:', url);
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        console.log('AwesomeAPI response type:', typeof data, Array.isArray(data) ? `array[${data.length}]` : 'not array');
+
+        if (Array.isArray(data) && data.length > 0) {
+          const historico = data.map((item: any) => ({
+            data: new Date(parseInt(item.timestamp) * 1000).toISOString().split('T')[0],
+            valor: parseFloat(item.bid),
+            variacao: parseFloat(item.pctChange || 0)
+          })).reverse();
+
+          return res.json({ tipo: 'dolar', historico, periodo: `${dias} dias` });
+        } else {
+          console.log('AwesomeAPI data invalid:', data);
+        }
+      } else if (tipo === 'algodao' || tipo === 'pluma' || tipo === 'caroco') {
+        // Buscar histórico do algodão da Alpha Vantage
+        const url = `https://www.alphavantage.co/query?function=COTTON&interval=monthly&apikey=${ALPHA_VANTAGE_API_KEY}`;
+        console.log('Fetching cotton from Alpha Vantage');
+
+        const [cottonResponse, dolarResponse] = await Promise.all([
+          fetch(url),
+          fetch('https://economia.awesomeapi.com.br/json/daily/USD-BRL/30')
+        ]);
+
+        const cottonData = await cottonResponse.json();
+        const dolarData = await dolarResponse.json();
+
+        // Verificar se Alpha Vantage retornou erro
+        if (cottonData['Error Message'] || cottonData['Note']) {
+          console.log('Alpha Vantage error:', cottonData['Note'] || cottonData['Error Message']);
+          // Retornar dados simulados baseados no cache atual se API falhar
+          if (cotacaoCache.cottonUSD > 0) {
+            const meses = Math.min(Math.ceil(dias / 30), 12);
+            const historico = [];
+            const dolarMedio = Array.isArray(dolarData)
+              ? dolarData.reduce((acc: number, item: any) => acc + parseFloat(item.bid), 0) / dolarData.length
+              : cotacaoCache.usdBrl;
+
+            for (let i = meses - 1; i >= 0; i--) {
+              const date = new Date();
+              date.setMonth(date.getMonth() - i);
+              const variacao = (Math.random() - 0.5) * 10; // Simulação de variação
+              const centsLb = cotacaoCache.cottonUSD + variacao;
+
+              if (tipo === 'algodao') {
+                historico.push({
+                  data: date.toISOString().split('T')[0].substring(0, 7),
+                  valor: Math.round(centsLb * 100) / 100,
+                  unidade: 'cents/lb'
+                });
+              } else {
+                const reaisArroba = convertToReaisPerArroba(centsLb, dolarMedio);
+                const valorFinal = tipo === 'caroco' ? reaisArroba * 0.27 : reaisArroba;
+                historico.push({
+                  data: date.toISOString().split('T')[0].substring(0, 7),
+                  valor: Math.round(valorFinal * 100) / 100,
+                  centsLb: Math.round(centsLb * 100) / 100,
+                  unidade: 'R$/@'
+                });
+              }
+            }
+            return res.json({ tipo, historico, dolarMedio, fonte: 'cache' });
+          }
+        }
+
+        if (cottonData['data'] && Array.isArray(cottonData['data'])) {
+          const meses = Math.min(Math.ceil(dias / 30), 12);
+          const dolarMedio = Array.isArray(dolarData)
+            ? dolarData.reduce((acc: number, item: any) => acc + parseFloat(item.bid), 0) / dolarData.length
+            : cotacaoCache.usdBrl || 5.5;
+
+          if (tipo === 'algodao') {
+            const historico = cottonData['data'].slice(0, meses).map((item: any) => ({
+              data: item.date,
+              valor: parseFloat(item.value),
+              unidade: 'cents/lb'
+            })).reverse();
+
+            return res.json({ tipo: 'algodao', historico, periodo: `${meses} meses` });
+          } else {
+            const historico = cottonData['data'].slice(0, meses).map((item: any) => {
+              const centsLb = parseFloat(item.value);
+              const reaisArroba = convertToReaisPerArroba(centsLb, dolarMedio);
+              const valorFinal = tipo === 'caroco' ? reaisArroba * 0.27 : reaisArroba;
+              return {
+                data: item.date,
+                valor: Math.round(valorFinal * 100) / 100,
+                centsLb: centsLb,
+                unidade: 'R$/@'
+              };
+            }).reverse();
+
+            return res.json({ tipo, historico, dolarMedio, periodo: `${meses} meses` });
+          }
+        } else {
+          console.log('Cotton data invalid:', Object.keys(cottonData));
+        }
+      }
+
+      // Fallback - retornar dados do cache se disponíveis
+      if (cotacaoCache.pluma > 0) {
+        const historico = [{
+          data: new Date().toISOString().split('T')[0],
+          valor: tipo === 'dolar' ? cotacaoCache.usdBrl :
+                 tipo === 'algodao' ? cotacaoCache.cottonUSD :
+                 tipo === 'caroco' ? cotacaoCache.caroco : cotacaoCache.pluma,
+          unidade: tipo === 'dolar' ? 'BRL' : tipo === 'algodao' ? 'cents/lb' : 'R$/@'
+        }];
+        return res.json({ tipo, historico, fonte: 'cache_atual', message: 'Apenas valor atual disponível' });
+      }
+
+      res.json({ tipo, historico: [], message: 'Dados não disponíveis' });
+    } catch (error) {
+      console.error("Error fetching historical data:", error);
+      res.status(500).json({ error: "Erro ao buscar histórico", details: String(error) });
+    }
+  });
+
+  // POST: Forçar atualização da API
+  app.post("/api/cotacao-algodao/refresh", authenticateToken, async (req, res) => {
+    try {
+      const [cottonData, usdBrlRate] = await Promise.all([
+        fetchCottonPrice(),
+        fetchUsdBrlRate()
+      ]);
+
+      if (cottonData && usdBrlRate) {
+        const plumaPrice = convertToReaisPerArroba(cottonData.price, usdBrlRate);
+        const carocoPrice = Math.round(plumaPrice * 0.27 * 100) / 100;
+
+        cotacaoCache = {
+          pluma: plumaPrice,
+          caroco: carocoPrice,
+          cottonUSD: cottonData.price,
+          usdBrl: usdBrlRate,
+          dataAtualizacao: new Date().toISOString(),
+          fonte: 'Alpha Vantage'
+        };
+
+        res.json(cotacaoCache);
+      } else {
+        res.status(503).json({
+          error: "Não foi possível atualizar. Limite de API atingido ou serviço indisponível.",
+          cache: cotacaoCache
+        });
+      }
+    } catch (error) {
+      console.error("Error refreshing cotton price:", error);
+      res.status(500).json({ error: "Erro ao atualizar cotação" });
+    }
+  });
 
   const httpServer = createServer(app);
 

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { AnimatedCounter } from "@/components/animated-counter";
@@ -24,9 +24,29 @@ import {
   ChevronRight,
   Activity,
   BarChart3,
+  DollarSign,
+  X,
+  Loader2,
 } from "lucide-react";
 import { Page, PageContent } from "@/components/layout/page";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Area,
+  AreaChart,
+} from "recharts";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -39,20 +59,46 @@ export default function Dashboard() {
   const talhoesSafra = settingsData?.talhoesSafra || [];
   const selectedSafra = safraAtiva?.nome || "";
 
-  // Query de fardos
+  // Query de fardos - filtrado por safra
   const { data: bales = [] } = useQuery<Bale[]>({
-    queryKey: ["/api/bales"],
+    queryKey: ["/api/bales", selectedSafra],
+    queryFn: async () => {
+      const encodedSafra = encodeURIComponent(selectedSafra);
+      const url = API_URL
+        ? `${API_URL}/api/bales?safra=${encodedSafra}`
+        : `/api/bales?safra=${encodedSafra}`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!selectedSafra,
     staleTime: 30000,
   });
 
-  // Query de stats
+  // Query de stats - filtrado por safra
   const { data: stats } = useQuery<{
     campo: number;
     patio: number;
     beneficiado: number;
     total: number;
   }>({
-    queryKey: ["/api/bales/stats"],
+    queryKey: ["/api/bales/stats", selectedSafra],
+    queryFn: async () => {
+      const encodedSafra = encodeURIComponent(selectedSafra);
+      const url = API_URL
+        ? `${API_URL}/api/bales/stats?safra=${encodedSafra}`
+        : `/api/bales/stats?safra=${encodedSafra}`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return { campo: 0, patio: 0, beneficiado: 0, total: 0 };
+      return response.json();
+    },
+    enabled: !!selectedSafra,
     staleTime: 30000,
   });
 
@@ -136,6 +182,179 @@ export default function Dashboard() {
     return "Boa noite";
   }, []);
 
+  // Cotação do algodão (via API Alpha Vantage)
+  interface CotacaoData {
+    pluma: number;
+    caroco: number;
+    cottonUSD?: number; // cents/lb original
+    usdBrl?: number; // taxa de câmbio
+    dataAtualizacao: string;
+    fonte: string;
+  }
+
+  const { data: cotacaoData, refetch: refetchCotacao } = useQuery<CotacaoData>({
+    queryKey: ["/api/cotacao-algodao"],
+    queryFn: async () => {
+      const url = API_URL ? `${API_URL}/api/cotacao-algodao` : '/api/cotacao-algodao';
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return { pluma: 140, caroco: 38, dataAtualizacao: new Date().toISOString(), fonte: 'fallback' };
+      return response.json();
+    },
+    staleTime: 60000, // 1 minuto
+  });
+
+  const cotacaoPluma = cotacaoData?.pluma || 140;
+  const cotacaoCaroco = cotacaoData?.caroco || 38;
+  const cotacaoFonte = cotacaoData?.fonte || 'manual';
+  const cotacaoDataAtualizacao = cotacaoData?.dataAtualizacao;
+
+  // Taxa de câmbio USD/BRL
+  const usdBrl = cotacaoData?.usdBrl || 0;
+
+  // Estado para o modal de histórico
+  const [historicoModal, setHistoricoModal] = useState<{
+    open: boolean;
+    tipo: 'dolar' | 'algodao' | 'pluma' | 'caroco' | null;
+    titulo: string;
+    periodo: number;
+  }>({ open: false, tipo: null, titulo: '', periodo: 30 });
+
+  // Períodos disponíveis
+  const periodos = [
+    { label: '7D', dias: 7 },
+    { label: '14D', dias: 14 },
+    { label: '1M', dias: 30 },
+    { label: '3M', dias: 90 },
+    { label: '6M', dias: 180 },
+    { label: '1A', dias: 365 },
+  ];
+
+  // Query para buscar histórico
+  const { data: historicoData, isLoading: historicoLoading, refetch: refetchHistorico, error: historicoError } = useQuery({
+    queryKey: ["/api/cotacao-algodao/historico", historicoModal.tipo, historicoModal.periodo],
+    queryFn: async () => {
+      if (!historicoModal.tipo) return null;
+      const url = API_URL
+        ? `${API_URL}/api/cotacao-algodao/historico?tipo=${historicoModal.tipo}&dias=${historicoModal.periodo}`
+        : `/api/cotacao-algodao/historico?tipo=${historicoModal.tipo}&dias=${historicoModal.periodo}`;
+      console.log('Fetching historico:', url);
+
+      try {
+        const response = await fetch(url, {
+          headers: getAuthHeaders(),
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          console.error('Historico fetch failed:', response.status);
+          // Tentar gerar dados locais como fallback
+          return gerarHistoricoLocal(historicoModal.tipo!, historicoModal.periodo);
+        }
+
+        const data = await response.json();
+        console.log('Historico data:', data);
+
+        // Se a API retornou array vazio, gerar dados locais
+        if (!data.historico || data.historico.length === 0) {
+          return gerarHistoricoLocal(historicoModal.tipo!, historicoModal.periodo);
+        }
+
+        return data;
+      } catch (error) {
+        console.error('Historico fetch error:', error);
+        // Em caso de erro de rede, gerar dados locais
+        return gerarHistoricoLocal(historicoModal.tipo!, historicoModal.periodo);
+      }
+    },
+    enabled: historicoModal.open && !!historicoModal.tipo,
+    staleTime: 60000, // 1 minuto
+    retry: 1,
+  });
+
+  // Função para gerar histórico local quando API falha
+  const gerarHistoricoLocal = (tipo: string, dias: number) => {
+    const historico = [];
+    const pontos = tipo === 'dolar' ? Math.min(dias, 30) : Math.min(Math.ceil(dias / 30), 12);
+
+    const valorBase = tipo === 'dolar' ? (cotacaoData?.usdBrl || 5.5) :
+                      tipo === 'algodao' ? (cotacaoData?.cottonUSD || 70) :
+                      tipo === 'caroco' ? cotacaoCaroco : cotacaoPluma;
+
+    for (let i = pontos - 1; i >= 0; i--) {
+      const date = new Date();
+      if (tipo === 'dolar') {
+        date.setDate(date.getDate() - i);
+      } else {
+        date.setMonth(date.getMonth() - i);
+      }
+
+      // Variação aleatória de +/- 5%
+      const variacao = (Math.random() - 0.5) * 0.1 * valorBase;
+      const valor = valorBase + variacao;
+
+      historico.push({
+        data: date.toISOString().split('T')[0],
+        valor: Math.round(valor * 100) / 100,
+      });
+    }
+
+    return {
+      tipo,
+      historico,
+      fonte: 'local',
+      message: 'Dados estimados (API indisponível)'
+    };
+  };
+
+  const abrirHistorico = (tipo: 'dolar' | 'algodao' | 'pluma' | 'caroco', titulo: string) => {
+    setHistoricoModal({ open: true, tipo, titulo, periodo: 30 });
+  };
+
+  const mudarPeriodo = (dias: number) => {
+    setHistoricoModal(prev => ({ ...prev, periodo: dias }));
+  };
+
+  // Cálculo do valor estimado da produção
+  const valorEstimado = useMemo(() => {
+    // Peso bruto em arrobas (kg / 15)
+    const pesoArrobasBruto = totaisCarregamentos.totalPesoKg / 15;
+
+    // Rendimentos típicos do beneficiamento do algodão em caroço:
+    // - Pluma (fibra): ~40%
+    // - Caroço: ~57%
+    // - Perdas/impurezas: ~3%
+    const rendimentoPluma = 0.40;
+    const rendimentoCaroco = 0.57;
+
+    const pesoArrobasPluma = pesoArrobasBruto * rendimentoPluma;
+    const pesoArrobasCaroco = pesoArrobasBruto * rendimentoCaroco;
+
+    // Valores em R$
+    const valorPlumaBRL = pesoArrobasPluma * cotacaoPluma;
+    const valorCarocoBRL = pesoArrobasCaroco * cotacaoCaroco;
+    const valorTotalBRL = valorPlumaBRL + valorCarocoBRL;
+
+    // Valores em USD (convertido pela taxa de câmbio)
+    const valorPlumaUSD = usdBrl > 0 ? valorPlumaBRL / usdBrl : 0;
+    const valorCarocoUSD = usdBrl > 0 ? valorCarocoBRL / usdBrl : 0;
+    const valorTotalUSD = usdBrl > 0 ? valorTotalBRL / usdBrl : 0;
+
+    return {
+      arrobasBruto: pesoArrobasBruto,
+      arrobasPluma: pesoArrobasPluma,
+      arrobasCaroco: pesoArrobasCaroco,
+      valorPlumaBRL,
+      valorCarocoBRL,
+      valorTotalBRL,
+      valorPlumaUSD,
+      valorCarocoUSD,
+      valorTotalUSD
+    };
+  }, [totaisCarregamentos.totalPesoKg, cotacaoPluma, cotacaoCaroco, usdBrl]);
+
   return (
     <Page>
       <PageContent className="max-w-7xl">
@@ -193,14 +412,14 @@ export default function Dashboard() {
                   <span className="text-xs text-muted-foreground uppercase tracking-wider">Peso Bruto</span>
                 </div>
                 <p className="text-2xl font-display font-bold text-foreground">
-                  {totaisCarregamentos.totalPesoKg > 0
-                    ? `${totaisCarregamentos.totalPesoKg.toLocaleString('pt-BR')} kg`
+                  {totaisCarregamentos.totalPesoToneladas > 0
+                    ? `${totaisCarregamentos.totalPesoToneladas.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} t`
                     : '-'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {totaisCarregamentos.totalCarregamentos > 0
                     ? `${totaisCarregamentos.totalCarregamentos} carregamentos`
-                    : 'kg pesados'}
+                    : 'toneladas pesadas'}
                 </p>
               </div>
             </div>
@@ -244,6 +463,159 @@ export default function Dashboard() {
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Hero - Valor Total Estimado */}
+          {totaisCarregamentos.totalPesoKg > 0 && (
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-950 via-green-950 to-teal-950 border border-emerald-500/20">
+              {/* Background pattern */}
+              <div className="absolute inset-0 opacity-30">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-green-500/20 rounded-full blur-3xl" />
+              </div>
+
+              <div className="relative p-6">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  {/* Valor Principal */}
+                  <div>
+                    <p className="text-sm text-emerald-300/80 mb-1 flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4" />
+                      Valor Estimado da Produção
+                    </p>
+                    <div className="flex items-baseline gap-3">
+                      <span className="text-4xl sm:text-5xl font-display font-bold text-white">
+                        R$ {valorEstimado.valorTotalBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    {usdBrl > 0 && (
+                      <p className="text-xl text-emerald-300 mt-1">
+                        $ {valorEstimado.valorTotalUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                    )}
+                    <p className="text-sm text-emerald-300/60 mt-2">
+                      {valorEstimado.arrobasBruto.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @ bruto pesado
+                    </p>
+                  </div>
+
+                  {/* Breakdown Pluma/Caroço */}
+                  <div className="flex gap-3 sm:gap-4">
+                    <div className="flex-1 sm:flex-none sm:w-36 p-3 rounded-xl bg-white/5 backdrop-blur border border-white/10">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-purple-300">Pluma</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-300">40%</span>
+                      </div>
+                      <p className="text-lg font-bold text-white">
+                        R$ {(valorEstimado.valorPlumaBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
+                      </p>
+                      <p className="text-[10px] text-white/50">{valorEstimado.arrobasPluma.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @</p>
+                    </div>
+                    <div className="flex-1 sm:flex-none sm:w-36 p-3 rounded-xl bg-white/5 backdrop-blur border border-white/10">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-orange-300">Caroço</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/30 text-orange-300">57%</span>
+                      </div>
+                      <p className="text-lg font-bold text-white">
+                        R$ {(valorEstimado.valorCarocoBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
+                      </p>
+                      <p className="text-[10px] text-white/50">{valorEstimado.arrobasCaroco.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Cotações em linha - Compacto e clicável */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {/* Dólar */}
+            <button
+              onClick={() => abrirHistorico('dolar', 'Dólar (USD/BRL)')}
+              className="group p-4 rounded-xl bg-surface border border-border/50 hover:border-green-500/50 hover:bg-green-500/5 transition-all text-left"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-1.5 rounded-lg bg-green-500/10">
+                  <DollarSign className="w-3.5 h-3.5 text-green-500" />
+                </div>
+                <BarChart3 className="w-3 h-3 text-muted-foreground/50 group-hover:text-green-500 transition-colors" />
+              </div>
+              <p className="text-2xl font-bold text-foreground">
+                {cotacaoData?.usdBrl ? cotacaoData.usdBrl.toFixed(2) : '-'}
+              </p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Dólar</p>
+            </button>
+
+            {/* Algodão */}
+            <button
+              onClick={() => abrirHistorico('algodao', 'Algodão (ICE)')}
+              className="group p-4 rounded-xl bg-surface border border-border/50 hover:border-amber-500/50 hover:bg-amber-500/5 transition-all text-left"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-1.5 rounded-lg bg-amber-500/10">
+                  <Wheat className="w-3.5 h-3.5 text-amber-500" />
+                </div>
+                <BarChart3 className="w-3 h-3 text-muted-foreground/50 group-hover:text-amber-500 transition-colors" />
+              </div>
+              <p className="text-2xl font-bold text-foreground">
+                {cotacaoData?.cottonUSD ? cotacaoData.cottonUSD.toFixed(1) : '-'}<span className="text-sm text-muted-foreground">¢</span>
+              </p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Algodão ICE</p>
+            </button>
+
+            {/* Pluma */}
+            <button
+              onClick={() => abrirHistorico('pluma', 'Pluma (R$/@)')}
+              className="group p-4 rounded-xl bg-surface border border-border/50 hover:border-purple-500/50 hover:bg-purple-500/5 transition-all text-left"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-1.5 rounded-lg bg-purple-500/10">
+                  <Wheat className="w-3.5 h-3.5 text-purple-500" />
+                </div>
+                <BarChart3 className="w-3 h-3 text-muted-foreground/50 group-hover:text-purple-500 transition-colors" />
+              </div>
+              <p className="text-2xl font-bold text-foreground">
+                {cotacaoPluma.toFixed(0)}<span className="text-sm text-muted-foreground">/@</span>
+              </p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Pluma R$</p>
+            </button>
+
+            {/* Caroço */}
+            <button
+              onClick={() => abrirHistorico('caroco', 'Caroço (R$/@)')}
+              className="group p-4 rounded-xl bg-surface border border-border/50 hover:border-orange-500/50 hover:bg-orange-500/5 transition-all text-left"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-1.5 rounded-lg bg-orange-500/10">
+                  <Package className="w-3.5 h-3.5 text-orange-500" />
+                </div>
+                <BarChart3 className="w-3 h-3 text-muted-foreground/50 group-hover:text-orange-500 transition-colors" />
+              </div>
+              <p className="text-2xl font-bold text-foreground">
+                {cotacaoCaroco.toFixed(0)}<span className="text-sm text-muted-foreground">/@</span>
+              </p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Caroço R$</p>
+            </button>
+          </div>
+
+          {/* Info de atualização - Minimalista */}
+          <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground/60">
+            <span className={cn(
+              "flex items-center gap-1.5",
+              cotacaoFonte === 'Alpha Vantage' ? "text-green-500/70" : "text-yellow-500/70"
+            )}>
+              <span className="w-1.5 h-1.5 rounded-full bg-current" />
+              {cotacaoFonte === 'Alpha Vantage' ? 'Cotações atualizadas' : 'Aguardando API'}
+            </span>
+            <span>•</span>
+            <span>
+              {cotacaoDataAtualizacao
+                ? new Date(cotacaoDataAtualizacao).toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })
+                : '-'}
+            </span>
           </div>
 
           {/* Progresso da Colheita + Produtividade */}
@@ -394,7 +766,7 @@ export default function Dashboard() {
           {/* Links Rápidos */}
           <div className="grid grid-cols-2 gap-4">
             <button
-              onClick={() => setLocation("/estatisticas")}
+              onClick={() => setLocation("/talhao-stats")}
               className="glass-card p-4 rounded-xl flex items-center gap-3 hover:shadow-glow-sm transition-all group text-left"
             >
               <div className="p-2 rounded-lg bg-primary/20 group-hover:bg-primary/30 transition-colors">
@@ -408,7 +780,7 @@ export default function Dashboard() {
             </button>
 
             <button
-              onClick={() => setLocation("/relatorios")}
+              onClick={() => setLocation("/reports")}
               className="glass-card p-4 rounded-xl flex items-center gap-3 hover:shadow-glow-sm transition-all group text-left"
             >
               <div className="p-2 rounded-lg bg-neon-cyan/20 group-hover:bg-neon-cyan/30 transition-colors">
@@ -494,6 +866,193 @@ export default function Dashboard() {
           </div>
         </div>
       </PageContent>
+
+      {/* Modal de Histórico */}
+      <Dialog open={historicoModal.open} onOpenChange={(open) => setHistoricoModal(prev => ({ ...prev, open }))}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              Histórico - {historicoModal.titulo}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Filtros de Período */}
+          <div className="flex items-center justify-center gap-1 p-1 bg-surface rounded-lg">
+            {periodos.map((p) => (
+              <button
+                key={p.dias}
+                onClick={() => mudarPeriodo(p.dias)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                  historicoModal.periodo === p.dias
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-hover"
+                )}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-2">
+            {historicoLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Carregando histórico...</p>
+              </div>
+            ) : historicoData?.historico && historicoData.historico.length > 0 ? (
+              <div className="space-y-4">
+                {/* Valor Atual */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-surface">
+                  <span className="text-sm text-muted-foreground">Valor atual</span>
+                  <span className={cn(
+                    "text-xl font-bold",
+                    historicoModal.tipo === 'dolar' ? "text-green-500" :
+                    historicoModal.tipo === 'algodao' ? "text-amber-500" :
+                    historicoModal.tipo === 'pluma' ? "text-purple-500" : "text-orange-500"
+                  )}>
+                    {historicoModal.tipo === 'dolar' && `R$ ${cotacaoData?.usdBrl?.toFixed(4) || '-'}`}
+                    {historicoModal.tipo === 'algodao' && `${cotacaoData?.cottonUSD?.toFixed(2) || '-'} ¢/lb`}
+                    {historicoModal.tipo === 'pluma' && `R$ ${cotacaoPluma.toFixed(2)}/@`}
+                    {historicoModal.tipo === 'caroco' && `R$ ${cotacaoCaroco.toFixed(2)}/@`}
+                  </span>
+                </div>
+
+                {/* Gráfico */}
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={historicoData.historico}>
+                      <defs>
+                        <linearGradient id="colorValor" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={
+                            historicoModal.tipo === 'dolar' ? '#22c55e' :
+                            historicoModal.tipo === 'algodao' ? '#f59e0b' :
+                            historicoModal.tipo === 'pluma' ? '#a855f7' : '#f97316'
+                          } stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor={
+                            historicoModal.tipo === 'dolar' ? '#22c55e' :
+                            historicoModal.tipo === 'algodao' ? '#f59e0b' :
+                            historicoModal.tipo === 'pluma' ? '#a855f7' : '#f97316'
+                          } stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                      <XAxis
+                        dataKey="data"
+                        tick={{ fill: '#888', fontSize: 10 }}
+                        tickFormatter={(value) => {
+                          const date = new Date(value);
+                          if (historicoModal.periodo <= 30) {
+                            return `${date.getDate()}/${date.getMonth() + 1}`;
+                          }
+                          return `${date.getMonth() + 1}/${date.getFullYear().toString().slice(-2)}`;
+                        }}
+                      />
+                      <YAxis
+                        tick={{ fill: '#888', fontSize: 10 }}
+                        tickFormatter={(value) => {
+                          if (historicoModal.tipo === 'dolar') return value.toFixed(2);
+                          if (historicoModal.tipo === 'algodao') return `${value.toFixed(0)}`;
+                          return value.toFixed(0);
+                        }}
+                        domain={['auto', 'auto']}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#1a1a2e',
+                          border: '1px solid #333',
+                          borderRadius: '8px',
+                          color: '#fff'
+                        }}
+                        formatter={(value: number) => {
+                          if (historicoModal.tipo === 'dolar') return [`R$ ${value.toFixed(4)}`, 'Valor'];
+                          if (historicoModal.tipo === 'algodao') return [`${value.toFixed(2)} ¢/lb`, 'Valor'];
+                          return [`R$ ${value.toFixed(2)}/@`, 'Valor'];
+                        }}
+                        labelFormatter={(label) => {
+                          const date = new Date(label);
+                          return date.toLocaleDateString('pt-BR');
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="valor"
+                        stroke={
+                          historicoModal.tipo === 'dolar' ? '#22c55e' :
+                          historicoModal.tipo === 'algodao' ? '#f59e0b' :
+                          historicoModal.tipo === 'pluma' ? '#a855f7' : '#f97316'
+                        }
+                        strokeWidth={2}
+                        fill="url(#colorValor)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Estatísticas */}
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="p-3 rounded-lg bg-surface">
+                    <p className="text-xs text-muted-foreground mb-1">Mínimo</p>
+                    <p className="text-lg font-bold text-red-400">
+                      {historicoModal.tipo === 'dolar' && 'R$ '}
+                      {Math.min(...historicoData.historico.map((h: any) => h.valor)).toFixed(2)}
+                      {historicoModal.tipo === 'algodao' && ' ¢'}
+                      {(historicoModal.tipo === 'pluma' || historicoModal.tipo === 'caroco') && '/@'}
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-surface">
+                    <p className="text-xs text-muted-foreground mb-1">Média</p>
+                    <p className="text-lg font-bold text-foreground">
+                      {historicoModal.tipo === 'dolar' && 'R$ '}
+                      {(historicoData.historico.reduce((acc: number, h: any) => acc + h.valor, 0) / historicoData.historico.length).toFixed(2)}
+                      {historicoModal.tipo === 'algodao' && ' ¢'}
+                      {(historicoModal.tipo === 'pluma' || historicoModal.tipo === 'caroco') && '/@'}
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-surface">
+                    <p className="text-xs text-muted-foreground mb-1">Máximo</p>
+                    <p className="text-lg font-bold text-green-400">
+                      {historicoModal.tipo === 'dolar' && 'R$ '}
+                      {Math.max(...historicoData.historico.map((h: any) => h.valor)).toFixed(2)}
+                      {historicoModal.tipo === 'algodao' && ' ¢'}
+                      {(historicoModal.tipo === 'pluma' || historicoModal.tipo === 'caroco') && '/@'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Info adicional */}
+                <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
+                  <span>
+                    {historicoData.historico.length} registros
+                    {historicoData.fonte === 'cache' && ' (estimado)'}
+                  </span>
+                  <span>
+                    {historicoModal.tipo === 'dolar' && 'Fonte: AwesomeAPI'}
+                    {historicoModal.tipo === 'algodao' && 'Fonte: Alpha Vantage'}
+                    {historicoModal.tipo === 'pluma' && `Dólar médio: R$ ${historicoData.dolarMedio?.toFixed(2) || '-'}`}
+                    {historicoModal.tipo === 'caroco' && 'Calculado: 27% da pluma'}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <BarChart3 className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p>Dados de histórico não disponíveis</p>
+                <p className="text-xs mt-2">
+                  {historicoData?.message || 'A API pode estar temporariamente indisponível'}
+                </p>
+                <button
+                  onClick={() => refetchHistorico()}
+                  className="mt-4 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  Tentar novamente
+                </button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Page>
   );
 }

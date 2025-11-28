@@ -52,13 +52,13 @@ export interface IStorage {
   createSingleBale(id: string, safra: string, talhao: string, numero: string, userId: string): Promise<Bale>;
   batchCreateBales(data: BatchCreateBales, userId: string): Promise<Bale[]>;
   updateBaleStatus(id: string, status: BaleStatus, userId: string): Promise<Bale>;
-  getBaleStats(): Promise<{
+  getBaleStats(safra?: string): Promise<{
     campo: number;
     patio: number;
     beneficiado: number;
     total: number;
   }>;
-  getBaleStatsByTalhao(): Promise<{
+  getBaleStatsByTalhao(safra?: string): Promise<{
     talhao: string;
     campo: number;
     patio: number;
@@ -519,7 +519,7 @@ export class PostgresStorage implements IStorage {
     }
   }
 
-  async getBaleStats(): Promise<{
+  async getBaleStats(safra?: string): Promise<{
     campo: number;
     patio: number;
     beneficiado: number;
@@ -527,26 +527,36 @@ export class PostgresStorage implements IStorage {
   }> {
     const allBales = await this.getAllBales();
 
+    // Filtrar por safra se fornecido
+    const filteredBales = safra
+      ? allBales.filter(b => b.safra === safra)
+      : allBales;
+
     return {
-      campo: allBales.filter((b) => b.status === "campo").length,
-      patio: allBales.filter((b) => b.status === "patio").length,
-      beneficiado: allBales.filter((b) => b.status === "beneficiado").length,
-      total: allBales.length,
+      campo: filteredBales.filter((b) => b.status === "campo").length,
+      patio: filteredBales.filter((b) => b.status === "patio").length,
+      beneficiado: filteredBales.filter((b) => b.status === "beneficiado").length,
+      total: filteredBales.length,
     };
   }
 
-  async getBaleStatsByTalhao(): Promise<any> {
+  async getBaleStatsByTalhao(safra?: string): Promise<any> {
     const allBales = await this.getAllBales();
+
+    // Filtrar por safra se fornecido
+    const filteredBales = safra
+      ? allBales.filter(b => b.safra === safra)
+      : allBales;
     
     // Mapeamento de talhões para área em hectares (de shared/talhoes.ts)
     const talhaoAreas: Record<string, number> = {
       '1B': 774.90, '2B': 762.20, '3B': 661.00, '4B': 573.60, '5B': 472.60,
       '2A': 493.90, '3A': 338.50, '4A': 368.30, '5A': 493.00
     };
-    
+
     const talhaoMap = new Map<string, Bale[]>();
-    
-    for (const bale of allBales) {
+
+    for (const bale of filteredBales) {
       const existing = talhaoMap.get(bale.talhao) || [];
       talhaoMap.set(bale.talhao, [...existing, bale]);
     }

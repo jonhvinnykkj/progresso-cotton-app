@@ -1454,15 +1454,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return Math.round(brlPerArroba * 100) / 100; // 2 casas decimais
   }
 
+  // Função para verificar se deve atualizar baseado nos horários 8h, 12h, 18h
+  function deveAtualizarCotacao(): boolean {
+    const agora = new Date();
+    const ultimaAtualizacao = new Date(cotacaoCache.dataAtualizacao);
+
+    // Horários de atualização (em horas)
+    const horariosAtualizacao = [8, 12, 18];
+
+    // Pegar o horário de atualização mais recente que já passou
+    const horaAtual = agora.getHours();
+    const dataHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+
+    // Encontrar o último horário de atualização que já passou
+    let ultimoHorarioAtualizacao: Date | null = null;
+
+    for (const hora of horariosAtualizacao) {
+      const horarioHoje = new Date(dataHoje);
+      horarioHoje.setHours(hora, 0, 0, 0);
+
+      if (horarioHoje <= agora) {
+        ultimoHorarioAtualizacao = horarioHoje;
+      }
+    }
+
+    // Se não passou nenhum horário hoje, pegar o último de ontem (18h)
+    if (!ultimoHorarioAtualizacao) {
+      ultimoHorarioAtualizacao = new Date(dataHoje);
+      ultimoHorarioAtualizacao.setDate(ultimoHorarioAtualizacao.getDate() - 1);
+      ultimoHorarioAtualizacao.setHours(18, 0, 0, 0);
+    }
+
+    // Se a última atualização foi antes do último horário programado, deve atualizar
+    const deveAtualizar = ultimaAtualizacao < ultimoHorarioAtualizacao;
+
+    if (deveAtualizar) {
+      console.log(`Cotação deve atualizar: última em ${ultimaAtualizacao.toLocaleString('pt-BR')}, próximo horário era ${ultimoHorarioAtualizacao.toLocaleString('pt-BR')}`);
+    }
+
+    return deveAtualizar;
+  }
+
   // GET: Buscar cotação atual
   app.get("/api/cotacao-algodao", authenticateToken, async (req, res) => {
     try {
-      // Verificar se o cache é recente (menos de 8 horas - economia de API calls)
-      const cacheAge = Date.now() - new Date(cotacaoCache.dataAtualizacao).getTime();
-      const oitoHoras = 8 * 60 * 60 * 1000;
+      // Verificar se deve atualizar baseado nos horários 8h, 12h, 18h
+      const precisaAtualizar = deveAtualizarCotacao();
 
-      // Se cache recente e fonte é API, retornar cache
-      if (cacheAge < oitoHoras && cotacaoCache.fonte === 'Alpha Vantage') {
+      // Se não precisa atualizar e fonte é API, retornar cache
+      if (!precisaAtualizar && cotacaoCache.fonte === 'ICE Futures (NY)') {
         return res.json(cotacaoCache);
       }
 

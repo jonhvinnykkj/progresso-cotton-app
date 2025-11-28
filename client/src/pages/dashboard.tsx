@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { AnimatedCounter } from "@/components/animated-counter";
@@ -6,38 +6,26 @@ import { useAuth } from "@/lib/auth-context";
 import { useRealtime } from "@/hooks/use-realtime";
 import { API_URL } from "@/lib/api-config";
 import { getAuthHeaders } from "@/lib/api-client";
-import type { Bale, Lote, Fardinho, RendimentoTalhao } from "@shared/schema";
-import { TALHOES_INFO } from "@shared/talhoes";
+import { useSettings } from "@/hooks/use-settings";
+import type { Bale } from "@shared/schema";
 import {
   Package,
   Truck,
   CheckCircle,
   TrendingUp,
-  CalendarDays,
   Sparkles,
   Scale,
   Wheat,
   Target,
   ArrowUpRight,
   ArrowDownRight,
-  Minus,
   Factory,
-  Boxes,
   MapPin,
   ChevronRight,
   Activity,
   BarChart3,
-  Percent,
-  Award,
 } from "lucide-react";
 import { Page, PageContent } from "@/components/layout/page";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
@@ -45,7 +33,11 @@ export default function Dashboard() {
   const { isAuthenticated, user } = useAuth();
   useRealtime(isAuthenticated);
 
-  const [selectedSafra, setSelectedSafra] = useState("24/25");
+  // Safra e talhões dinâmicos
+  const { data: settingsData } = useSettings();
+  const safraAtiva = settingsData?.safraAtiva;
+  const talhoesSafra = settingsData?.talhoesSafra || [];
+  const selectedSafra = safraAtiva?.nome || "";
 
   // Query de fardos
   const { data: bales = [] } = useQuery<Bale[]>({
@@ -79,67 +71,14 @@ export default function Dashboard() {
       if (!response.ok) return [];
       return response.json();
     },
+    enabled: !!selectedSafra,
     staleTime: 60000,
   });
 
-  // Query de rendimentos
-  const { data: rendimentos = [] } = useQuery<RendimentoTalhao[]>({
-    queryKey: ["/api/rendimento", selectedSafra],
-    queryFn: async () => {
-      const encodedSafra = encodeURIComponent(selectedSafra);
-      const url = API_URL
-        ? `${API_URL}/api/rendimento/${encodedSafra}`
-        : `/api/rendimento/${encodedSafra}`;
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
-      if (!response.ok) return [];
-      return response.json();
-    },
-    staleTime: 60000,
-  });
-
-  // Query de lotes (pluma)
-  const { data: lotes = [] } = useQuery<Lote[]>({
-    queryKey: ["/api/lotes", selectedSafra],
-    queryFn: async () => {
-      const encodedSafra = encodeURIComponent(selectedSafra);
-      const url = API_URL
-        ? `${API_URL}/api/lotes/${encodedSafra}`
-        : `/api/lotes/${encodedSafra}`;
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
-      if (!response.ok) return [];
-      return response.json();
-    },
-    staleTime: 60000,
-  });
-
-  // Query de fardinhos
-  const { data: fardinhos = [] } = useQuery<Fardinho[]>({
-    queryKey: ["/api/fardinhos", selectedSafra],
-    queryFn: async () => {
-      const encodedSafra = encodeURIComponent(selectedSafra);
-      const url = API_URL
-        ? `${API_URL}/api/fardinhos/${encodedSafra}`
-        : `/api/fardinhos/${encodedSafra}`;
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
-      if (!response.ok) return [];
-      return response.json();
-    },
-    staleTime: 60000,
-  });
-
-  // Cálculos principais
+  // Cálculos principais - usando talhões dinâmicos da safra
   const totalHectares = useMemo(() =>
-    TALHOES_INFO.reduce((acc, t) => acc + parseFloat(t.hectares.replace(",", ".")), 0)
-  , []);
+    talhoesSafra.reduce((acc, t) => acc + parseFloat(t.hectares.replace(",", ".")), 0)
+  , [talhoesSafra]);
 
   const totaisCarregamentos = useMemo(() => {
     const totalPesoKg = pesoBrutoTotais.reduce((acc, item) => acc + (Number(item.pesoBrutoTotal) || 0), 0);
@@ -160,55 +99,20 @@ export default function Dashboard() {
     const pesoEstimado = totalFardos * 2000;
     const prevista = totalHectares > 0 ? (pesoEstimado / totalHectares) / 15 : 0;
 
-    // Real: peso dos carregamentos / hectares / 15
-    // Usamos o peso médio dos carregamentos × total de fardos
-    const pesoMedioFardo = totaisCarregamentos.totalCarregamentos > 0
-      ? totaisCarregamentos.totalPesoKg / totaisCarregamentos.totalCarregamentos
+    // Real: peso total dos carregamentos / hectares / 15
+    // Peso médio do fardo = peso total / quantidade de fardos
+    const pesoMedioFardo = totalFardos > 0
+      ? totaisCarregamentos.totalPesoKg / totalFardos
       : 0;
-    const pesoRealCalculado = pesoMedioFardo * totalFardos;
-    const real = totalHectares > 0 && pesoMedioFardo > 0 ? (pesoRealCalculado / totalHectares) / 15 : 0;
+    const real = totalHectares > 0 && totaisCarregamentos.totalPesoKg > 0
+      ? (totaisCarregamentos.totalPesoKg / totalHectares) / 15
+      : 0;
 
     const diferenca = real - prevista;
     const diferencaPercent = prevista > 0 ? ((real - prevista) / prevista) * 100 : 0;
 
-    return { prevista, real, diferenca, diferencaPercent, temDadosReais: totaisCarregamentos.totalCarregamentos > 0 };
+    return { prevista, real, diferenca, diferencaPercent, pesoMedioFardo, temDadosReais: totaisCarregamentos.totalPesoKg > 0 };
   }, [stats, totalHectares, totaisCarregamentos]);
-
-  // Rendimento médio de pluma
-  const rendimentoMedio = useMemo(() => {
-    const rendimentosValidos = rendimentos.filter(r => parseFloat(r.rendimentoPluma) > 0);
-    if (rendimentosValidos.length === 0) return 0;
-    const soma = rendimentosValidos.reduce((acc, r) => acc + parseFloat(r.rendimentoPluma), 0);
-    return soma / rendimentosValidos.length;
-  }, [rendimentos]);
-
-  // Totais de pluma e fardinhos
-  const totaisPluma = useMemo(() => {
-    const totalPesoPluma = lotes.reduce((acc, lote) => acc + (parseFloat(lote.pesoPluma) || 0), 0);
-    const totalFardinhos = fardinhos.reduce((acc, f) => acc + (f.quantidade || 0), 0);
-    const produtividadePluma = totalHectares > 0 ? (totalPesoPluma / totalHectares) / 15 : 0;
-    return { totalPesoPluma, totalFardinhos, produtividadePluma, totalLotes: lotes.length };
-  }, [lotes, fardinhos, totalHectares]);
-
-  // Rendimento calculado (pluma / bruto)
-  const rendimentoCalculado = useMemo(() => {
-    if (totaisCarregamentos.totalPesoKg === 0 || totaisPluma.totalPesoPluma === 0) return 0;
-    return (totaisPluma.totalPesoPluma / totaisCarregamentos.totalPesoKg) * 100;
-  }, [totaisCarregamentos.totalPesoKg, totaisPluma.totalPesoPluma]);
-
-  // Top 5 talhões por produtividade
-  const topTalhoes = useMemo(() => {
-    return TALHOES_INFO.map(talhaoInfo => {
-      const hectares = parseFloat(talhaoInfo.hectares.replace(",", ".")) || 0;
-      const fardos = bales.filter(b => b.talhao === talhaoInfo.id).length;
-      const pesoEstimado = fardos * 2000;
-      const produtividade = hectares > 0 ? (pesoEstimado / hectares) / 15 : 0;
-      return { talhao: talhaoInfo.id, hectares, fardos, produtividade };
-    })
-    .filter(t => t.fardos > 0)
-    .sort((a, b) => b.produtividade - a.produtividade)
-    .slice(0, 5);
-  }, [bales]);
 
   // Fardos de hoje
   const balesToday = useMemo(() => {
@@ -247,15 +151,12 @@ export default function Dashboard() {
                 Resumo da Safra
               </h1>
             </div>
-            <Select value={selectedSafra} onValueChange={setSelectedSafra}>
-              <SelectTrigger className="w-32 h-10 rounded-xl bg-surface border-border/50">
-                <SelectValue placeholder="Safra" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="24/25">Safra 24/25</SelectItem>
-                <SelectItem value="25/26">Safra 25/26</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2 px-4 h-10 rounded-xl bg-surface border border-border/50">
+              <Wheat className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">
+                {safraAtiva ? `Safra ${safraAtiva.nome}` : "Nenhuma safra"}
+              </span>
+            </div>
           </div>
 
           {/* KPIs Principais */}
@@ -291,15 +192,15 @@ export default function Dashboard() {
                   </div>
                   <span className="text-xs text-muted-foreground uppercase tracking-wider">Peso Bruto</span>
                 </div>
-                <p className="text-3xl font-display font-bold text-foreground">
-                  {totaisCarregamentos.totalPesoToneladas > 0
-                    ? <AnimatedCounter value={totaisCarregamentos.totalPesoToneladas} decimals={1} />
+                <p className="text-2xl font-display font-bold text-foreground">
+                  {totaisCarregamentos.totalPesoKg > 0
+                    ? `${totaisCarregamentos.totalPesoKg.toLocaleString('pt-BR')} kg`
                     : '-'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {totaisCarregamentos.totalCarregamentos > 0
                     ? `${totaisCarregamentos.totalCarregamentos} carregamentos`
-                    : 'toneladas pesadas'}
+                    : 'kg pesados'}
                 </p>
               </div>
             </div>
@@ -323,22 +224,24 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Produtividade Pluma */}
+            {/* Produtividade Real */}
             <div className="glass-card p-5 rounded-xl relative overflow-hidden group hover:shadow-glow-sm transition-all">
               <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/10 to-transparent" />
               <div className="relative">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-2 rounded-lg bg-neon-cyan/20">
-                    <Wheat className="w-4 h-4 text-neon-cyan" />
+                    <TrendingUp className="w-4 h-4 text-neon-cyan" />
                   </div>
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Prod. Pluma</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Prod. Real</span>
                 </div>
                 <p className="text-3xl font-display font-bold text-foreground">
-                  {totaisPluma.produtividadePluma > 0
-                    ? <AnimatedCounter value={totaisPluma.produtividadePluma} decimals={1} />
+                  {produtividade.temDadosReais
+                    ? <AnimatedCounter value={produtividade.real} decimals={1} />
                     : '-'}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">@/ha (pluma)</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {produtividade.temDadosReais ? '@/ha (pesado)' : 'aguardando pesagem'}
+                </p>
               </div>
             </div>
           </div>
@@ -480,130 +383,43 @@ export default function Dashboard() {
               <div className="flex items-center justify-between p-3 rounded-lg bg-surface">
                 <span className="text-sm text-muted-foreground">Peso médio/fardo</span>
                 <span className="text-sm font-bold">
-                  {totaisCarregamentos.mediaPesoPorCarregamento > 0
-                    ? `${(totaisCarregamentos.mediaPesoPorCarregamento / 1000).toFixed(2)} t`
-                    : '2.00 t (estimado)'}
+                  {produtividade.pesoMedioFardo > 0
+                    ? `${Math.round(produtividade.pesoMedioFardo).toLocaleString('pt-BR')} kg`
+                    : '2.000 kg (estimado)'}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Beneficiamento + Top Talhões */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Rendimento & Beneficiamento */}
-            <div className="glass-card p-5 rounded-xl">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold flex items-center gap-2">
-                  <Factory className="w-4 h-4 text-neon-cyan" />
-                  Beneficiamento
-                </h3>
-                <button
-                  onClick={() => setLocation("/algodoeira")}
-                  className="text-xs text-primary hover:underline flex items-center gap-1"
-                >
-                  Ver detalhes <ChevronRight className="w-3 h-3" />
-                </button>
+          {/* Links Rápidos */}
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => setLocation("/estatisticas")}
+              className="glass-card p-4 rounded-xl flex items-center gap-3 hover:shadow-glow-sm transition-all group text-left"
+            >
+              <div className="p-2 rounded-lg bg-primary/20 group-hover:bg-primary/30 transition-colors">
+                <BarChart3 className="w-5 h-5 text-primary" />
               </div>
-
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                {/* Rendimento */}
-                <div className="p-3 rounded-xl bg-surface text-center">
-                  <div className="p-2 rounded-lg bg-accent/20 w-fit mx-auto mb-2">
-                    <Percent className="w-4 h-4 text-accent" />
-                  </div>
-                  <p className="text-2xl font-display font-bold text-foreground">
-                    {rendimentoCalculado > 0 ? rendimentoCalculado.toFixed(1) : rendimentoMedio > 0 ? rendimentoMedio.toFixed(1) : '-'}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground uppercase">Rendimento %</p>
-                </div>
-
-                {/* Pluma */}
-                <div className="p-3 rounded-xl bg-surface text-center">
-                  <div className="p-2 rounded-lg bg-neon-cyan/20 w-fit mx-auto mb-2">
-                    <Wheat className="w-4 h-4 text-neon-cyan" />
-                  </div>
-                  <p className="text-2xl font-display font-bold text-foreground">
-                    {totaisPluma.totalPesoPluma > 0
-                      ? (totaisPluma.totalPesoPluma / 1000).toFixed(1)
-                      : '-'}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground uppercase">Pluma (t)</p>
-                </div>
-
-                {/* Fardinhos */}
-                <div className="p-3 rounded-xl bg-surface text-center">
-                  <div className="p-2 rounded-lg bg-primary/20 w-fit mx-auto mb-2">
-                    <Boxes className="w-4 h-4 text-primary" />
-                  </div>
-                  <p className="text-2xl font-display font-bold text-foreground">
-                    {totaisPluma.totalFardinhos > 0
-                      ? totaisPluma.totalFardinhos.toLocaleString()
-                      : '-'}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground uppercase">Fardinhos</p>
-                </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm">Estatísticas Detalhadas</p>
+                <p className="text-xs text-muted-foreground">Análise completa por talhão</p>
               </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            </button>
 
-              {/* Lotes */}
-              <div className="flex items-center justify-between p-3 rounded-lg bg-surface">
-                <span className="text-sm text-muted-foreground">Lotes processados</span>
-                <span className="text-sm font-bold">{totaisPluma.totalLotes}</span>
+            <button
+              onClick={() => setLocation("/relatorios")}
+              className="glass-card p-4 rounded-xl flex items-center gap-3 hover:shadow-glow-sm transition-all group text-left"
+            >
+              <div className="p-2 rounded-lg bg-neon-cyan/20 group-hover:bg-neon-cyan/30 transition-colors">
+                <Factory className="w-5 h-5 text-neon-cyan" />
               </div>
-            </div>
-
-            {/* Top Talhões */}
-            <div className="glass-card p-5 rounded-xl">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold flex items-center gap-2">
-                  <Award className="w-4 h-4 text-primary" />
-                  Top Talhões
-                </h3>
-                <button
-                  onClick={() => setLocation("/estatisticas")}
-                  className="text-xs text-primary hover:underline flex items-center gap-1"
-                >
-                  Ver todos <ChevronRight className="w-3 h-3" />
-                </button>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm">Exportar Relatórios</p>
+                <p className="text-xs text-muted-foreground">PDF e Excel</p>
               </div>
-
-              {topTalhoes.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <MapPin className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">Nenhum talhão com fardos</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {topTalhoes.map((talhao, index) => {
-                    const maxProd = topTalhoes[0]?.produtividade || 1;
-                    const width = (talhao.produtividade / maxProd) * 100;
-                    const medalColor = index === 0 ? "text-yellow-500" : index === 1 ? "text-gray-400" : index === 2 ? "text-amber-600" : "text-muted-foreground";
-
-                    return (
-                      <div key={talhao.talhao} className="relative p-3 rounded-lg bg-surface overflow-hidden">
-                        <div
-                          className="absolute inset-y-0 left-0 bg-primary/10 transition-all"
-                          style={{ width: `${width}%` }}
-                        />
-                        <div className="relative flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className={cn("text-sm font-bold w-6", medalColor)}>
-                              {index + 1}º
-                            </span>
-                            <span className="font-medium">{talhao.talhao}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {talhao.fardos} fardos
-                            </span>
-                          </div>
-                          <span className="font-bold text-foreground">
-                            {talhao.produtividade.toFixed(1)} @/ha
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-neon-cyan transition-colors" />
+            </button>
           </div>
 
           {/* Visão Geral dos Talhões */}
@@ -621,36 +437,44 @@ export default function Dashboard() {
               </button>
             </div>
 
-            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2">
-              {TALHOES_INFO.map(talhaoInfo => {
-                const fardosTalhao = bales.filter(b => b.talhao === talhaoInfo.id).length;
-                const hectares = parseFloat(talhaoInfo.hectares.replace(",", ".")) || 0;
-                const hasData = fardosTalhao > 0;
+            {talhoesSafra.length > 0 ? (
+              <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2">
+                {talhoesSafra.map(talhaoInfo => {
+                  const fardosTalhao = bales.filter(b => b.talhao === talhaoInfo.nome).length;
+                  const hectares = parseFloat(talhaoInfo.hectares.replace(",", ".")) || 0;
+                  const hasData = fardosTalhao > 0;
 
-                return (
-                  <button
-                    key={talhaoInfo.id}
-                    onClick={() => setLocation(`/talhoes/${talhaoInfo.id}`)}
-                    className={cn(
-                      "p-3 rounded-xl text-center transition-all hover:scale-105",
-                      hasData
-                        ? "bg-primary/10 border border-primary/20 hover:shadow-glow-sm"
-                        : "bg-surface border border-border/30 hover:border-border/50"
-                    )}
-                  >
-                    <p className={cn(
-                      "text-lg font-bold",
-                      hasData ? "text-foreground" : "text-muted-foreground"
-                    )}>
-                      {talhaoInfo.id}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {fardosTalhao > 0 ? `${fardosTalhao}` : '-'}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
+                  return (
+                    <button
+                      key={talhaoInfo.nome}
+                      onClick={() => setLocation(`/talhoes/${talhaoInfo.nome}`)}
+                      className={cn(
+                        "p-3 rounded-xl text-center transition-all hover:scale-105",
+                        hasData
+                          ? "bg-primary/10 border border-primary/20 hover:shadow-glow-sm"
+                          : "bg-surface border border-border/30 hover:border-border/50"
+                      )}
+                    >
+                      <p className={cn(
+                        "text-lg font-bold",
+                        hasData ? "text-foreground" : "text-muted-foreground"
+                      )}>
+                        {talhaoInfo.nome}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {fardosTalhao > 0 ? `${fardosTalhao}` : '-'}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-muted-foreground">
+                <MapPin className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Nenhum talhão configurado</p>
+                <p className="text-xs">Configure os talhões nas configurações.</p>
+              </div>
+            )}
 
             {/* Resumo rápido */}
             <div className="mt-4 pt-4 border-t border-border/30 grid grid-cols-3 gap-4 text-center">

@@ -16,19 +16,19 @@
   --black-pure: 0 0% 0%;
   --white: 0 0% 98%;
 
-  /* === NEON PALETTE === */
+  /* === COLOR PALETTE (Green & Gold Harmony) === */
   --neon-green: 152 100% 35%;
-  --neon-yellow: 54 100% 40%;
-  --neon-cyan: 186 100% 35%;
-  --neon-orange: 32 100% 40%;
-  --neon-pink: 330 100% 60%;
-  --neon-purple: 270 100% 60%;
+  --neon-yellow: 48 100% 50%;
+  --neon-cyan: 160 60% 45%;
+  --neon-orange: 38 100% 45%;
+  --neon-pink: 340 50% 55%;
+  --neon-purple: 280 40% 50%;
 
   /* === GLOW COLORS (for shadows) === */
   --glow-green: 0, 179, 89;
-  --glow-yellow: 204, 163, 0;
-  --glow-cyan: 0, 148, 179;
-  --glow-orange: 204, 102, 0;
+  --glow-yellow: 255, 200, 0;
+  --glow-cyan: 70, 180, 150;
+  --glow-orange: 230, 160, 30;
 
   /* === SEMANTIC COLORS === */
   --background: 0 0% 4%;
@@ -60,8 +60,8 @@
   --secondary: 0 0% 14%;
   --secondary-foreground: 0 0% 98%;
 
-  /* Accent = Neon Yellow */
-  --accent: 54 100% 40%;
+  /* Accent = Neon Yellow/Gold */
+  --accent: 48 100% 50%;
   --accent-foreground: 0 0% 4%;
 
   /* Muted = Dim grays */
@@ -88,15 +88,15 @@
 
   /* Charts */
   --chart-1: 152 100% 35%;
-  --chart-2: 54 100% 40%;
-  --chart-3: 186 100% 35%;
-  --chart-4: 32 100% 40%;
-  --chart-5: 270 100% 50%;
+  --chart-2: 48 100% 50%;
+  --chart-3: 160 60% 45%;
+  --chart-4: 38 100% 45%;
+  --chart-5: 280 40% 50%;
 
-  /* === BALE STATUS COLORS (NEON) === */
+  /* === BALE STATUS COLORS === */
   --bale-campo: 152 100% 35%;
-  --bale-patio: 32 100% 40%;
-  --bale-beneficiado: 186 100% 35%;
+  --bale-patio: 38 100% 45%;
+  --bale-beneficiado: 160 60% 45%;
 
   /* === TYPOGRAPHY === */
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -138,86 +138,86 @@
 /* Light mode override */
 .light {
   /* === CORE === */
-  --background: 0 0% 98%;
-  --background-elevated: 0 0% 100%;
-  --foreground: 0 0% 4%;
+  --background: 152 30% 96%;
+  --background-elevated: 152 20% 98%;
+  --foreground: 0 0% 15%;
 
   /* === SURFACES === */
-  --surface: 0 0% 96%;
-  --surface-elevated: 0 0% 100%;
-  --surface-hover: 0 0% 92%;
+  --surface: 152 25% 93%;
+  --surface-elevated: 152 20% 97%;
+  --surface-hover: 152 30% 88%;
 
   /* === BORDERS === */
-  --border: 0 0% 88%;
-  --border-subtle: 0 0% 92%;
-  --border-strong: 0 0% 80%;
+  --border: 152 20% 82%;
+  --border-subtle: 152 15% 88%;
+  --border-strong: 152 25% 70%;
 
   /* === CARDS === */
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 4%;
-  --card-border: 0 0% 90%;
+  --card: 152 20% 97%;
+  --card-foreground: 0 0% 15%;
+  --card-border: 152 20% 85%;
 
   /* === POPOVERS === */
-  --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 4%;
-  --popover-border: 0 0% 88%;
+  --popover: 152 15% 98%;
+  --popover-foreground: 0 0% 15%;
+  --popover-border: 152 20% 82%;
 
-  /* === PRIMARY (Green - slightly darker for contrast) === */
-  --primary: 152 80% 35%;
+  /* === PRIMARY (Neon Green) === */
+  --primary: 152 100% 30%;
   --primary-foreground: 0 0% 100%;
-  --primary-muted: 152 50% 85%;
+  --primary-muted: 152 60% 85%;
 
   /* === SECONDARY === */
-  --secondary: 0 0% 96%;
-  --secondary-foreground: 0 0% 4%;
+  --secondary: 152 25% 90%;
+  --secondary-foreground: 0 0% 20%;
 
-  /* === ACCENT (Yellow - darker for contrast) === */
-  --accent: 54 100% 40%;
-  --accent-foreground: 0 0% 4%;
+  /* === ACCENT (Neon Yellow/Gold) === */
+  --accent: 48 100% 45%;
+  --accent-foreground: 0 0% 10%;
 
   /* === MUTED === */
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 45%;
+  --muted: 152 20% 92%;
+  --muted-foreground: 0 0% 40%;
 
   /* === DESTRUCTIVE === */
   --destructive: 0 85% 50%;
   --destructive-foreground: 0 0% 100%;
 
   /* === INPUT & RING === */
-  --input: 0 0% 92%;
-  --ring: 152 80% 35%;
+  --input: 152 20% 90%;
+  --ring: 152 100% 35%;
 
-  /* === SIDEBAR === */
-  --sidebar: 0 0% 100%;
-  --sidebar-foreground: 0 0% 4%;
-  --sidebar-border: 0 0% 92%;
-  --sidebar-primary: 152 80% 35%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 0 0% 96%;
-  --sidebar-accent-foreground: 0 0% 4%;
-  --sidebar-ring: 152 80% 35%;
+  /* === SIDEBAR (Dark Green with white text) === */
+  --sidebar: 152 80% 15%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-border: 152 60% 25%;
+  --sidebar-primary: 48 100% 50%;
+  --sidebar-primary-foreground: 0 0% 10%;
+  --sidebar-accent: 152 70% 22%;
+  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-ring: 48 100% 50%;
 
-  /* === CHARTS (darker for visibility) === */
-  --chart-1: 152 80% 35%;
-  --chart-2: 54 100% 40%;
-  --chart-3: 186 100% 40%;
-  --chart-4: 32 100% 45%;
-  --chart-5: 270 80% 50%;
+  /* === CHARTS === */
+  --chart-1: 152 100% 35%;
+  --chart-2: 48 100% 50%;
+  --chart-3: 160 60% 45%;
+  --chart-4: 38 100% 45%;
+  --chart-5: 280 40% 50%;
 
-  /* === BALE STATUS (darker for contrast) === */
-  --bale-campo: 152 80% 35%;
-  --bale-patio: 32 100% 45%;
-  --bale-beneficiado: 186 100% 40%;
+  /* === BALE STATUS === */
+  --bale-campo: 152 100% 35%;
+  --bale-patio: 38 100% 45%;
+  --bale-beneficiado: 160 60% 45%;
 
-  /* === GLOW COLORS (softer for light mode) === */
-  --glow-green: 34, 139, 34;
-  --glow-yellow: 184, 134, 11;
-  --glow-cyan: 0, 139, 139;
-  --glow-orange: 210, 105, 30;
+  /* === GLOW COLORS (for light mode) === */
+  --glow-green: 0, 179, 89;
+  --glow-yellow: 255, 200, 0;
+  --glow-cyan: 70, 180, 150;
+  --glow-orange: 230, 160, 30;
 
-  /* === GLASS EFFECT (for light mode) === */
-  --glass-bg: rgb(255 255 255 / 0.7);
-  --glass-border: rgb(0 0 0 / 0.08);
+  /* === GLASS EFFECT (green tinted for light mode) === */
+  --glass-bg: rgb(240 253 244 / 0.8);
+  --glass-border: rgb(0 120 60 / 0.15);
   --glass-highlight: rgb(255 255 255 / 0.9);
 
   /* === SHADOWS (softer for light mode) === */
@@ -227,11 +227,19 @@
   --shadow-lg: 0 10px 25px -3px rgb(0 0 0 / 0.1);
   --shadow-xl: 0 20px 40px -4px rgb(0 0 0 / 0.15);
 
-  /* === GLOW SHADOWS (subtle for light mode) === */
-  --glow-sm: 0 0 10px rgb(var(--glow-green) / 0.15);
-  --glow-md: 0 0 20px rgb(var(--glow-green) / 0.2);
-  --glow-lg: 0 0 30px rgb(var(--glow-green) / 0.25);
-  --glow-xl: 0 0 50px rgb(var(--glow-green) / 0.3);
+  /* === GLOW SHADOWS (more visible for light mode) === */
+  --glow-sm: 0 0 15px rgb(var(--glow-green) / 0.35);
+  --glow-md: 0 0 25px rgb(var(--glow-green) / 0.4);
+  --glow-lg: 0 0 35px rgb(var(--glow-green) / 0.45);
+  --glow-xl: 0 0 60px rgb(var(--glow-green) / 0.5);
+
+  /* === NEON PALETTE (same as dark mode) === */
+  --neon-green: 152 100% 35%;
+  --neon-yellow: 48 100% 50%;
+  --neon-cyan: 160 60% 45%;
+  --neon-orange: 38 100% 45%;
+  --neon-pink: 340 50% 55%;
+  --neon-purple: 280 40% 50%;
 }
 
 /* ============================================
@@ -553,16 +561,16 @@
   /* === NAVIGATION === */
   .nav-item {
     @apply flex items-center gap-3 px-4 py-3 rounded-lg;
-    @apply text-muted-foreground;
+    @apply text-sidebar-foreground/70;
     @apply transition-all duration-200;
   }
 
   .nav-item:hover {
-    @apply bg-surface text-foreground;
+    @apply bg-sidebar-accent text-sidebar-foreground;
   }
 
   .nav-item.active {
-    @apply bg-primary/10 text-primary;
+    @apply bg-sidebar-primary/20 text-sidebar-primary;
     box-shadow: inset 0 0 20px rgb(var(--glow-green) / 0.1);
   }
 
@@ -573,12 +581,12 @@
   /* Bottom nav item */
   .bottom-nav-item {
     @apply flex flex-col items-center justify-center gap-1 py-2 px-3;
-    @apply text-muted-foreground text-xs;
+    @apply text-sidebar-foreground/70 text-xs;
     @apply transition-all duration-200;
   }
 
   .bottom-nav-item.active {
-    @apply text-primary;
+    @apply text-sidebar-primary;
   }
 
   .bottom-nav-item.active .bottom-nav-icon {
@@ -990,18 +998,99 @@
 }
 
 /* ============================================
-   LEAFLET MAP OVERRIDES (Dark Theme)
+   LEAFLET MAP OVERRIDES (Theme Adaptive)
    ============================================ */
 .leaflet-container {
-  @apply bg-surface rounded-lg;
+  background: hsl(var(--background)) !important;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
 
 .leaflet-popup-content-wrapper {
-  @apply bg-surface text-foreground rounded-lg shadow-lg;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 16px !important;
 }
 
-.leaflet-popup-tip {
-  @apply bg-surface;
+.leaflet-popup-content {
+  margin: 0 !important;
+}
+
+.leaflet-popup-tip-container {
+  display: none !important;
+}
+
+/* Zoom controls - adapts to theme (dark is default) */
+.leaflet-control-zoom {
+  border: none !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+:root.light .leaflet-control-zoom {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+.leaflet-control-zoom a {
+  background: rgba(15, 23, 42, 0.9) !important;
+  backdrop-filter: blur(8px);
+  color: #f1f5f9 !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 18px !important;
+  transition: all 0.15s ease;
+}
+
+:root.light .leaflet-control-zoom a {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1e293b !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+.leaflet-control-zoom a:last-child {
+  border-bottom: none !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: rgba(30, 41, 59, 0.95) !important;
+  color: #00b359 !important;
+}
+
+:root.light .leaflet-control-zoom a:hover {
+  background: rgba(241, 245, 249, 1) !important;
+  color: #00b359 !important;
+}
+
+/* Attribution - adapts to theme (dark is default) */
+.leaflet-control-attribution {
+  background: rgba(15, 23, 42, 0.8) !important;
+  backdrop-filter: blur(4px);
+  color: #94a3b8 !important;
+  font-size: 10px !important;
+  padding: 4px 8px !important;
+  border-radius: 8px 0 0 0 !important;
+}
+
+:root.light .leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #64748b !important;
+}
+
+.leaflet-control-attribution a {
+  color: #00b359 !important;
+}
+
+/* Interactive elements glow on hover */
+.leaflet-interactive {
+  transition: all 0.15s ease-out;
+}
+
+.leaflet-interactive:hover {
+  filter: drop-shadow(0 0 8px rgba(0, 179, 89, 0.6));
 }
 
 /* ============================================

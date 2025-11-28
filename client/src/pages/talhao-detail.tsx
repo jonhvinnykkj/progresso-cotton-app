@@ -4,10 +4,10 @@ import { useLocation, useRoute } from "wouter";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { BaleCard } from "@/components/bale-card";
 import { useAuth } from "@/lib/auth-context";
+import { useSettings } from "@/hooks/use-settings";
 import { API_URL } from "@/lib/api-config";
 import { getAuthHeaders } from "@/lib/api-client";
 import type { Bale, BaleStatus } from "@shared/schema";
-import { TALHOES_INFO } from "@shared/talhoes";
 import {
   Package,
   Truck,
@@ -37,11 +37,17 @@ export default function TalhaoDetail() {
 
   useAuth();
 
+  // Safra e talhões dinâmicos
+  const { data: settingsData } = useSettings();
+  const safraAtiva = settingsData?.safraAtiva;
+  const talhoesSafra = settingsData?.talhoesSafra || [];
+  const selectedSafra = safraAtiva?.nome || "";
+
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<BaleStatus | "all">("all");
 
   // Buscar info do talhão
-  const talhaoInfo = TALHOES_INFO.find(t => t.id === talhaoId);
+  const talhaoInfo = talhoesSafra.find(t => t.nome === talhaoId);
   const hectares = talhaoInfo ? parseFloat(talhaoInfo.hectares.replace(",", ".")) : 0;
 
   // Query de todos os fardos
@@ -57,11 +63,12 @@ export default function TalhaoDetail() {
 
   // Query de carregamentos
   const { data: pesoBrutoTotais = [] } = useQuery<{ talhao: string; pesoBrutoTotal: number; quantidadeCarregamentos: number }[]>({
-    queryKey: ["/api/carregamentos-totais", "24/25"],
+    queryKey: ["/api/carregamentos-totais", selectedSafra],
     queryFn: async () => {
+      const encodedSafra = encodeURIComponent(selectedSafra);
       const url = API_URL
-        ? `${API_URL}/api/carregamentos-totais/24%2F25`
-        : `/api/carregamentos-totais/24%2F25`;
+        ? `${API_URL}/api/carregamentos-totais/${encodedSafra}`
+        : `/api/carregamentos-totais/${encodedSafra}`;
       const response = await fetch(url, {
         headers: getAuthHeaders(),
         credentials: "include",
@@ -69,6 +76,7 @@ export default function TalhaoDetail() {
       if (!response.ok) return [];
       return response.json();
     },
+    enabled: !!selectedSafra,
     staleTime: 60000,
   });
 
@@ -87,11 +95,11 @@ export default function TalhaoDetail() {
     const pesoBruto = pesoBrutoTotais.find(p => p.talhao === talhaoId);
     const pesoBrutoTotal = pesoBruto?.pesoBrutoTotal || 0;
     const qtdCarregamentos = pesoBruto?.quantidadeCarregamentos || 0;
-    const pesoMedioFardo = qtdCarregamentos > 0 ? pesoBrutoTotal / qtdCarregamentos : 0;
-    const pesoRealCalculado = pesoMedioFardo * total;
-    const produtividadeReal = hectares > 0 && pesoMedioFardo > 0 ? (pesoRealCalculado / hectares) / 15 : 0;
+    // Peso médio real do fardo = peso total / quantidade de fardos
+    const pesoMedioFardo = total > 0 ? pesoBrutoTotal / total : 0;
+    const produtividadeReal = hectares > 0 && pesoBrutoTotal > 0 ? (pesoBrutoTotal / hectares) / 15 : 0;
 
-    const temDadosReais = qtdCarregamentos > 0 && total > 0;
+    const temDadosReais = pesoBrutoTotal > 0 && total > 0;
     const diferencaPercent = produtividadePrevista > 0 && produtividadeReal > 0
       ? ((produtividadeReal - produtividadePrevista) / produtividadePrevista) * 100
       : 0;

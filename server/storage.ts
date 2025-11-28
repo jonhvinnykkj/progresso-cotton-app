@@ -22,10 +22,17 @@ import {
   type Fardinho,
   type CreateFardinho,
   type UpdateFardinho,
+  type TalhaoInfo,
+  type Safra,
+  type CreateSafra,
+  type UpdateSafra,
+  type TalhaoSafra,
+  type CreateTalhaoSafra,
+  type BatchCreateTalhoesSafra,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
-import { users as usersTable, bales as balesTable, settings as settingsTable, talhaoCounters as talhaoCountersTable, notifications as notificationsTable, producaoTalhao as producaoTalhaoTable, carregamentos as carregamentosTable, rendimentoTalhao as rendimentoTalhaoTable, lotes as lotesTable, fardinhos as fardinhosTable } from "@shared/schema";
+import { users as usersTable, bales as balesTable, settings as settingsTable, talhaoCounters as talhaoCountersTable, notifications as notificationsTable, producaoTalhao as producaoTalhaoTable, carregamentos as carregamentosTable, rendimentoTalhao as rendimentoTalhaoTable, lotes as lotesTable, fardinhos as fardinhosTable, talhoesInfo as talhoesInfoTable, safras as safrasTable, talhoesSafra as talhoesSafraTable } from "@shared/schema";
 import { eq, sql, inArray } from "drizzle-orm";
 import { hashPassword } from "./auth";
 
@@ -67,6 +74,7 @@ export interface IStorage {
   }[]>;
   deleteBale(id: string): Promise<void>;
   deleteAllBales(): Promise<{ deletedCount: number }>;
+  deleteAllData(): Promise<{ deletedCounts: Record<string, number> }>;
 
   // Talhao counter methods (contador único por safra)
   getOrCreateTalhaoCounter(safra: string): Promise<TalhaoCounter>;
@@ -113,6 +121,26 @@ export interface IStorage {
   updateFardinho(id: string, data: UpdateFardinho): Promise<Fardinho>;
   deleteFardinho(id: string): Promise<void>;
   getTotalFardinhosSafra(safra: string): Promise<number>;
+
+  // Talhões Info methods
+  getAllTalhoesInfo(): Promise<TalhaoInfo[]>;
+
+  // Safras methods
+  getAllSafras(): Promise<Safra[]>;
+  getSafraById(id: string): Promise<Safra | undefined>;
+  getSafraByNome(nome: string): Promise<Safra | undefined>;
+  getSafraAtiva(): Promise<Safra | undefined>;
+  createSafra(data: CreateSafra, userId: string): Promise<Safra>;
+  updateSafra(id: string, data: UpdateSafra): Promise<Safra>;
+  setActiveSafra(id: string): Promise<Safra>;
+  deleteSafra(id: string): Promise<void>;
+
+  // Talhões Safra methods
+  getTalhoesBySafra(safraId: string): Promise<TalhaoSafra[]>;
+  getTalhoesBySafraNome(safraNome: string): Promise<TalhaoSafra[]>;
+  createTalhaoSafra(data: CreateTalhaoSafra, userId: string): Promise<TalhaoSafra>;
+  batchCreateTalhoesSafra(data: BatchCreateTalhoesSafra, userId: string): Promise<TalhaoSafra[]>;
+  deleteTalhoesBySafra(safraId: string): Promise<void>;
 }
 
 export class PostgresStorage implements IStorage {
@@ -597,6 +625,23 @@ export class PostgresStorage implements IStorage {
     // Também resetar contadores
     await db.delete(talhaoCountersTable);
     return { deletedCount: result.length };
+  }
+
+  async deleteAllData(): Promise<{ deletedCounts: Record<string, number> }> {
+    const deletedCounts: Record<string, number> = {};
+
+    // Delete all data from all tables
+    const balesResult = await db.delete(balesTable).returning({ id: balesTable.id });
+    deletedCounts.bales = balesResult.length;
+
+    await db.delete(talhaoCountersTable);
+    await db.delete(carregamentosTable);
+    await db.delete(rendimentoTalhaoTable);
+    await db.delete(lotesTable);
+    await db.delete(fardinhosTable);
+    await db.delete(producaoTalhaoTable);
+
+    return { deletedCounts };
   }
 
   // Talhao counters methods
@@ -1117,6 +1162,276 @@ export class PostgresStorage implements IStorage {
     } catch (error) {
       console.warn('⚠️ fardinhos table may not exist:', error);
       return 0;
+    }
+  }
+
+  // Talhões Info methods
+  async getAllTalhoesInfo(): Promise<TalhaoInfo[]> {
+    try {
+      const result = await db.select().from(talhoesInfoTable);
+      return result;
+    } catch (error) {
+      console.warn('⚠️ talhoes_info table may not exist:', error);
+      return [];
+    }
+  }
+
+  // ==================== SAFRAS METHODS ====================
+
+  async getAllSafras(): Promise<Safra[]> {
+    try {
+      const result = await db
+        .select()
+        .from(safrasTable)
+        .orderBy(sql`${safrasTable.nome} DESC`);
+      return result;
+    } catch (error) {
+      console.warn('⚠️ safras table may not exist:', error);
+      return [];
+    }
+  }
+
+  async getSafraById(id: string): Promise<Safra | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(safrasTable)
+        .where(eq(safrasTable.id, id))
+        .limit(1);
+      return result[0];
+    } catch (error) {
+      console.warn('⚠️ safras table may not exist:', error);
+      return undefined;
+    }
+  }
+
+  async getSafraByNome(nome: string): Promise<Safra | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(safrasTable)
+        .where(eq(safrasTable.nome, nome))
+        .limit(1);
+      return result[0];
+    } catch (error) {
+      console.warn('⚠️ safras table may not exist:', error);
+      return undefined;
+    }
+  }
+
+  async getSafraAtiva(): Promise<Safra | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(safrasTable)
+        .where(eq(safrasTable.isAtiva, 1))
+        .limit(1);
+      return result[0];
+    } catch (error) {
+      console.warn('⚠️ safras table may not exist:', error);
+      return undefined;
+    }
+  }
+
+  async createSafra(data: CreateSafra, userId: string): Promise<Safra> {
+    try {
+      const now = new Date();
+
+      // Desativar outras safras se esta for a primeira
+      const existingSafras = await this.getAllSafras();
+      const isAtiva = existingSafras.length === 0 ? 1 : 0;
+
+      const result = await db
+        .insert(safrasTable)
+        .values({
+          nome: data.nome,
+          descricao: data.descricao || null,
+          isAtiva,
+          createdAt: now,
+          createdBy: userId,
+          updatedAt: now,
+        })
+        .returning();
+
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error creating safra:', error);
+      throw error;
+    }
+  }
+
+  async updateSafra(id: string, data: UpdateSafra): Promise<Safra> {
+    try {
+      const now = new Date();
+      const updates: any = { updatedAt: now };
+
+      if (data.descricao !== undefined) {
+        updates.descricao = data.descricao;
+      }
+      if (data.isAtiva !== undefined) {
+        updates.isAtiva = data.isAtiva;
+      }
+
+      const result = await db
+        .update(safrasTable)
+        .set(updates)
+        .where(eq(safrasTable.id, id))
+        .returning();
+
+      if (!result[0]) {
+        throw new Error('Safra não encontrada');
+      }
+
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error updating safra:', error);
+      throw error;
+    }
+  }
+
+  async setActiveSafra(id: string): Promise<Safra> {
+    try {
+      const now = new Date();
+
+      // Desativar todas as outras safras
+      await db
+        .update(safrasTable)
+        .set({ isAtiva: 0, updatedAt: now });
+
+      // Ativar a safra selecionada
+      const result = await db
+        .update(safrasTable)
+        .set({ isAtiva: 1, updatedAt: now })
+        .where(eq(safrasTable.id, id))
+        .returning();
+
+      if (!result[0]) {
+        throw new Error('Safra não encontrada');
+      }
+
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error setting active safra:', error);
+      throw error;
+    }
+  }
+
+  async deleteSafra(id: string): Promise<void> {
+    try {
+      // Talhões serão deletados automaticamente (cascade)
+      await db.delete(safrasTable).where(eq(safrasTable.id, id));
+    } catch (error) {
+      console.error('❌ Error deleting safra:', error);
+      throw new Error('Erro ao deletar safra');
+    }
+  }
+
+  // ==================== TALHÕES SAFRA METHODS ====================
+
+  async getTalhoesBySafra(safraId: string): Promise<TalhaoSafra[]> {
+    try {
+      const result = await db
+        .select()
+        .from(talhoesSafraTable)
+        .where(eq(talhoesSafraTable.safraId, safraId))
+        .orderBy(sql`${talhoesSafraTable.nome} ASC`);
+      return result;
+    } catch (error) {
+      console.warn('⚠️ talhoes_safra table may not exist:', error);
+      return [];
+    }
+  }
+
+  async getTalhoesBySafraNome(safraNome: string): Promise<TalhaoSafra[]> {
+    try {
+      const safra = await this.getSafraByNome(safraNome);
+      if (!safra) {
+        return [];
+      }
+      return this.getTalhoesBySafra(safra.id);
+    } catch (error) {
+      console.warn('⚠️ Error getting talhoes by safra nome:', error);
+      return [];
+    }
+  }
+
+  async createTalhaoSafra(data: CreateTalhaoSafra, userId: string): Promise<TalhaoSafra> {
+    try {
+      const now = new Date();
+
+      const result = await db
+        .insert(talhoesSafraTable)
+        .values({
+          safraId: data.safraId,
+          nome: data.nome,
+          hectares: data.hectares,
+          geometry: data.geometry,
+          centroid: data.centroid || null,
+          cultura: data.cultura || 'algodao',
+          createdAt: now,
+          createdBy: userId,
+        })
+        .returning();
+
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error creating talhao safra:', error);
+      throw error;
+    }
+  }
+
+  async batchCreateTalhoesSafra(data: BatchCreateTalhoesSafra, userId: string): Promise<TalhaoSafra[]> {
+    try {
+      const now = new Date();
+
+      const values = data.talhoes.map(talhao => ({
+        safraId: data.safraId,
+        nome: talhao.nome,
+        hectares: talhao.hectares,
+        geometry: talhao.geometry,
+        centroid: talhao.centroid || null,
+        cultura: 'algodao',
+        createdAt: now,
+        createdBy: userId,
+      }));
+
+      const result = await db
+        .insert(talhoesSafraTable)
+        .values(values)
+        .returning();
+
+      return result;
+    } catch (error) {
+      console.error('❌ Error batch creating talhoes safra:', error);
+      throw error;
+    }
+  }
+
+  async deleteTalhoesBySafra(safraId: string): Promise<void> {
+    try {
+      await db.delete(talhoesSafraTable).where(eq(talhoesSafraTable.safraId, safraId));
+    } catch (error) {
+      console.error('❌ Error deleting talhoes safra:', error);
+      throw new Error('Erro ao deletar talhões da safra');
+    }
+  }
+
+  // Método para atualizar a configuração de safra padrão (migrar para novo sistema)
+  async syncSafraWithSettings(): Promise<void> {
+    try {
+      // Verificar se existe configuração de safra no settings antigo
+      const defaultSafraSetting = await this.getSetting('defaultSafra');
+      if (defaultSafraSetting) {
+        // Verificar se essa safra já existe no novo sistema
+        const existingSafra = await this.getSafraByNome(defaultSafraSetting.value);
+        if (!existingSafra) {
+          // Criar a safra no novo sistema
+          console.log(`📦 Migrando safra ${defaultSafraSetting.value} para novo sistema...`);
+          await this.createSafra({ nome: defaultSafraSetting.value }, 'system');
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Error syncing safra with settings:', error);
     }
   }
 }

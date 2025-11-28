@@ -50,7 +50,7 @@ export default {
           border: "hsl(var(--popover-border) / <alpha-value>)",
         },
 
-        /* Primary - Neon Green */
+        /* Primary - Dark Green */
         primary: {
           DEFAULT: "hsl(var(--primary) / <alpha-value>)",
           foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
@@ -63,7 +63,7 @@ export default {
           foreground: "hsl(var(--secondary-foreground) / <alpha-value>)",
         },
 
-        /* Accent - Neon Yellow */
+        /* Accent - Dark Gold */
         accent: {
           DEFAULT: "hsl(var(--accent) / <alpha-value>)",
           foreground: "hsl(var(--accent-foreground) / <alpha-value>)",
@@ -101,7 +101,7 @@ export default {
           foreground: "hsl(var(--sidebar-accent-foreground) / <alpha-value>)",
         },
 
-        /* Neon Colors */
+        /* Dark Colors */
         neon: {
           green: "hsl(var(--neon-green) / <alpha-value>)",
           yellow: "hsl(var(--neon-yellow) / <alpha-value>)",
@@ -159,14 +159,14 @@ export default {
       },
 
       boxShadow: {
-        "glow-sm": "0 0 10px rgb(152 255 136 / 0.3)",
-        "glow": "0 0 20px rgb(152 255 136 / 0.4)",
-        "glow-lg": "0 0 30px rgb(152 255 136 / 0.5)",
-        "glow-xl": "0 0 50px rgb(152 255 136 / 0.6)",
-        "glow-accent": "0 0 20px rgb(255 229 0 / 0.4)",
-        "glow-cyan": "0 0 20px rgb(0 212 255 / 0.4)",
-        "glow-orange": "0 0 20px rgb(255 149 0 / 0.4)",
-        "inner-glow": "inset 0 0 20px rgb(152 255 136 / 0.1)",
+        "glow-sm": "0 0 10px rgb(0 179 89 / 0.3)",
+        "glow": "0 0 20px rgb(0 179 89 / 0.4)",
+        "glow-lg": "0 0 30px rgb(0 179 89 / 0.5)",
+        "glow-xl": "0 0 50px rgb(0 179 89 / 0.6)",
+        "glow-accent": "0 0 20px rgb(255 200 0 / 0.4)",
+        "glow-cyan": "0 0 20px rgb(70 180 150 / 0.4)",
+        "glow-orange": "0 0 20px rgb(230 160 30 / 0.4)",
+        "inner-glow": "inset 0 0 20px rgb(0 179 89 / 0.1)",
       },
 
       backdropBlur: {
@@ -211,8 +211,8 @@ export default {
           "100%": { transform: "translateX(100%)" },
         },
         "pulse-glow": {
-          "0%, 100%": { boxShadow: "0 0 20px rgb(152 255 136 / 0.3)" },
-          "50%": { boxShadow: "0 0 40px rgb(152 255 136 / 0.5)" },
+          "0%, 100%": { boxShadow: "0 0 20px rgb(0 179 89 / 0.3)" },
+          "50%": { boxShadow: "0 0 40px rgb(0 179 89 / 0.5)" },
         },
         "float": {
           "0%, 100%": { transform: "translateY(0)" },

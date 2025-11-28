@@ -8,6 +8,13 @@
       "when": 1764127828369,
       "tag": "0000_add-lotes-table",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1764294951558,
+      "tag": "0001_skinny_northstar",
+      "breakpoints": true
     }
   ]
 }

@@ -15,7 +15,12 @@ import {
   updateLoteSchema,
   createFardinhoSchema,
   updateFardinhoSchema,
+  createSafraSchema,
+  updateSafraSchema,
+  batchCreateTalhoesSafraSchema,
 } from "@shared/schema";
+import { parseShapefileFromBuffers, parseGeoJSON } from "./shapefile-parser";
+import multer from "multer";
 import { addClient, notifyBaleChange, notifyVersionUpdate } from "./events";
 import {
   verifyPassword,
@@ -48,6 +53,14 @@ const authLimiter = rateLimit({
   message: "Muitas tentativas de login. Tente novamente em 15 minutos.",
   standardHeaders: true,
   legacyHeaders: false,
+});
+
+// Configurar multer para upload de arquivos em memória
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB max
+  },
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -281,6 +294,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching talhao counters:", error);
       res.status(500).json({
         error: "Erro ao buscar contadores",
+      });
+    }
+  });
+
+  // Get talhoes info (hectares, etc)
+  app.get("/api/talhoes-info", authenticateToken, async (req, res) => {
+    try {
+      const talhoes = await storage.getAllTalhoesInfo();
+      res.json(talhoes);
+    } catch (error) {
+      console.error("Error fetching talhoes info:", error);
+      res.status(500).json({
+        error: "Erro ao buscar informações dos talhões",
       });
     }
   });
@@ -588,19 +614,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Reports endpoints (requires authentication)
   app.get("/api/reports/pdf", authenticateToken, async (req, res) => {
     try {
-      const bales = await storage.getAllBales();
-      
+      const safra = req.query.safra as string || "24/25";
+      const reportType = req.query.reportType as string || "custom";
+
+      // Fetch all necessary data including talhoes info from database
+      const [bales, carregamentos, lotes, fardinhos, pesoBrutoTotais, talhoesInfo] = await Promise.all([
+        storage.getAllBales(),
+        storage.getAllCarregamentosBySafra(safra),
+        storage.getAllLotesBySafra(safra),
+        storage.getAllFardinhosBySafra(safra),
+        storage.getPesoBrutoByTalhao(safra),
+        storage.getAllTalhoesInfo(),
+      ]);
+
       const filters = {
+        safra,
+        reportType: reportType as any,
         startDate: req.query.startDate as string | undefined,
         endDate: req.query.endDate as string | undefined,
         status: req.query.status ? (req.query.status as string).split(',') : undefined,
         talhao: req.query.talhao ? (req.query.talhao as string).split(',') : undefined,
+        columns: req.query.columns ? (req.query.columns as string).split(',') : undefined,
       };
-      
-      const pdfBuffer = generatePDF(bales, filters);
-      
+
+      const additionalData = {
+        carregamentos,
+        lotes,
+        fardinhos,
+        pesoBrutoTotais,
+        talhoesInfo,
+      };
+
+      const pdfBuffer = await generatePDF(bales, filters, additionalData);
+
+      const reportNames: Record<string, string> = {
+        'safra-summary': 'resumo-safra',
+        'productivity': 'produtividade',
+        'shipments': 'carregamentos',
+        'processing': 'beneficiamento',
+        'inventory': 'inventario',
+        'custom': 'personalizado',
+      };
+      const reportName = reportNames[reportType] || 'relatorio';
+
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename=relatorio-${Date.now()}.pdf`);
+      res.setHeader("Content-Disposition", `attachment; filename=${reportName}-${safra.replace('/', '-')}-${Date.now()}.pdf`);
       res.send(pdfBuffer);
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -612,19 +670,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/reports/excel", authenticateToken, async (req, res) => {
     try {
-      const bales = await storage.getAllBales();
+      const safra = req.query.safra as string || "24/25";
+      const reportType = req.query.reportType as string || "custom";
+
+      // Fetch all necessary data including talhoes info from database
+      const [bales, carregamentos, lotes, fardinhos, pesoBrutoTotais, talhoesInfo] = await Promise.all([
+        storage.getAllBales(),
+        storage.getAllCarregamentosBySafra(safra),
+        storage.getAllLotesBySafra(safra),
+        storage.getAllFardinhosBySafra(safra),
+        storage.getPesoBrutoByTalhao(safra),
+        storage.getAllTalhoesInfo(),
+      ]);
 
       const filters = {
+        safra,
+        reportType: reportType as any,
         startDate: req.query.startDate as string | undefined,
         endDate: req.query.endDate as string | undefined,
         status: req.query.status ? (req.query.status as string).split(',') : undefined,
         talhao: req.query.talhao ? (req.query.talhao as string).split(',') : undefined,
+        columns: req.query.columns ? (req.query.columns as string).split(',') : undefined,
       };
 
-      const excelBuffer = generateExcel(bales, filters);
+      const additionalData = {
+        carregamentos,
+        lotes,
+        fardinhos,
+        pesoBrutoTotais,
+        talhoesInfo,
+      };
+
+      const excelBuffer = generateExcel(bales, filters, additionalData);
+
+      const reportNames: Record<string, string> = {
+        'safra-summary': 'resumo-safra',
+        'productivity': 'produtividade',
+        'shipments': 'carregamentos',
+        'processing': 'beneficiamento',
+        'inventory': 'inventario',
+        'custom': 'personalizado',
+      };
+      const reportName = reportNames[reportType] || 'relatorio';
 
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", `attachment; filename=relatorio-${Date.now()}.xlsx`);
+      res.setHeader("Content-Disposition", `attachment; filename=${reportName}-${safra.replace('/', '-')}-${Date.now()}.xlsx`);
       res.send(excelBuffer);
     } catch (error) {
       console.error("Error generating Excel:", error);
@@ -969,6 +1059,245 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Erro ao deletar fardinho" });
     }
   });
+
+  // ========== SAFRAS ENDPOINTS ==========
+
+  // Get all safras
+  app.get("/api/safras", authenticateToken, async (req, res) => {
+    try {
+      const safras = await storage.getAllSafras();
+      res.json(safras);
+    } catch (error) {
+      console.error("Error fetching safras:", error);
+      res.status(500).json({ error: "Erro ao buscar safras" });
+    }
+  });
+
+  // Get active safra
+  app.get("/api/safras/ativa", authenticateToken, async (req, res) => {
+    try {
+      const safra = await storage.getSafraAtiva();
+      res.json(safra || null);
+    } catch (error) {
+      console.error("Error fetching active safra:", error);
+      res.status(500).json({ error: "Erro ao buscar safra ativa" });
+    }
+  });
+
+  // Get safra by ID
+  app.get("/api/safras/:id", authenticateToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const safra = await storage.getSafraById(id);
+      if (!safra) {
+        return res.status(404).json({ error: "Safra não encontrada" });
+      }
+      res.json(safra);
+    } catch (error) {
+      console.error("Error fetching safra:", error);
+      res.status(500).json({ error: "Erro ao buscar safra" });
+    }
+  });
+
+  // Create safra
+  app.post("/api/safras", authenticateToken, authorizeRoles("admin", "superadmin"), async (req, res) => {
+    try {
+      const data = createSafraSchema.parse(req.body);
+      const userId = req.user?.userId || "unknown-user";
+      const safra = await storage.createSafra(data, userId);
+      res.status(201).json(safra);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error creating safra:", error);
+      res.status(500).json({ error: "Erro ao criar safra" });
+    }
+  });
+
+  // Update safra
+  app.patch("/api/safras/:id", authenticateToken, authorizeRoles("admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const data = updateSafraSchema.parse(req.body);
+      const safra = await storage.updateSafra(id, data);
+      res.json(safra);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error updating safra:", error);
+      res.status(500).json({ error: "Erro ao atualizar safra" });
+    }
+  });
+
+  // Set active safra
+  app.post("/api/safras/:id/ativar", authenticateToken, authorizeRoles("admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const safra = await storage.setActiveSafra(id);
+
+      // Também atualizar o setting antigo para compatibilidade
+      await storage.updateSetting("default_safra", safra.nome);
+
+      res.json(safra);
+    } catch (error) {
+      console.error("Error activating safra:", error);
+      res.status(500).json({ error: "Erro ao ativar safra" });
+    }
+  });
+
+  // Delete safra
+  app.delete("/api/safras/:id", authenticateToken, authorizeRoles("admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteSafra(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting safra:", error);
+      res.status(500).json({ error: "Erro ao deletar safra" });
+    }
+  });
+
+  // ========== TALHÕES SAFRA ENDPOINTS ==========
+
+  // Get talhões by safra ID
+  app.get("/api/safras/:safraId/talhoes", authenticateToken, async (req, res) => {
+    try {
+      const { safraId } = req.params;
+      const talhoes = await storage.getTalhoesBySafra(safraId);
+      res.json(talhoes);
+    } catch (error) {
+      console.error("Error fetching talhoes:", error);
+      res.status(500).json({ error: "Erro ao buscar talhões" });
+    }
+  });
+
+  // Get talhões by safra nome (para compatibilidade com sistema antigo)
+  app.get("/api/talhoes-safra/:safraNome", authenticateToken, async (req, res) => {
+    try {
+      const { safraNome } = req.params;
+      const talhoes = await storage.getTalhoesBySafraNome(decodeURIComponent(safraNome));
+      res.json(talhoes);
+    } catch (error) {
+      console.error("Error fetching talhoes by safra nome:", error);
+      res.status(500).json({ error: "Erro ao buscar talhões da safra" });
+    }
+  });
+
+  // Batch create talhões (após seleção do usuário)
+  app.post("/api/safras/:safraId/talhoes/batch", authenticateToken, authorizeRoles("admin", "superadmin"), async (req, res) => {
+    try {
+      const { safraId } = req.params;
+      const data = batchCreateTalhoesSafraSchema.parse({
+        safraId,
+        talhoes: req.body.talhoes,
+      });
+      const userId = req.user?.userId || "unknown-user";
+
+      // Deletar talhões existentes antes de criar novos
+      await storage.deleteTalhoesBySafra(safraId);
+
+      const talhoes = await storage.batchCreateTalhoesSafra(data, userId);
+      res.status(201).json(talhoes);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error batch creating talhoes:", error);
+      res.status(500).json({ error: "Erro ao criar talhões" });
+    }
+  });
+
+  // Delete all talhões from safra
+  app.delete("/api/safras/:safraId/talhoes", authenticateToken, authorizeRoles("admin", "superadmin"), async (req, res) => {
+    try {
+      const { safraId } = req.params;
+      await storage.deleteTalhoesBySafra(safraId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting talhoes:", error);
+      res.status(500).json({ error: "Erro ao deletar talhões" });
+    }
+  });
+
+  // ========== SHAPEFILE UPLOAD & PROCESSING ==========
+
+  // Upload and process shapefile
+  app.post(
+    "/api/shapefile/parse",
+    authenticateToken,
+    authorizeRoles("admin", "superadmin"),
+    upload.fields([
+      { name: "shp", maxCount: 1 },
+      { name: "dbf", maxCount: 1 },
+      { name: "geojson", maxCount: 1 },
+    ]),
+    async (req, res) => {
+      try {
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+
+        // Verificar se é GeoJSON
+        if (files.geojson && files.geojson[0]) {
+          const geojsonBuffer = files.geojson[0].buffer;
+          const geojsonString = geojsonBuffer.toString("utf-8");
+
+          try {
+            const geojson = JSON.parse(geojsonString);
+            const result = parseGeoJSON(geojson);
+
+            if (!result.success) {
+              return res.status(400).json({ error: result.error });
+            }
+
+            return res.json({
+              success: true,
+              talhoes: result.talhoes,
+              totalFeatures: result.totalFeatures,
+            });
+          } catch (parseError) {
+            return res.status(400).json({ error: "GeoJSON inválido" });
+          }
+        }
+
+        // Verificar se é Shapefile
+        if (!files.shp || !files.shp[0]) {
+          return res.status(400).json({
+            error: "Arquivo .shp é obrigatório. Envie os arquivos .shp e .dbf ou um arquivo GeoJSON.",
+          });
+        }
+
+        const shpBuffer = files.shp[0].buffer;
+        const dbfBuffer = files.dbf && files.dbf[0] ? files.dbf[0].buffer : undefined;
+
+        const result = await parseShapefileFromBuffers(shpBuffer, dbfBuffer);
+
+        if (!result.success) {
+          return res.status(400).json({ error: result.error });
+        }
+
+        res.json({
+          success: true,
+          talhoes: result.talhoes,
+          totalFeatures: result.totalFeatures,
+        });
+      } catch (error) {
+        console.error("Error processing shapefile:", error);
+        res.status(500).json({
+          error: error instanceof Error ? error.message : "Erro ao processar arquivo",
+        });
+      }
+    }
+  );
 
   const httpServer = createServer(app);
 

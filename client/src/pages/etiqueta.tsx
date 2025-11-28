@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { Printer, QrCode, ArrowLeft, Loader2, Download } from "lucide-react";
+import { Printer, QrCode, ArrowLeft, Loader2, Download, Lightbulb } from "lucide-react";
 import QRCode from "qrcode";
 import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -14,7 +13,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import logoProgresso from "/favicon.png";
 import type { Bale } from "@shared/schema";
-import { Footer } from "@/components/footer";
+import { Page, PageContent, PageHeader, Section } from "@/components/layout/page";
 
 export default function Etiqueta() {
   const [, setLocation] = useLocation();
@@ -340,201 +339,171 @@ export default function Etiqueta() {
 
   if (baleIds.length === 0) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <Card className="max-w-md shadow-sm border rounded-xl overflow-hidden animate-fade-in-up">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold text-gray-900">Erro</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground mb-4">
-              Nenhum fardo selecionado. Volte e tente novamente.
-            </p>
-            <Button 
-              onClick={handleBack} 
-              className="w-full h-12 rounded-lg bg-green-600 hover:bg-green-700 font-semibold"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <Page>
+        <PageContent className="max-w-md flex items-center justify-center min-h-[60vh]">
+          <Section className="w-full animate-fade-in-up">
+            <div className="text-center space-y-4">
+              <div className="inline-flex p-4 bg-destructive/10 rounded-2xl mb-2">
+                <QrCode className="w-10 h-10 text-destructive" />
+              </div>
+              <h2 className="text-xl font-bold">Erro</h2>
+              <p className="text-sm text-muted-foreground">
+                Nenhum fardo selecionado. Volte e tente novamente.
+              </p>
+              <Button
+                onClick={handleBack}
+                className="w-full h-12 rounded-xl btn-neon font-semibold"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
+              </Button>
+            </div>
+          </Section>
+        </PageContent>
+      </Page>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-10 h-10 animate-spin mx-auto text-green-600" />
-          <p className="text-base text-muted-foreground font-semibold">Carregando etiquetas...</p>
-        </div>
-      </div>
+      <Page>
+        <PageContent className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center space-y-4">
+            <Loader2 className="w-10 h-10 animate-spin mx-auto text-primary" />
+            <p className="text-base text-muted-foreground font-semibold">Carregando etiquetas...</p>
+          </div>
+        </PageContent>
+      </Page>
     );
   }
 
   if (bales.length === 0) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <Card className="max-w-md shadow-sm border rounded-xl overflow-hidden animate-fade-in-up">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold text-gray-900">Fardos não encontrados</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground mb-4">
-              Os fardos selecionados não foram encontrados no sistema.
-            </p>
-            <Button 
-              onClick={handleBack} 
-              className="w-full h-12 rounded-lg bg-green-600 hover:bg-green-700 font-semibold"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <Page>
+        <PageContent className="max-w-md flex items-center justify-center min-h-[60vh]">
+          <Section className="w-full animate-fade-in-up">
+            <div className="text-center space-y-4">
+              <div className="inline-flex p-4 bg-neon-orange/10 rounded-2xl mb-2">
+                <QrCode className="w-10 h-10 text-neon-orange" />
+              </div>
+              <h2 className="text-xl font-bold">Fardos não encontrados</h2>
+              <p className="text-sm text-muted-foreground">
+                Os fardos selecionados não foram encontrados no sistema.
+              </p>
+              <Button
+                onClick={handleBack}
+                className="w-full h-12 rounded-xl btn-neon font-semibold"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
+              </Button>
+            </div>
+          </Section>
+        </PageContent>
+      </Page>
     );
   }
 
   return (
     <>
-      <div className="min-h-screen bg-white print:hidden pb-20 lg:pb-0">
-        {/* Header */}
-        <header className="sticky top-0 z-50 bg-white border-b shadow-sm">
-          <div className="container mx-auto px-4">
-            <div className="flex items-center justify-between gap-4 py-3 sm:py-4">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleBack}
-                  data-testid="button-back"
-                  className="shrink-0"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </Button>
-                <div className="p-2 bg-green-100 rounded-xl shrink-0">
-                  <img
-                    src={logoProgresso}
-                    alt="Grupo Progresso"
-                    className="h-6 w-6 sm:h-8 sm:w-8"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h1 className="text-lg sm:text-xl font-bold truncate text-gray-900">
-                    Etiquetas dos Fardos
-                  </h1>
-                  <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                    {bales.length} {bales.length === 1 ? 'etiqueta' : 'etiquetas'} • {user?.username}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
+      <Page>
+        <PageContent className="max-w-4xl space-y-6 print:hidden">
+          {/* Header */}
+          <PageHeader
+            title="Etiquetas dos Fardos"
+            subtitle={`${bales.length} ${bales.length === 1 ? 'etiqueta' : 'etiquetas'} • ${user?.username}`}
+            icon={<QrCode className="w-6 h-6" />}
+            actions={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBack}
+                data-testid="button-back"
+                className="rounded-xl border-border/50"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
+              </Button>
+            }
+          />
 
-        {/* Conteúdo principal */}
-        <main className="container mx-auto px-4 py-6 max-w-4xl space-y-6">
-          
           {/* Preview das etiquetas */}
-          <Card className="shadow-sm border rounded-xl overflow-hidden animate-fade-in-up">
-            <CardHeader className="bg-white border-b">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-green-100 text-green-700 rounded-lg shrink-0">
-                    <QrCode className="w-6 h-6" />
-                  </div>
-                  <CardTitle className="text-xl text-gray-900 font-bold">
-                    Preview das Etiquetas
-                  </CardTitle>
-                </div>
-                <Button
-                  onClick={handlePrint}
-                  size="lg"
-                  data-testid="button-print-labels"
-                  disabled={qrDataUrls.size === 0}
-                  className="w-full lg:w-auto h-12 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold shrink-0"
-                >
-                  {Capacitor.isNativePlatform() ? (
-                    <>
-                      <Download className="w-5 h-5 mr-2" />
-                      Gerar PDF
-                    </>
-                  ) : (
-                    <>
-                      <Printer className="w-5 h-5 mr-2" />
-                      Imprimir Todas
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {bales.map((bale, index) => {
-                  const qrUrl = qrDataUrls.get(bale.id);
-                  
-                  return (
-                    <div 
-                      key={bale.id} 
-                      className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white hover:shadow-sm transition-all duration-200 animate-fade-in-up"
-                      style={{ animationDelay: `${index * 0.05}s` }}
-                    >
-                      {qrUrl ? (
-                        <img 
-                          src={qrUrl} 
-                          alt={`QR Code ${bale.numero}`}
-                          className="w-full aspect-square rounded-lg"
-                        />
-                      ) : (
-                        <div className="w-full aspect-square bg-muted animate-pulse rounded-lg" />
-                      )}
-                      
-                      <div className="text-center space-y-1">
-                        <p className="text-xs text-muted-foreground font-semibold">Talhão: {bale.talhao}</p>
-                        <p className="text-xl font-bold font-mono text-primary">{bale.numero}</p>
-                        {bale.safra && (
-                          <p className="text-xs text-muted-foreground font-semibold">Safra: {bale.safra}</p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+          <Section
+            title="Preview das Etiquetas"
+            description="Visualize as etiquetas antes de imprimir"
+            action={
+              <Button
+                onClick={handlePrint}
+                size="lg"
+                data-testid="button-print-labels"
+                disabled={qrDataUrls.size === 0}
+                className="h-12 rounded-xl btn-neon font-semibold"
+              >
+                {Capacitor.isNativePlatform() ? (
+                  <>
+                    <Download className="w-5 h-5 mr-2" />
+                    Gerar PDF
+                  </>
+                ) : (
+                  <>
+                    <Printer className="w-5 h-5 mr-2" />
+                    Imprimir Todas
+                  </>
+                )}
+              </Button>
+            }
+            className="animate-fade-in-up"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {bales.map((bale, index) => {
+                const qrUrl = qrDataUrls.get(bale.id);
 
-          {/* Informações */}
-          <Card className="shadow-sm border rounded-xl animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
-            <CardContent className="pt-6 pb-6 px-6">
+                return (
+                  <div
+                    key={bale.id}
+                    className="glass-card-hover p-4 space-y-3 animate-fade-in-up"
+                    style={{ animationDelay: `${index * 0.05}s` }}
+                  >
+                    {qrUrl ? (
+                      <img
+                        src={qrUrl}
+                        alt={`QR Code ${bale.numero}`}
+                        className="w-full aspect-square rounded-xl bg-white"
+                      />
+                    ) : (
+                      <div className="w-full aspect-square bg-surface animate-pulse rounded-xl" />
+                    )}
+
+                    <div className="text-center space-y-1">
+                      <p className="text-xs text-muted-foreground font-semibold">Talhão: {bale.talhao}</p>
+                      <p className="text-xl font-bold font-mono text-primary">{bale.numero}</p>
+                      {bale.safra && (
+                        <p className="text-xs text-muted-foreground font-semibold">Safra: {bale.safra}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Section>
+
+          {/* Instruções */}
+          <div className="animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+            <Section>
               <h3 className="font-bold text-base mb-4 flex items-center gap-2">
-                <Printer className="w-5 h-5 text-green-700" />
+                <Lightbulb className="w-5 h-5 text-primary" />
                 Instruções de Impressão
               </h3>
-              <ol className="text-sm text-muted-foreground space-y-3 list-decimal list-inside">
-                <li className="flex items-start gap-2">
-                  <span className="font-bold text-green-600">1.</span>
-                  <span className="flex-1">Conecte a impressora térmica móvel</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="font-bold text-green-600">2.</span>
-                  <span className="flex-1">Clique em "Imprimir Todas" acima</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="font-bold text-green-600">3.</span>
-                  <span className="flex-1">Verifique se todas as etiquetas foram impressas corretamente</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="font-bold text-green-600">4.</span>
-                  <span className="flex-1">Cole cada etiqueta no fardo físico correspondente</span>
-                </li>
+              <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                <li>Conecte a impressora térmica móvel</li>
+                <li>Clique em "Imprimir Todas" acima</li>
+                <li>Verifique se todas as etiquetas foram impressas corretamente</li>
+                <li>Cole cada etiqueta no fardo físico correspondente</li>
               </ol>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
+            </Section>
+          </div>
+        </PageContent>
+      </Page>
 
       {/* Print-only area */}
       {qrDataUrls.size > 0 && (
@@ -647,8 +616,6 @@ export default function Etiqueta() {
         </div>
       )}
 
-      {/* Footer */}
-      <Footer />
     </>
   );
 }

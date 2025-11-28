@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, forwardRef } from "react";
 import { useLocation } from "wouter";
 import logoFavicon from "/favicon.png";
 import {
@@ -26,14 +26,23 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle,
 } from "@/components/ui/sheet";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+// Forward ref button for Tooltip compatibility
+const SidebarButton = forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement>
+>(({ className, children, ...props }, ref) => (
+  <button ref={ref} className={className} {...props}>
+    {children}
+  </button>
+));
+SidebarButton.displayName = "SidebarButton";
 
 interface NavItem {
   title: string;
@@ -100,7 +109,7 @@ export function Sidebar() {
 
   // Conteúdo comum do sidebar
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col text-sidebar-foreground">
       {/* Header com Logo */}
       <div
         className={cn(
@@ -118,7 +127,7 @@ export function Sidebar() {
               <span className="font-display font-bold text-lg gradient-text">
                 Cotton
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-sidebar-foreground/70">
                 Grupo Progresso
               </span>
             </div>
@@ -151,7 +160,7 @@ export function Sidebar() {
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold truncate text-foreground">
+              <p className="text-sm font-semibold truncate text-sidebar-foreground">
                 {user.username}
               </p>
               {selectedRole && (
@@ -170,31 +179,35 @@ export function Sidebar() {
           const Icon = item.icon;
           const isActive = location === item.href || location.startsWith(`${item.href}/`);
 
-          const NavButton = (
-            <button
-              key={item.href}
-              onClick={() => {
-                setLocation(item.href);
-                if (mobile) setSidebarOpen(false);
-              }}
-              className={cn(
-                "nav-item w-full",
-                isActive && "active",
-                sidebarCollapsed && !mobile && "justify-center px-2"
-              )}
-            >
+          const buttonContent = (
+            <>
               <Icon className={cn("h-5 w-5 nav-icon", !sidebarCollapsed && !mobile && "mr-3")} />
               {(!sidebarCollapsed || mobile) && (
                 <span className="flex-1 text-left text-sm">{item.title}</span>
               )}
-            </button>
+            </>
           );
+
+          const buttonClassName = cn(
+            "nav-item w-full",
+            isActive && "active",
+            sidebarCollapsed && !mobile && "justify-center px-2"
+          );
+
+          const handleClick = () => {
+            setLocation(item.href);
+            if (mobile) setSidebarOpen(false);
+          };
 
           // Wrap in tooltip when collapsed
           if (sidebarCollapsed && !mobile) {
             return (
               <Tooltip key={item.href} delayDuration={0}>
-                <TooltipTrigger asChild>{NavButton}</TooltipTrigger>
+                <TooltipTrigger asChild>
+                  <SidebarButton onClick={handleClick} className={buttonClassName}>
+                    {buttonContent}
+                  </SidebarButton>
+                </TooltipTrigger>
                 <TooltipContent side="right" className="glass-card">
                   {item.title}
                 </TooltipContent>
@@ -202,86 +215,104 @@ export function Sidebar() {
             );
           }
 
-          return NavButton;
+          return (
+            <button
+              key={item.href}
+              onClick={handleClick}
+              className={buttonClassName}
+            >
+              {buttonContent}
+            </button>
+          );
         })}
       </nav>
 
       {/* Footer Actions */}
       <div className="border-t border-border/50 p-3 space-y-2">
         {/* Theme Toggle */}
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <button
-              onClick={toggleTheme}
-              className={cn(
-                "nav-item w-full",
-                sidebarCollapsed && !mobile && "justify-center px-2"
-              )}
-            >
-              {theme === "dark" ? (
-                <Sun className={cn("h-5 w-5", !sidebarCollapsed && !mobile && "mr-3")} />
-              ) : (
-                <Moon className={cn("h-5 w-5", !sidebarCollapsed && !mobile && "mr-3")} />
-              )}
-              {(!sidebarCollapsed || mobile) && (
-                <span className="flex-1 text-left text-sm">
-                  {theme === "dark" ? "Modo Claro" : "Modo Escuro"}
-                </span>
-              )}
-            </button>
-          </TooltipTrigger>
-          {sidebarCollapsed && !mobile && (
+        {sidebarCollapsed && !mobile ? (
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <SidebarButton
+                onClick={toggleTheme}
+                className="nav-item w-full justify-center px-2"
+              >
+                {theme === "dark" ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+              </SidebarButton>
+            </TooltipTrigger>
             <TooltipContent side="right" className="glass-card">
               {theme === "dark" ? "Modo Claro" : "Modo Escuro"}
             </TooltipContent>
-          )}
-        </Tooltip>
+          </Tooltip>
+        ) : (
+          <button
+            onClick={toggleTheme}
+            className="nav-item w-full"
+          >
+            {theme === "dark" ? (
+              <Sun className="h-5 w-5 mr-3" />
+            ) : (
+              <Moon className="h-5 w-5 mr-3" />
+            )}
+            <span className="flex-1 text-left text-sm">
+              {theme === "dark" ? "Modo Claro" : "Modo Escuro"}
+            </span>
+          </button>
+        )}
 
         {isSuperAdmin && (
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <button
-                onClick={handleClearCache}
-                className={cn(
-                  "nav-item w-full",
-                  sidebarCollapsed && !mobile && "justify-center px-2"
-                )}
-              >
-                <RefreshCw className={cn("h-5 w-5", !sidebarCollapsed && !mobile && "mr-3")} />
-                {(!sidebarCollapsed || mobile) && (
-                  <span className="flex-1 text-left text-sm">Limpar Cache</span>
-                )}
-              </button>
-            </TooltipTrigger>
-            {sidebarCollapsed && !mobile && (
+          sidebarCollapsed && !mobile ? (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <SidebarButton
+                  onClick={handleClearCache}
+                  className="nav-item w-full justify-center px-2"
+                >
+                  <RefreshCw className="h-5 w-5" />
+                </SidebarButton>
+              </TooltipTrigger>
               <TooltipContent side="right" className="glass-card">
                 Limpar Cache
               </TooltipContent>
-            )}
-          </Tooltip>
+            </Tooltip>
+          ) : (
+            <button
+              onClick={handleClearCache}
+              className="nav-item w-full"
+            >
+              <RefreshCw className="h-5 w-5 mr-3" />
+              <span className="flex-1 text-left text-sm">Limpar Cache</span>
+            </button>
+          )
         )}
 
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <button
-              onClick={handleLogout}
-              className={cn(
-                "nav-item w-full text-destructive hover:bg-destructive/10",
-                sidebarCollapsed && !mobile && "justify-center px-2"
-              )}
-            >
-              <LogOut className={cn("h-5 w-5", !sidebarCollapsed && !mobile && "mr-3")} />
-              {(!sidebarCollapsed || mobile) && (
-                <span className="flex-1 text-left text-sm">Sair</span>
-              )}
-            </button>
-          </TooltipTrigger>
-          {sidebarCollapsed && !mobile && (
+        {sidebarCollapsed && !mobile ? (
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <SidebarButton
+                onClick={handleLogout}
+                className="nav-item w-full text-destructive hover:bg-destructive/10 justify-center px-2"
+              >
+                <LogOut className="h-5 w-5" />
+              </SidebarButton>
+            </TooltipTrigger>
             <TooltipContent side="right" className="glass-card">
               Sair
             </TooltipContent>
-          )}
-        </Tooltip>
+          </Tooltip>
+        ) : (
+          <button
+            onClick={handleLogout}
+            className="nav-item w-full text-destructive hover:bg-destructive/10"
+          >
+            <LogOut className="h-5 w-5 mr-3" />
+            <span className="flex-1 text-left text-sm">Sair</span>
+          </button>
+        )}
 
         {/* Collapse toggle - desktop only */}
         {!mobile && (

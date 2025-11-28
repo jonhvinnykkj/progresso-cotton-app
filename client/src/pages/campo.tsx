@@ -46,7 +46,7 @@ import {
 import { z } from "zod";
 import type { Bale } from "@shared/schema";
 import logoFavicon from "/favicon.png";
-import { TALHOES_INFO } from "@shared/talhoes";
+import { useSettings } from "@/hooks/use-settings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Page, PageContent } from "@/components/layout/page";
 import { cn } from "@/lib/utils";
@@ -457,11 +457,10 @@ export default function Campo() {
   const [createdBales, setCreatedBales] = useState<Bale[]>([]);
   const { createBale, createBatch } = useOfflineBaleCreation();
 
-  const { data: defaultSafraData } = useQuery<{ value: string }>({
-    queryKey: ["/api/settings/default-safra"],
-  });
-
-  const defaultSafra = defaultSafraData?.value || "";
+  // Usar nova API de safras
+  const { data: settingsData } = useSettings();
+  const defaultSafra = settingsData?.defaultSafra || "";
+  const talhoesSafra = settingsData?.talhoesSafra || [];
 
   const form = useForm<BatchCreateForm>({
     resolver: zodResolver(batchCreateSchema),
@@ -715,25 +714,31 @@ export default function Campo() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="rounded-xl border-border/50 bg-popover">
-                              {TALHOES_INFO.map((talhao) => (
-                                <SelectItem
-                                  key={talhao.id}
-                                  value={talhao.nome}
-                                  className="rounded-lg my-0.5 data-[highlighted]:bg-primary/20 data-[state=checked]:bg-primary/30 focus:bg-primary/20"
-                                >
-                                  <div className="flex items-center justify-between gap-3 w-full py-1">
-                                    <div className="flex items-center gap-2">
-                                      <MapPin className="w-3.5 h-3.5 text-primary" />
-                                      <span className="font-semibold">
-                                        {talhao.nome}
+                              {talhoesSafra.length === 0 ? (
+                                <div className="p-4 text-center text-sm text-muted-foreground">
+                                  Nenhum talhão configurado. Configure uma safra nas configurações.
+                                </div>
+                              ) : (
+                                talhoesSafra.map((talhao) => (
+                                  <SelectItem
+                                    key={talhao.id}
+                                    value={talhao.nome}
+                                    className="rounded-lg my-0.5 data-[highlighted]:bg-primary/20 data-[state=checked]:bg-primary/30 focus:bg-primary/20"
+                                  >
+                                    <div className="flex items-center justify-between gap-3 w-full py-1">
+                                      <div className="flex items-center gap-2">
+                                        <MapPin className="w-3.5 h-3.5 text-primary" />
+                                        <span className="font-semibold">
+                                          {talhao.nome}
+                                        </span>
+                                      </div>
+                                      <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full font-semibold">
+                                        {talhao.hectares} ha
                                       </span>
                                     </div>
-                                    <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full font-semibold">
-                                      {talhao.hectares} ha
-                                    </span>
-                                  </div>
-                                </SelectItem>
-                              ))}
+                                  </SelectItem>
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
                           <FormDescription className="flex items-center gap-1.5 text-xs">
@@ -833,25 +838,31 @@ export default function Campo() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="rounded-xl border-border/50 bg-popover">
-                              {TALHOES_INFO.map((talhao) => (
-                                <SelectItem
-                                  key={talhao.id}
-                                  value={talhao.nome}
-                                  className="rounded-lg my-0.5 data-[highlighted]:bg-primary/20 data-[state=checked]:bg-primary/30 focus:bg-primary/20"
-                                >
-                                  <div className="flex items-center justify-between gap-3 w-full py-1">
-                                    <div className="flex items-center gap-2">
-                                      <MapPin className="w-3.5 h-3.5 text-primary" />
-                                      <span className="font-semibold">
-                                        {talhao.nome}
+                              {talhoesSafra.length === 0 ? (
+                                <div className="p-4 text-center text-sm text-muted-foreground">
+                                  Nenhum talhão configurado. Configure uma safra nas configurações.
+                                </div>
+                              ) : (
+                                talhoesSafra.map((talhao) => (
+                                  <SelectItem
+                                    key={talhao.id}
+                                    value={talhao.nome}
+                                    className="rounded-lg my-0.5 data-[highlighted]:bg-primary/20 data-[state=checked]:bg-primary/30 focus:bg-primary/20"
+                                  >
+                                    <div className="flex items-center justify-between gap-3 w-full py-1">
+                                      <div className="flex items-center gap-2">
+                                        <MapPin className="w-3.5 h-3.5 text-primary" />
+                                        <span className="font-semibold">
+                                          {talhao.nome}
+                                        </span>
+                                      </div>
+                                      <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full font-semibold">
+                                        {talhao.hectares} ha
                                       </span>
                                     </div>
-                                    <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full font-semibold">
-                                      {talhao.hectares} ha
-                                    </span>
-                                  </div>
-                                </SelectItem>
-                              ))}
+                                  </SelectItem>
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
                           <FormDescription className="flex items-center gap-1.5 text-xs">

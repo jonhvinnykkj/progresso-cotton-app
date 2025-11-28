@@ -31,7 +31,7 @@ import { Page, PageContent } from "@/components/layout/page";
 import { API_URL } from "@/lib/api-config";
 import { getAuthHeaders } from "@/lib/api-client";
 import logoFavicon from "/favicon.png";
-import { TALHOES_INFO } from "@shared/talhoes";
+import { useSettings } from "@/hooks/use-settings";
 import {
   ScanLine,
   Factory,
@@ -67,8 +67,11 @@ export default function Algodoeira() {
   const [scannedBale, setScannedBale] = useState<Bale | null>(null);
   const [activeTab, setActiveTab] = useState("beneficiamento");
 
-  // Safra state
-  const [selectedSafra, setSelectedSafra] = useState("24/25");
+  // Safra e talhões dinâmicos
+  const { data: settingsData } = useSettings();
+  const safraAtiva = settingsData?.safraAtiva;
+  const talhoesSafra = settingsData?.talhoesSafra || [];
+  const selectedSafra = safraAtiva?.nome || "";
 
   // Carregamentos state
   const [carregamentoTalhao, setCarregamentoTalhao] = useState("");
@@ -1055,15 +1058,11 @@ export default function Algodoeira() {
                     <label className="text-sm font-semibold text-muted-foreground">
                       Safra
                     </label>
-                    <Select value={selectedSafra} onValueChange={setSelectedSafra}>
-                      <SelectTrigger className="h-12 rounded-xl bg-surface border-border/50">
-                        <SelectValue placeholder="Selecione a safra" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="24/25">Safra 24/25</SelectItem>
-                        <SelectItem value="25/26">Safra 25/26</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="h-12 rounded-xl bg-surface border border-border/50 flex items-center px-3">
+                      <span className="text-sm font-medium">
+                        {safraAtiva ? `Safra ${safraAtiva.nome}` : "Nenhuma safra configurada"}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -1072,12 +1071,12 @@ export default function Algodoeira() {
                     </label>
                     <Select value={carregamentoTalhao} onValueChange={setCarregamentoTalhao}>
                       <SelectTrigger className="h-12 rounded-xl bg-surface border-border/50">
-                        <SelectValue placeholder="Selecione o talhão" />
+                        <SelectValue placeholder={talhoesSafra.length > 0 ? "Selecione o talhão" : "Nenhum talhão configurado"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {TALHOES_INFO.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.id} - {t.hectares} ha
+                        {talhoesSafra.map((t) => (
+                          <SelectItem key={t.nome} value={t.nome}>
+                            {t.nome} - {t.hectares} ha
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1272,15 +1271,11 @@ export default function Algodoeira() {
                   <label className="text-sm font-semibold text-muted-foreground">
                     Safra
                   </label>
-                  <Select value={selectedSafra} onValueChange={setSelectedSafra}>
-                    <SelectTrigger className="h-12 rounded-xl bg-surface border-border/50">
-                      <SelectValue placeholder="Selecione a safra" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="24/25">Safra 24/25</SelectItem>
-                      <SelectItem value="25/26">Safra 25/26</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="h-12 rounded-xl bg-surface border border-border/50 flex items-center px-3">
+                    <span className="text-sm font-medium">
+                      {safraAtiva ? `Safra ${safraAtiva.nome}` : "Nenhuma safra configurada"}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Peso bruto da safra (somente leitura) */}
@@ -1584,15 +1579,11 @@ export default function Algodoeira() {
                   <label className="text-sm font-semibold text-muted-foreground">
                     Safra
                   </label>
-                  <Select value={selectedSafra} onValueChange={setSelectedSafra}>
-                    <SelectTrigger className="h-12 rounded-xl bg-surface border-border/50">
-                      <SelectValue placeholder="Selecione a safra" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="24/25">Safra 24/25</SelectItem>
-                      <SelectItem value="25/26">Safra 25/26</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="h-12 rounded-xl bg-surface border border-border/50 flex items-center px-3">
+                    <span className="text-sm font-medium">
+                      {safraAtiva ? `Safra ${safraAtiva.nome}` : "Nenhuma safra configurada"}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Input de quantidade de fardinhos */}

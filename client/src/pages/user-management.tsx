@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Trash2,
@@ -449,11 +449,14 @@ export default function UserManagement() {
                     )}
                     onClick={() => toggleRole(role.value)}
                   >
-                    <Checkbox
-                      checked={selectedRoles.includes(role.value)}
-                      onCheckedChange={() => toggleRole(role.value)}
-                      className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                    />
+                    <div className={cn(
+                      "h-4 w-4 shrink-0 rounded-sm border flex items-center justify-center transition-colors",
+                      selectedRoles.includes(role.value)
+                        ? "bg-primary border-primary text-primary-foreground"
+                        : "border-primary"
+                    )}>
+                      {selectedRoles.includes(role.value) && <Check className="h-3 w-3" />}
+                    </div>
                     <span className="text-sm font-semibold">{role.label}</span>
                   </div>
                 ))}
@@ -606,11 +609,14 @@ export default function UserManagement() {
                       )}
                       onClick={() => toggleEditRole(role.value)}
                     >
-                      <Checkbox
-                        checked={editRoles.includes(role.value)}
-                        onCheckedChange={() => toggleEditRole(role.value)}
-                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                      />
+                      <div className={cn(
+                        "h-4 w-4 shrink-0 rounded-sm border flex items-center justify-center transition-colors",
+                        editRoles.includes(role.value)
+                          ? "bg-primary border-primary text-primary-foreground"
+                          : "border-primary"
+                      )}>
+                        {editRoles.includes(role.value) && <Check className="h-3 w-3" />}
+                      </div>
                       <span className="text-sm font-semibold">{role.label}</span>
                     </div>
                   ))}

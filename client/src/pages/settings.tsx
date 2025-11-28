@@ -1,19 +1,6 @@
 import { useState } from "react";
 import { useLocation, Redirect } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,11 +14,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { getAuthHeaders } from "@/lib/api-client";
-import { API_URL } from "@/lib/api-config";
 import {
-  Settings,
-  Save,
   Loader2,
   Trash2,
   AlertTriangle,
@@ -44,13 +27,7 @@ import {
 } from "lucide-react";
 import { Page, PageContent } from "@/components/layout/page";
 import logoFavicon from "/favicon.png";
-import { z } from "zod";
-
-const safraSettingsSchema = z.object({
-  safra: z.string().min(1, "Safra é obrigatória"),
-});
-
-type SafraSettingsForm = z.infer<typeof safraSettingsSchema>;
+import { SafraConfig } from "@/components/safra-config";
 
 export default function SettingsPage() {
   const [, setLocation] = useLocation();
@@ -62,60 +39,6 @@ export default function SettingsPage() {
   if (selectedRole !== "superadmin") {
     return <Redirect to="/dashboard" />;
   }
-
-  const { data: defaultSafraData, isLoading } = useQuery<{ value: string }>({
-    queryKey: ["/api/settings/default-safra"],
-  });
-
-  const form = useForm<SafraSettingsForm>({
-    resolver: zodResolver(safraSettingsSchema),
-    values: {
-      safra: defaultSafraData?.value || "",
-    },
-  });
-
-  const updateSafraMutation = useMutation({
-    mutationFn: async (data: SafraSettingsForm) => {
-      const url = API_URL
-        ? `${API_URL}/api/settings/default-safra`
-        : "/api/settings/default-safra";
-      const response = await fetch(url, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        credentials: "include",
-        body: JSON.stringify({ value: data.safra }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Erro ao atualizar safra");
-      }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/settings/default-safra"] });
-      toast({
-        variant: "success",
-        title: "Configurações salvas",
-        description: "Safra padrão atualizada com sucesso",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Erro ao salvar",
-        description: error.message,
-      });
-    },
-  });
-
-  const handleSave = (data: SafraSettingsForm) => {
-    updateSafraMutation.mutate(data);
-  };
 
   const handleDeleteAllBales = async () => {
     setIsDeleting(true);
@@ -189,77 +112,25 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Safra Settings */}
+        {/* Configuração de Safras */}
         <div className="glass-card rounded-2xl overflow-hidden">
           <div className="relative p-5 border-b border-border/30">
-            <div className="absolute inset-0 bg-gradient-to-r from-neon-orange/10 via-neon-orange/5 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent" />
             <div className="relative flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-neon-orange/20">
-                <Wheat className="w-5 h-5 text-neon-orange" />
+              <div className="p-2.5 rounded-xl bg-primary/20">
+                <Wheat className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">Safra Padrão</h2>
+                <h2 className="text-lg font-semibold">Configuração de Safras</h2>
                 <p className="text-sm text-muted-foreground">
-                  Defina qual safra será incluída automaticamente em todos os novos fardos
+                  Configure safras e importe talhões de algodão via shapefile
                 </p>
               </div>
             </div>
           </div>
 
           <div className="p-5">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSave)} className="space-y-5">
-                  <FormField
-                    control={form.control}
-                    name="safra"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold flex items-center gap-2">
-                          <Settings className="w-4 h-4 text-neon-orange" />
-                          Safra
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Ex: 2024/2025"
-                            data-testid="input-safra"
-                            className="h-12 rounded-xl bg-surface border-border/50 focus:border-neon-orange text-base"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription className="text-xs text-muted-foreground">
-                          Esta safra será automaticamente incluída em todos os QR codes gerados
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <Button
-                    type="submit"
-                    className="w-full h-12 rounded-xl bg-neon-orange hover:bg-neon-orange/90 text-black font-semibold shadow-glow-orange"
-                    disabled={updateSafraMutation.isPending}
-                    data-testid="button-save-settings"
-                  >
-                    {updateSafraMutation.isPending ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Salvando...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-5 h-5 mr-2" />
-                        Salvar Configurações
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </Form>
-            )}
+            <SafraConfig />
           </div>
         </div>
 
@@ -277,10 +148,10 @@ export default function SettingsPage() {
 
           <div className="p-5 space-y-3">
             {[
-              "A safra definida aqui será automaticamente incluída em todos os fardos criados pelos operadores de campo",
-              "Os operadores não precisam informar a safra manualmente - ela virá pré-definida",
-              "A safra aparecerá nos QR codes e etiquetas dos fardos",
-              "Você pode alterar a safra padrão a qualquer momento (afetará apenas fardos novos)",
+              "Crie uma safra e faça upload do shapefile do plano de plantio",
+              "Selecione quais talhões são de algodão - a área é calculada automaticamente",
+              "Ative a safra para que ela seja a padrão em todas as operações",
+              "Os talhões configurados aparecerão nas estatísticas e relatórios",
             ].map((text, index) => (
               <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-surface border border-border/30">
                 <CheckCircle className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
@@ -334,7 +205,8 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="p-5">
+          <div className="p-5 space-y-4">
+            {/* Deletar Todos os Fardos */}
             <div className="flex flex-col sm:flex-row items-start justify-between gap-4 p-5 border border-destructive/30 rounded-xl bg-destructive/5">
               <div className="flex-1 space-y-2">
                 <h3 className="font-bold text-base flex items-center gap-2 text-destructive">
@@ -357,6 +229,7 @@ export default function SettingsPage() {
                 Deletar
               </Button>
             </div>
+
           </div>
         </div>
 
@@ -417,6 +290,7 @@ export default function SettingsPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
       </PageContent>
     </Page>
   );

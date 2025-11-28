@@ -298,3 +298,68 @@ export const upsertProducaoTalhaoSchema = z.object({
 
 export type UpsertProducaoTalhao = z.infer<typeof upsertProducaoTalhaoSchema>;
 export type ProducaoTalhao = typeof producaoTalhao.$inferSelect;
+
+// ==================== CONFIGURAÇÃO DE SAFRAS ====================
+
+// Tabela de safras configuradas
+export const safras = pgTable("safras", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nome: text("nome").notNull().unique(), // Ex: "24/25", "25/26"
+  descricao: text("descricao"), // Descrição opcional
+  isAtiva: integer("is_ativa").notNull().default(1), // 1 = ativa (safra padrão), 0 = inativa
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: text("created_by"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Talhões de algodão vinculados a cada safra (importados do shapefile)
+export const talhoesSafra = pgTable("talhoes_safra", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  safraId: varchar("safra_id").notNull().references(() => safras.id, { onDelete: "cascade" }),
+  nome: text("nome").notNull(), // Nome do talhão (ex: "1A", "2B")
+  hectares: text("hectares").notNull(), // Área em hectares (calculada do polígono)
+  geometry: text("geometry").notNull(), // GeoJSON do polígono (para renderizar no mapa)
+  centroid: text("centroid"), // GeoJSON do centróide (para posicionar labels)
+  cultura: text("cultura").notNull().default("algodao"), // Tipo de cultura (sempre algodão neste caso)
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: text("created_by"),
+});
+
+// Schemas para safras
+export const createSafraSchema = z.object({
+  nome: z.string().min(1, "Nome da safra é obrigatório").regex(/^\d{2}\/\d{2}$/, "Formato inválido. Use: XX/XX"),
+  descricao: z.string().optional(),
+});
+
+export const updateSafraSchema = z.object({
+  descricao: z.string().optional(),
+  isAtiva: z.number().min(0).max(1).optional(),
+});
+
+export type CreateSafra = z.infer<typeof createSafraSchema>;
+export type UpdateSafra = z.infer<typeof updateSafraSchema>;
+export type Safra = typeof safras.$inferSelect;
+
+// Schemas para talhões da safra
+export const createTalhaoSafraSchema = z.object({
+  safraId: z.string().min(1, "ID da safra é obrigatório"),
+  nome: z.string().min(1, "Nome do talhão é obrigatório"),
+  hectares: z.string().min(1, "Hectares é obrigatório"),
+  geometry: z.string().min(1, "Geometria é obrigatória"),
+  centroid: z.string().optional(),
+  cultura: z.string().default("algodao"),
+});
+
+export const batchCreateTalhoesSafraSchema = z.object({
+  safraId: z.string().min(1, "ID da safra é obrigatório"),
+  talhoes: z.array(z.object({
+    nome: z.string().min(1),
+    hectares: z.string().min(1),
+    geometry: z.string().min(1),
+    centroid: z.string().optional(),
+  })).min(1, "Selecione pelo menos um talhão"),
+});
+
+export type CreateTalhaoSafra = z.infer<typeof createTalhaoSafraSchema>;
+export type BatchCreateTalhoesSafra = z.infer<typeof batchCreateTalhoesSafraSchema>;
+export type TalhaoSafra = typeof talhoesSafra.$inferSelect;

@@ -3,8 +3,8 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { useAuth } from "@/lib/auth-context";
+import { useSettings } from "@/hooks/use-settings";
 import type { Bale, RendimentoTalhao, Lote, Fardinho } from "@shared/schema";
-import { TALHOES_INFO } from "@shared/talhoes";
 import { API_URL } from "@/lib/api-config";
 import { getAuthHeaders } from "@/lib/api-client";
 import {
@@ -94,7 +94,12 @@ export default function TalhaoStats() {
   useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTalhao, setSelectedTalhao] = useState<string | null>(null);
-  const [selectedSafra, setSelectedSafra] = useState("24/25");
+
+  // Safra e talhões dinâmicos
+  const { data: settingsData } = useSettings();
+  const safraAtiva = settingsData?.safraAtiva;
+  const talhoesSafra = settingsData?.talhoesSafra || [];
+  const selectedSafra = safraAtiva?.nome || "";
 
   const { data: talhaoStatsData, isLoading } = useQuery<Record<string, TalhaoStats>>({
     queryKey: ["/api/bales/stats-by-talhao"],
@@ -198,7 +203,7 @@ export default function TalhaoStats() {
   );
 
   const getTalhaoInfo = (nome: string) => {
-    return TALHOES_INFO.find(t => t.nome === nome);
+    return talhoesSafra.find(t => t.nome === nome);
   };
 
   const selectedTalhaoData = selectedTalhao
@@ -237,7 +242,7 @@ export default function TalhaoStats() {
   thisWeek.setDate(thisWeek.getDate() - 7);
   const balesThisWeek = allBales.filter(b => new Date(b.createdAt) >= thisWeek).length;
 
-  const totalHectares = TALHOES_INFO.reduce((acc, t) => acc + parseFloat(t.hectares), 0);
+  const totalHectares = talhoesSafra.reduce((acc, t) => acc + parseFloat(t.hectares.replace(",", ".")), 0);
 
   const avgFardosPorHectare = (() => {
     if (!globalStats?.total || totalHectares === 0) return '0.00';
@@ -255,12 +260,12 @@ export default function TalhaoStats() {
   // Calcular dados de produtividade prevista vs real
   const produtividadeComparativa = useMemo(() => {
     const pesoBrutoList = pesoBrutoTotais ?? [];
-    return TALHOES_INFO.map((talhaoInfo) => {
+    return talhoesSafra.map((talhaoInfo) => {
       const hectares = parseFloat(talhaoInfo.hectares.replace(",", ".")) || 0;
-      const stats = talhaoStats.find((s) => s.talhao === talhaoInfo.id);
+      const stats = talhaoStats.find((s) => s.talhao === talhaoInfo.nome);
 
       // Buscar dados dos carregamentos (peso real da algodoeira)
-      const pesoBrutoData = pesoBrutoList.find((p) => p.talhao === talhaoInfo.id);
+      const pesoBrutoData = pesoBrutoList.find((p) => p.talhao === talhaoInfo.nome);
 
       const totalFardos = stats?.total || 0;
 
@@ -268,8 +273,8 @@ export default function TalhaoStats() {
       const pesoBrutoTotal = pesoBrutoData?.pesoBrutoTotal || 0;
       const qtdCarregamentos = pesoBrutoData?.quantidadeCarregamentos || 0;
 
-      // Peso médio do fardo = peso total dos carregamentos / quantidade de carregamentos
-      const pesoMedioRealFardo = qtdCarregamentos > 0 ? pesoBrutoTotal / qtdCarregamentos : 0;
+      // Peso médio real do fardo = peso total / quantidade de fardos
+      const pesoMedioRealFardo = totalFardos > 0 ? pesoBrutoTotal / totalFardos : 0;
 
       // Produtividade PREVISTA: estimativa baseada na contagem de fardos
       // Cada fardo tem média ESTIMADA de 2000kg
@@ -277,11 +282,11 @@ export default function TalhaoStats() {
       const produtividadePrevistoKg = hectares > 0 && totalFardos > 0 ? pesoEstimado / hectares : 0;
       const produtividadePrevistoArrobas = produtividadePrevistoKg / 15; // 1 arroba = ~15kg
 
-      // Produtividade REAL: (pesoMédioFardo × qtdFardos) / hectares / 15
-      // pesoMédioFardo = pesoTotalCarregamentos / qtdCarregamentos
-      const pesoRealCalculado = pesoMedioRealFardo * totalFardos;
-      const produtividadeRealKg = hectares > 0 && pesoMedioRealFardo > 0 && totalFardos > 0
-        ? pesoRealCalculado / hectares
+      // Produtividade REAL: pesoTotal / hectares / 15
+      // pesoMédioFardo = pesoTotal / qtdFardos
+      const pesoRealCalculado = pesoBrutoTotal;
+      const produtividadeRealKg = hectares > 0 && pesoBrutoTotal > 0
+        ? pesoBrutoTotal / hectares
         : 0;
       const produtividadeRealArrobas = produtividadeRealKg / 15; // 1 arroba = ~15kg
 
@@ -292,18 +297,18 @@ export default function TalhaoStats() {
           ? ((produtividadeRealArrobas - produtividadePrevistoArrobas) / produtividadePrevistoArrobas) * 100
           : 0;
 
-      // Tem dados reais se tiver carregamentos registrados
-      const temDadosReais = qtdCarregamentos > 0 && totalFardos > 0;
+      // Tem dados reais se tiver peso bruto registrado e fardos
+      const temDadosReais = pesoBrutoTotal > 0 && totalFardos > 0;
 
       return {
-        talhao: talhaoInfo.id,
+        talhao: talhaoInfo.nome,
         hectares,
         totalFardos,
         pesoEstimado,
         pesoBrutoTotal,
         qtdCarregamentos,
-        pesoMedioRealFardo, // Peso médio real = pesoTotal / qtdCarregamentos
-        pesoRealCalculado, // pesoMédio × qtdFardos
+        pesoMedioRealFardo, // Peso médio real = pesoTotal / qtdFardos
+        pesoRealCalculado, // peso bruto total
         produtividadePrevistoKg,
         produtividadePrevistoArrobas,
         produtividadeRealKg,
@@ -313,7 +318,7 @@ export default function TalhaoStats() {
         temDadosReais,
       };
     }).filter((t) => t.produtividadePrevistoArrobas > 0 || t.temDadosReais);
-  }, [talhaoStats, pesoBrutoTotais]);
+  }, [talhaoStats, pesoBrutoTotais, talhoesSafra]);
 
   // Totalizadores de produtividade
   const totaisProdutividade = useMemo(() => {
@@ -331,27 +336,24 @@ export default function TalhaoStats() {
       0
     );
 
-    // Total real calculado: soma de (pesoMédio × qtdFardos) de cada talhão
-    const totalPesoRealCalculado = talhoesComDados.reduce(
-      (acc, t) => acc + t.pesoRealCalculado,
-      0
-    );
-
-    // Totais para calcular peso médio global
+    // Total peso bruto real de todos os talhões com dados
     const totalPesoBruto = talhoesComDados.reduce((acc, t) => acc + t.pesoBrutoTotal, 0);
+
+    // Total de fardos dos talhões com dados reais
+    const totalFardosComDados = talhoesComDados.reduce((acc, t) => acc + t.totalFardos, 0);
     const totalCarregamentos = talhoesComDados.reduce((acc, t) => acc + t.qtdCarregamentos, 0);
 
-    // Peso médio real por fardo (global) = soma peso bruto / soma carregamentos
-    const pesoMedioRealGlobal = totalCarregamentos > 0 ? totalPesoBruto / totalCarregamentos : 0;
+    // Peso médio real por fardo (global) = soma peso bruto / soma fardos
+    const pesoMedioRealGlobal = totalFardosComDados > 0 ? totalPesoBruto / totalFardosComDados : 0;
 
     return {
       // Média prevista: peso estimado total / hectares / 15 (@/ha)
       produtividadePrevistaMedia:
         totalHectaresComFardos > 0 ? (totalPesoEstimado / totalHectaresComFardos) / 15 : 0,
-      // Média real: (pesoMédio × qtdFardos) total / hectares / 15 (@/ha)
+      // Média real: peso bruto total / hectares / 15 (@/ha)
       produtividadeRealMedia:
-        totalHectaresComDados > 0 ? (totalPesoRealCalculado / totalHectaresComDados) / 15 : 0,
-      // Peso médio real por fardo (kg) = pesoBrutoTotal / qtdCarregamentos
+        totalHectaresComDados > 0 ? (totalPesoBruto / totalHectaresComDados) / 15 : 0,
+      // Peso médio real por fardo (kg) = pesoBrutoTotal / qtdFardos
       pesoMedioRealGlobal,
       talhoesComDados: talhoesComDados.length,
       talhoesComFardos: talhoesComFardos.length,
@@ -515,7 +517,7 @@ export default function TalhaoStats() {
   const topTalhoes = useMemo(() => {
     return talhaoStats
       .map(stat => {
-        const talhaoInfo = TALHOES_INFO.find(t => t.id === stat.talhao);
+        const talhaoInfo = talhoesSafra.find(t => t.nome === stat.talhao);
         const hectares = talhaoInfo ? parseFloat(talhaoInfo.hectares.replace(",", ".")) : 0;
         const pesoEstimado = stat.total * 2000; // 2 toneladas por fardo
         const arrobasPorHa = hectares > 0 ? (pesoEstimado / hectares) / 15 : 0;
@@ -523,7 +525,7 @@ export default function TalhaoStats() {
       })
       .sort((a, b) => b.arrobasPorHa - a.arrobasPorHa)
       .slice(0, 5);
-  }, [talhaoStats]);
+  }, [talhaoStats, talhoesSafra]);
 
   return (
     <Page>
@@ -562,15 +564,12 @@ export default function TalhaoStats() {
               </div>
 
               <div className="flex items-center gap-2 self-end sm:self-auto">
-                <Select value={selectedSafra} onValueChange={setSelectedSafra}>
-                  <SelectTrigger className="w-24 sm:w-28 h-9 rounded-lg bg-surface border-border/50 text-sm">
-                    <SelectValue placeholder="Safra" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="24/25">24/25</SelectItem>
-                    <SelectItem value="25/26">25/26</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2 px-3 h-9 rounded-lg bg-surface border border-border/50">
+                  <Wheat className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium">
+                    {safraAtiva ? `${safraAtiva.nome}` : "Sem safra"}
+                  </span>
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
@@ -661,13 +660,13 @@ export default function TalhaoStats() {
                   <div className="flex items-center gap-2 sm:gap-3 mt-2 pt-2 border-t border-border/30">
                     <div className="flex-1 min-w-0">
                       <p className="text-[10px] text-muted-foreground uppercase truncate">Peso Est.</p>
-                      <p className="text-xs sm:text-sm font-bold text-foreground">2.00t</p>
+                      <p className="text-xs sm:text-sm font-bold text-foreground">2.000 kg</p>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[10px] text-muted-foreground uppercase truncate">Peso Real</p>
                       <p className="text-xs sm:text-sm font-bold text-foreground">
                         {totaisProdutividade.pesoMedioRealGlobal > 0
-                          ? `${(totaisProdutividade.pesoMedioRealGlobal / 1000).toFixed(2)}t`
+                          ? `${Math.round(totaisProdutividade.pesoMedioRealGlobal).toLocaleString('pt-BR')} kg`
                           : '-'}
                       </p>
                     </div>
@@ -687,17 +686,17 @@ export default function TalhaoStats() {
                     <div className="p-2 rounded-lg bg-neon-orange/20 group-hover:bg-neon-orange/30 transition-colors">
                       <Scale className="w-4 h-4 text-neon-orange" />
                     </div>
-                    <span className="text-xs text-neon-orange font-semibold uppercase tracking-wider">Volume</span>
+                    <span className="text-xs text-neon-orange font-semibold uppercase tracking-wider">Peso Bruto</span>
                   </div>
-                  <p className="text-3xl sm:text-4xl font-display font-bold mb-1">
-                    {(totaisCarregamentos.totalPesoKg / 1000).toFixed(1)}
-                    <span className="text-base sm:text-lg text-neon-orange ml-1">ton</span>
+                  <p className="text-xl sm:text-2xl font-display font-bold mb-1">
+                    {totaisCarregamentos.totalPesoKg.toLocaleString('pt-BR')}
+                    <span className="text-sm sm:text-base text-neon-orange ml-1">kg</span>
                   </p>
-                  <p className="text-xs text-muted-foreground">{totaisCarregamentos.totalCarregamentos} carreg.</p>
+                  <p className="text-xs text-muted-foreground">{totaisCarregamentos.totalCarregamentos} carregamentos</p>
                   <div className="flex items-center gap-2 mt-3">
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Truck className="w-3 h-3" />
-                      <span className="truncate">{(totaisCarregamentos.mediaPesoPorCarregamento / 1000).toFixed(1)} t/carreg.</span>
+                      <span className="truncate">Média: {Math.round(totaisCarregamentos.mediaPesoPorCarregamento).toLocaleString('pt-BR')} kg/carreg.</span>
                     </div>
                   </div>
                 </div>
@@ -955,10 +954,10 @@ export default function TalhaoStats() {
               <div className="glass-card p-4 rounded-xl">
                 <div className="flex items-center gap-2 mb-2">
                   <Truck className="w-4 h-4 text-neon-orange" />
-                  <span className="text-xs text-muted-foreground">Volume Total</span>
+                  <span className="text-xs text-muted-foreground">Peso Bruto</span>
                 </div>
-                <p className="text-2xl font-display font-bold text-foreground">{(totaisCarregamentos.totalPesoKg / 1000).toFixed(0)}</p>
-                <p className="text-xs text-muted-foreground">toneladas transportadas</p>
+                <p className="text-lg font-display font-bold text-foreground">{totaisCarregamentos.totalPesoKg.toLocaleString('pt-BR')}</p>
+                <p className="text-xs text-muted-foreground">kg transportados</p>
               </div>
 
               {/* Rendimento Pluma */}
@@ -1239,8 +1238,8 @@ export default function TalhaoStats() {
                     <Scale className="w-4 h-4 text-primary" />
                   </div>
                 </div>
-                <p className="text-2xl font-display font-bold text-foreground">{(totaisCarregamentos.totalPesoKg / 1000).toFixed(1)}</p>
-                <p className="text-xs text-muted-foreground">Toneladas</p>
+                <p className="text-lg font-display font-bold text-foreground">{totaisCarregamentos.totalPesoKg.toLocaleString('pt-BR')}</p>
+                <p className="text-xs text-muted-foreground">Peso Bruto (kg)</p>
               </div>
               <div className="glass-card p-4 rounded-xl">
                 <div className="flex items-center gap-2 mb-2">
@@ -1257,8 +1256,8 @@ export default function TalhaoStats() {
                     <TrendingUp className="w-4 h-4 text-accent" />
                   </div>
                 </div>
-                <p className="text-2xl font-display font-bold text-foreground">{(totaisCarregamentos.mediaPesoPorCarregamento / 1000).toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground">Ton/Carreg.</p>
+                <p className="text-lg font-display font-bold text-foreground">{Math.round(totaisCarregamentos.mediaPesoPorCarregamento).toLocaleString('pt-BR')}</p>
+                <p className="text-xs text-muted-foreground">kg/Carreg.</p>
               </div>
             </div>
 
@@ -1318,9 +1317,9 @@ export default function TalhaoStats() {
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className="text-lg font-bold text-foreground">{(item.pesoBrutoTotal / 1000).toFixed(1)} ton</p>
+                                <p className="text-sm font-bold text-foreground">{item.pesoBrutoTotal.toLocaleString('pt-BR')} kg</p>
                                 <p className="text-xs text-muted-foreground">
-                                  Média: {item.quantidadeCarregamentos > 0 ? (item.pesoBrutoTotal / item.quantidadeCarregamentos / 1000).toFixed(1) : "0"} ton/carreg.
+                                  Média: {item.quantidadeCarregamentos > 0 ? Math.round(item.pesoBrutoTotal / item.quantidadeCarregamentos).toLocaleString('pt-BR') : "0"} kg/carreg.
                                 </p>
                               </div>
                             </div>
@@ -1341,9 +1340,9 @@ export default function TalhaoStats() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-2xl font-display font-bold text-foreground">{(totaisCarregamentos.totalPesoKg / 1000).toFixed(1)} ton</p>
+                          <p className="text-lg font-display font-bold text-foreground">{totaisCarregamentos.totalPesoKg.toLocaleString('pt-BR')} kg</p>
                           <p className="text-xs text-muted-foreground">
-                            Média: {(totaisCarregamentos.mediaPesoPorCarregamento / 1000).toFixed(1)} ton/carreg.
+                            Média: {Math.round(totaisCarregamentos.mediaPesoPorCarregamento).toLocaleString('pt-BR')} kg/carreg.
                           </p>
                         </div>
                       </div>
@@ -1495,7 +1494,7 @@ export default function TalhaoStats() {
                           {item.temDadosReais && item.pesoMedioRealFardo > 0 && (
                             <div className="mt-3 pt-3 border-t border-border/30 flex items-center justify-between text-xs">
                               <span className="text-muted-foreground">Peso médio/rolo:</span>
-                              <span className="font-bold text-foreground">{(item.pesoMedioRealFardo / 1000).toFixed(2)}t</span>
+                              <span className="font-bold text-foreground">{Math.round(item.pesoMedioRealFardo).toLocaleString('pt-BR')} kg</span>
                             </div>
                           )}
                         </div>
@@ -1517,9 +1516,9 @@ export default function TalhaoStats() {
                     <Wheat className="w-4 h-4 text-purple-400" />
                   </div>
                 </div>
-                <p className="text-2xl font-bold text-purple-400">
-                  {(totaisLotes.totalPesoPluma / 1000).toFixed(1)}
-                  <span className="text-sm ml-1">ton</span>
+                <p className="text-lg font-bold text-purple-400">
+                  {totaisLotes.totalPesoPluma.toLocaleString('pt-BR')}
+                  <span className="text-xs ml-1">kg</span>
                 </p>
                 <p className="text-xs text-muted-foreground">Peso Pluma</p>
               </div>
@@ -1540,9 +1539,9 @@ export default function TalhaoStats() {
                     <Scale className="w-4 h-4 text-purple-400" />
                   </div>
                 </div>
-                <p className="text-2xl font-bold">
-                  {(totaisLotes.mediaPesoPorLote / 1000).toFixed(2)}
-                  <span className="text-sm ml-1">ton</span>
+                <p className="text-lg font-bold">
+                  {Math.round(totaisLotes.mediaPesoPorLote).toLocaleString('pt-BR')}
+                  <span className="text-xs ml-1">kg</span>
                 </p>
                 <p className="text-xs text-muted-foreground">Média/Lote</p>
               </div>
@@ -1596,8 +1595,8 @@ export default function TalhaoStats() {
                   />
                 </div>
                 <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                  <span>Peso Bruto: {(totaisCarregamentos.totalPesoKg / 1000).toFixed(1)} ton</span>
-                  <span>Pluma: {(totaisLotes.totalPesoPluma / 1000).toFixed(1)} ton</span>
+                  <span>Bruto: {totaisCarregamentos.totalPesoKg.toLocaleString('pt-BR')} kg</span>
+                  <span>Pluma: {totaisLotes.totalPesoPluma.toLocaleString('pt-BR')} kg</span>
                 </div>
               </div>
             )}
@@ -2509,7 +2508,7 @@ export default function TalhaoStats() {
                     <div className="grid grid-cols-2 gap-2 sm:gap-3">
                       <div className="glass-card p-2.5 sm:p-3 rounded-xl text-center">
                         <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">Peso Est./Fardo</p>
-                        <p className="text-lg sm:text-xl font-bold text-foreground">2.00 <span className="text-xs sm:text-sm font-normal">t</span></p>
+                        <p className="text-lg sm:text-xl font-bold text-foreground">2.000 <span className="text-xs sm:text-sm font-normal">kg</span></p>
                       </div>
                       <div className="glass-card p-2.5 sm:p-3 rounded-xl text-center">
                         <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">Peso Real/Fardo</p>
@@ -2518,9 +2517,9 @@ export default function TalhaoStats() {
                           talhaoProducao.temDadosReais ? "text-neon-cyan" : "text-muted-foreground"
                         )}>
                           {talhaoProducao.temDadosReais && talhaoProducao.pesoMedioRealFardo > 0
-                            ? `${(talhaoProducao.pesoMedioRealFardo / 1000).toFixed(2)}`
+                            ? Math.round(talhaoProducao.pesoMedioRealFardo).toLocaleString('pt-BR')
                             : '-'}
-                          {talhaoProducao.temDadosReais && <span className="text-xs sm:text-sm font-normal"> t</span>}
+                          {talhaoProducao.temDadosReais && <span className="text-xs sm:text-sm font-normal"> kg</span>}
                         </p>
                       </div>
                     </div>

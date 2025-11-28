@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth-context';
+import { useSettings } from '@/hooks/use-settings';
 import type { Bale } from '@shared/schema';
-import { TALHOES_INFO } from '@shared/talhoes';
 
 interface TalhaoStats {
   talhao: string;
@@ -12,6 +12,8 @@ interface TalhaoStats {
 
 export function useProductivityMonitor() {
   const { isAuthenticated } = useAuth();
+  const { data: settingsData } = useSettings();
+  const talhoesSafra = settingsData?.talhoesSafra || [];
   const notifyMilestone = () => {};
   const notifyLowProductivity = () => {};
   const lastTotalRef = useRef<number>(0);
@@ -73,9 +75,9 @@ export function useProductivityMonitor() {
     const productivities: number[] = [];
 
     talhaoStats.forEach((stats) => {
-      const talhaoInfo = TALHOES_INFO.find(t => t.nome === stats.talhao);
+      const talhaoInfo = talhoesSafra.find(t => t.nome === stats.talhao);
       if (talhaoInfo && talhaoInfo.hectares) {
-        const hectares = parseFloat(talhaoInfo.hectares);
+        const hectares = parseFloat(talhaoInfo.hectares.replace(",", "."));
         if (!isNaN(hectares) && hectares > 0) {
           stats.fardosPorHectare = stats.total / hectares;
           productivities.push(stats.fardosPorHectare);

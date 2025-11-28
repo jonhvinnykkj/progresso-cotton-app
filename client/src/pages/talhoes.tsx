@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { API_URL } from "@/lib/api-config";
 import { getAuthHeaders } from "@/lib/api-client";
 import type { Bale } from "@shared/schema";
-import { TALHOES_INFO } from "@shared/talhoes";
+import { useSettings } from "@/hooks/use-settings";
 import {
   Package,
   Truck,
@@ -36,6 +36,11 @@ export default function Talhoes() {
   const [, setLocation] = useLocation();
   useAuth();
 
+  // Usar talhões dinâmicos da safra ativa
+  const { data: settingsData } = useSettings();
+  const talhoesSafra = settingsData?.talhoesSafra || [];
+  const safraAtiva = settingsData?.safraAtiva;
+
   const { data: talhaoStatsData } = useQuery<Record<string, TalhaoStats>>({
     queryKey: ["/api/bales/stats-by-talhao"],
     staleTime: 60000,
@@ -49,11 +54,13 @@ export default function Talhoes() {
   });
 
   const { data: pesoBrutoTotais = [] } = useQuery<{ talhao: string; pesoBrutoTotal: number; quantidadeCarregamentos: number }[]>({
-    queryKey: ["/api/carregamentos-totais", "24/25"],
+    queryKey: ["/api/carregamentos-totais", safraAtiva?.nome || ""],
     queryFn: async () => {
+      if (!safraAtiva?.nome) return [];
+      const safraEncoded = encodeURIComponent(safraAtiva.nome);
       const url = API_URL
-        ? `${API_URL}/api/carregamentos-totais/24%2F25`
-        : `/api/carregamentos-totais/24%2F25`;
+        ? `${API_URL}/api/carregamentos-totais/${safraEncoded}`
+        : `/api/carregamentos-totais/${safraEncoded}`;
       const response = await fetch(url, {
         headers: getAuthHeaders(),
         credentials: "include",
@@ -61,15 +68,16 @@ export default function Talhoes() {
       if (!response.ok) return [];
       return response.json();
     },
+    enabled: !!safraAtiva?.nome,
     staleTime: 60000,
   });
 
-  // Calcular dados de cada talhão
+  // Calcular dados de cada talhão (agora usando talhões dinâmicos da safra)
   const talhoesData = useMemo(() => {
-    return TALHOES_INFO.map(talhaoInfo => {
+    return talhoesSafra.map(talhaoInfo => {
       const hectares = parseFloat(talhaoInfo.hectares.replace(",", ".")) || 0;
-      const stats = talhaoStats.find(s => s.talhao === talhaoInfo.id);
-      const pesoBruto = pesoBrutoTotais.find(p => p.talhao === talhaoInfo.id);
+      const stats = talhaoStats.find(s => s.talhao === talhaoInfo.nome);
+      const pesoBruto = pesoBrutoTotais.find(p => p.talhao === talhaoInfo.nome);
 
       const totalFardos = stats?.total || 0;
       const campo = stats?.campo || 0;
@@ -82,18 +90,17 @@ export default function Talhoes() {
 
       // Produtividade real
       const pesoBrutoTotal = pesoBruto?.pesoBrutoTotal || 0;
-      const qtdCarregamentos = pesoBruto?.quantidadeCarregamentos || 0;
-      const pesoMedioFardo = qtdCarregamentos > 0 ? pesoBrutoTotal / qtdCarregamentos : 0;
-      const pesoRealCalculado = pesoMedioFardo * totalFardos;
-      const produtividadeReal = hectares > 0 && pesoMedioFardo > 0 ? (pesoRealCalculado / hectares) / 15 : 0;
+      // Peso médio real do fardo = peso total / quantidade de fardos
+      const pesoMedioFardo = totalFardos > 0 ? pesoBrutoTotal / totalFardos : 0;
+      const produtividadeReal = hectares > 0 && pesoBrutoTotal > 0 ? (pesoBrutoTotal / hectares) / 15 : 0;
 
-      const temDadosReais = qtdCarregamentos > 0 && totalFardos > 0;
+      const temDadosReais = pesoBrutoTotal > 0 && totalFardos > 0;
       const diferencaPercent = produtividadePrevista > 0 && produtividadeReal > 0
         ? ((produtividadeReal - produtividadePrevista) / produtividadePrevista) * 100
         : 0;
 
       return {
-        id: talhaoInfo.id,
+        id: talhaoInfo.nome, // usar nome como ID pois é único dentro da safra
         nome: talhaoInfo.nome,
         hectares,
         totalFardos,
@@ -107,7 +114,7 @@ export default function Talhoes() {
         progressBeneficiado: totalFardos > 0 ? (beneficiado / totalFardos) * 100 : 0,
       };
     }).sort((a, b) => b.totalFardos - a.totalFardos);
-  }, [talhaoStats, pesoBrutoTotais]);
+  }, [talhoesSafra, talhaoStats, pesoBrutoTotais]);
 
   // Totais
   const totais = useMemo(() => {
@@ -137,12 +144,25 @@ export default function Talhoes() {
                   Talhões
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Visão geral de todos os talhões da safra
+                  {safraAtiva ? `Safra ${safraAtiva.nome}` : 'Nenhuma safra configurada'}
                 </p>
               </div>
             </div>
           </div>
 
+          {/* Mensagem quando não há safra */}
+          {!safraAtiva || talhoesSafra.length === 0 ? (
+            <div className="text-center py-12 glass-card rounded-xl">
+              <Wheat className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
+              <p className="text-lg font-semibold text-foreground mb-2">
+                Nenhum talhão configurado
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Configure uma safra e importe os talhões via shapefile nas configurações.
+              </p>
+            </div>
+          ) : (
+            <>
           {/* KPIs */}
           <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <div className="glass-card p-3 sm:p-4 rounded-xl text-center">
@@ -273,6 +293,8 @@ export default function Talhoes() {
               </button>
             ))}
           </div>
+          </>
+          )}
         </div>
       </PageContent>
     </Page>

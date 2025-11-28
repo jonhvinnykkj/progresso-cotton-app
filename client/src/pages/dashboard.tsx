@@ -190,6 +190,10 @@ export default function Dashboard() {
     usdBrl?: number; // taxa de câmbio
     dataAtualizacao: string;
     fonte: string;
+    variacaoDolar?: number; // % variação último mês
+    variacaoAlgodao?: number; // % variação último mês
+    variacaoPluma?: number; // % variação último mês
+    variacaoCaroco?: number; // % variação último mês
   }
 
   const { data: cotacaoData, refetch: refetchCotacao } = useQuery<CotacaoData>({
@@ -359,6 +363,11 @@ export default function Dashboard() {
     const valorCarocoBRL = pesoArrobasCaroco * cotacaoCaroco;
     const valorTotalBRL = valorPlumaBRL + valorCarocoBRL;
 
+    // Valor estimado das perdas (usando média ponderada entre pluma e caroço)
+    // Perdas são principalmente impurezas, estimamos pelo valor médio
+    const valorMedioPorArroba = (cotacaoPluma * 0.40 + cotacaoCaroco * 0.57) / 0.97;
+    const valorPerdasBRL = pesoArrobasPerdas * valorMedioPorArroba;
+
     // Valores em USD (convertido pela taxa de câmbio)
     const valorPlumaUSD = usdBrl > 0 ? valorPlumaBRL / usdBrl : 0;
     const valorCarocoUSD = usdBrl > 0 ? valorCarocoBRL / usdBrl : 0;
@@ -373,6 +382,7 @@ export default function Dashboard() {
       valorPlumaBRL,
       valorCarocoBRL,
       valorTotalBRL,
+      valorPerdasBRL,
       valorPlumaUSD,
       valorCarocoUSD,
       valorTotalUSD
@@ -549,9 +559,9 @@ export default function Dashboard() {
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/30 text-red-300">3%</span>
                       </div>
                       <p className="text-base sm:text-lg font-bold text-red-200 tracking-tight">
-                        {valorEstimado.arrobasPerdas.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @
+                        -R$ {(valorEstimado.valorPerdasBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
                       </p>
-                      <p className="text-[10px] text-white/50">impurezas</p>
+                      <p className="text-[10px] text-white/50">{valorEstimado.arrobasPerdas.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @ impurezas</p>
                     </div>
                   </div>
                 </div>
@@ -570,7 +580,16 @@ export default function Dashboard() {
                 <div className="p-1.5 rounded-lg bg-green-500/10">
                   <DollarSign className="w-3.5 h-3.5 text-green-500" />
                 </div>
-                <BarChart3 className="w-3 h-3 text-muted-foreground/50 group-hover:text-green-500 transition-colors" />
+                {cotacaoData?.variacaoDolar !== undefined && (
+                  <span className={cn(
+                    "text-[10px] font-medium px-1.5 py-0.5 rounded",
+                    cotacaoData.variacaoDolar >= 0
+                      ? "text-green-400 bg-green-500/10"
+                      : "text-red-400 bg-red-500/10"
+                  )}>
+                    {cotacaoData.variacaoDolar >= 0 ? '+' : ''}{cotacaoData.variacaoDolar.toFixed(2)}%
+                  </span>
+                )}
               </div>
               <p className="text-xl font-bold text-foreground tracking-tight">
                 <span className="text-sm text-muted-foreground font-normal">R$ </span>
@@ -588,10 +607,19 @@ export default function Dashboard() {
                 <div className="p-1.5 rounded-lg bg-amber-500/10">
                   <Wheat className="w-3.5 h-3.5 text-amber-500" />
                 </div>
-                <BarChart3 className="w-3 h-3 text-muted-foreground/50 group-hover:text-amber-500 transition-colors" />
+                {cotacaoData?.variacaoAlgodao !== undefined && (
+                  <span className={cn(
+                    "text-[10px] font-medium px-1.5 py-0.5 rounded",
+                    cotacaoData.variacaoAlgodao >= 0
+                      ? "text-green-400 bg-green-500/10"
+                      : "text-red-400 bg-red-500/10"
+                  )}>
+                    {cotacaoData.variacaoAlgodao >= 0 ? '+' : ''}{cotacaoData.variacaoAlgodao.toFixed(2)}%
+                  </span>
+                )}
               </div>
-              <p className="text-2xl font-bold text-foreground">
-                {cotacaoData?.cottonUSD ? cotacaoData.cottonUSD.toFixed(1) : '-'}<span className="text-sm text-muted-foreground">¢</span>
+              <p className="text-xl font-bold text-foreground tracking-tight">
+                {cotacaoData?.cottonUSD ? cotacaoData.cottonUSD.toFixed(1) : '-'}<span className="text-sm text-muted-foreground font-normal">¢/lb</span>
               </p>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Algodão ICE</p>
             </button>
@@ -605,7 +633,16 @@ export default function Dashboard() {
                 <div className="p-1.5 rounded-lg bg-purple-500/10">
                   <Wheat className="w-3.5 h-3.5 text-purple-500" />
                 </div>
-                <BarChart3 className="w-3 h-3 text-muted-foreground/50 group-hover:text-purple-500 transition-colors" />
+                {cotacaoData?.variacaoPluma !== undefined && (
+                  <span className={cn(
+                    "text-[10px] font-medium px-1.5 py-0.5 rounded",
+                    cotacaoData.variacaoPluma >= 0
+                      ? "text-green-400 bg-green-500/10"
+                      : "text-red-400 bg-red-500/10"
+                  )}>
+                    {cotacaoData.variacaoPluma >= 0 ? '+' : ''}{cotacaoData.variacaoPluma.toFixed(2)}%
+                  </span>
+                )}
               </div>
               <p className="text-xl font-bold text-foreground tracking-tight">
                 <span className="text-sm text-muted-foreground font-normal">R$ </span>
@@ -623,7 +660,16 @@ export default function Dashboard() {
                 <div className="p-1.5 rounded-lg bg-orange-500/10">
                   <Package className="w-3.5 h-3.5 text-orange-500" />
                 </div>
-                <BarChart3 className="w-3 h-3 text-muted-foreground/50 group-hover:text-orange-500 transition-colors" />
+                {cotacaoData?.variacaoCaroco !== undefined && (
+                  <span className={cn(
+                    "text-[10px] font-medium px-1.5 py-0.5 rounded",
+                    cotacaoData.variacaoCaroco >= 0
+                      ? "text-green-400 bg-green-500/10"
+                      : "text-red-400 bg-red-500/10"
+                  )}>
+                    {cotacaoData.variacaoCaroco >= 0 ? '+' : ''}{cotacaoData.variacaoCaroco.toFixed(2)}%
+                  </span>
+                )}
               </div>
               <p className="text-xl font-bold text-foreground tracking-tight">
                 <span className="text-sm text-muted-foreground font-normal">R$ </span>

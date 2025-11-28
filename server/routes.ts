@@ -1323,6 +1323,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     usdBrl: number; // taxa de câmbio
     dataAtualizacao: string;
     fonte: string;
+    variacaoDolar?: number; // % variação último mês
+    variacaoAlgodao?: number; // % variação último mês
+    variacaoPluma?: number; // % variação último mês
+    variacaoCaroco?: number; // % variação último mês
   } = {
     pluma: 140.00, // R$/@ padrão
     caroco: 38.00, // R$/@ padrão
@@ -1332,8 +1336,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     fonte: 'manual'
   };
 
+  // Função para buscar variação mensal do dólar
+  async function fetchDolarVariacao(): Promise<number | null> {
+    try {
+      const response = await fetch('https://economia.awesomeapi.com.br/json/daily/USD-BRL/30');
+      const data = await response.json();
+      if (Array.isArray(data) && data.length >= 2) {
+        const atual = parseFloat(data[0].bid);
+        const antigo = parseFloat(data[data.length - 1].bid);
+        const variacao = ((atual - antigo) / antigo) * 100;
+        return Math.round(variacao * 100) / 100;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching dolar variacao:', error);
+      return null;
+    }
+  }
+
   // Função para buscar cotação do algodão da Alpha Vantage
-  async function fetchCottonPrice(): Promise<{ price: number; date: string } | null> {
+  async function fetchCottonPrice(): Promise<{ price: number; date: string; variacao?: number } | null> {
     try {
       const url = `https://www.alphavantage.co/query?function=COTTON&interval=monthly&apikey=${ALPHA_VANTAGE_API_KEY}`;
       const response = await fetch(url);
@@ -1350,11 +1372,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return null;
       }
 
-      // Pegar o valor mais recente
+      // Pegar o valor mais recente e calcular variação
       const latest = timeSeries[0];
+      const priceAtual = parseFloat(latest.value);
+
+      // Calcular variação mensal (comparar com mês anterior)
+      let variacao: number | undefined;
+      if (timeSeries.length >= 2) {
+        const anterior = parseFloat(timeSeries[1].value);
+        variacao = Math.round(((priceAtual - anterior) / anterior) * 100 * 100) / 100;
+      }
+
       return {
-        price: parseFloat(latest.value), // cents per pound
-        date: latest.date
+        price: priceAtual, // cents per pound
+        date: latest.date,
+        variacao
       };
     } catch (error) {
       console.error('Error fetching cotton price from Alpha Vantage:', error);
@@ -1434,10 +1466,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(cotacaoCache);
       }
 
-      // Tentar buscar de Alpha Vantage
-      const [cottonData, usdBrlRate] = await Promise.all([
+      // Tentar buscar de Alpha Vantage e variações
+      const [cottonData, usdBrlRate, variacaoDolar] = await Promise.all([
         fetchCottonPrice(),
-        fetchUsdBrlRate()
+        fetchUsdBrlRate(),
+        fetchDolarVariacao()
       ]);
 
       if (cottonData && usdBrlRate) {
@@ -1446,16 +1479,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Caroço é aproximadamente 27% do valor da pluma (proporção de mercado)
         const carocoPrice = Math.round(plumaPrice * 0.27 * 100) / 100;
 
+        // Variação do algodão afeta pluma e caroço proporcionalmente
+        const variacaoAlgodao = cottonData.variacao;
+
         cotacaoCache = {
           pluma: plumaPrice,
           caroco: carocoPrice,
           cottonUSD: cottonData.price,
           usdBrl: usdBrlRate,
           dataAtualizacao: new Date().toISOString(),
-          fonte: 'Alpha Vantage'
+          fonte: 'Alpha Vantage',
+          variacaoDolar: variacaoDolar ?? undefined,
+          variacaoAlgodao: variacaoAlgodao,
+          variacaoPluma: variacaoAlgodao, // mesma variação do algodão
+          variacaoCaroco: variacaoAlgodao // mesma variação do algodão
         };
 
-        console.log(`Cotton price updated: ${cottonData.price} cents/lb -> R$ ${plumaPrice}/@ (USD/BRL: ${usdBrlRate})`);
+        console.log(`Cotton price updated: ${cottonData.price} cents/lb -> R$ ${plumaPrice}/@ (USD/BRL: ${usdBrlRate}, var: ${variacaoAlgodao}%)`);
       } else {
         // Se API falhou mas temos cache válido, retornar cache
         if (cotacaoCache.pluma > 0) {

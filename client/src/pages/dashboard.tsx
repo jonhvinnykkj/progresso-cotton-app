@@ -591,8 +591,8 @@ export default function Dashboard() {
                     cotacaoData.variacaoDolar >= 0
                       ? "text-green-400 bg-green-500/10"
                       : "text-red-400 bg-red-500/10"
-                  )}>
-                    {cotacaoData.variacaoDolar >= 0 ? '+' : ''}{cotacaoData.variacaoDolar.toFixed(2)}%
+                  )} title="Variação últimos 30 dias">
+                    {cotacaoData.variacaoDolar >= 0 ? '+' : ''}{cotacaoData.variacaoDolar.toFixed(2)}% <span className="opacity-60">30d</span>
                   </span>
                 )}
               </div>
@@ -618,15 +618,15 @@ export default function Dashboard() {
                     cotacaoData.variacaoAlgodao >= 0
                       ? "text-green-400 bg-green-500/10"
                       : "text-red-400 bg-red-500/10"
-                  )}>
-                    {cotacaoData.variacaoAlgodao >= 0 ? '+' : ''}{cotacaoData.variacaoAlgodao.toFixed(2)}%
+                  )} title="Variação mensal">
+                    {cotacaoData.variacaoAlgodao >= 0 ? '+' : ''}{cotacaoData.variacaoAlgodao.toFixed(2)}% <span className="opacity-60">mês</span>
                   </span>
                 )}
               </div>
               <p className="text-xl font-bold text-foreground tracking-tight">
                 {cotacaoData?.cottonUSD ? cotacaoData.cottonUSD.toFixed(1) : '-'}<span className="text-sm text-muted-foreground font-normal">¢/lb</span>
               </p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">CBOT/ICE</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">ICE Futures</p>
             </button>
 
             {/* Pluma */}
@@ -644,8 +644,8 @@ export default function Dashboard() {
                     cotacaoData.variacaoPluma >= 0
                       ? "text-green-400 bg-green-500/10"
                       : "text-red-400 bg-red-500/10"
-                  )}>
-                    {cotacaoData.variacaoPluma >= 0 ? '+' : ''}{cotacaoData.variacaoPluma.toFixed(2)}%
+                  )} title="Variação mensal">
+                    {cotacaoData.variacaoPluma >= 0 ? '+' : ''}{cotacaoData.variacaoPluma.toFixed(2)}% <span className="opacity-60">mês</span>
                   </span>
                 )}
               </div>
@@ -671,8 +671,8 @@ export default function Dashboard() {
                     cotacaoData.variacaoCaroco >= 0
                       ? "text-green-400 bg-green-500/10"
                       : "text-red-400 bg-red-500/10"
-                  )}>
-                    {cotacaoData.variacaoCaroco >= 0 ? '+' : ''}{cotacaoData.variacaoCaroco.toFixed(2)}%
+                  )} title="Variação mensal">
+                    {cotacaoData.variacaoCaroco >= 0 ? '+' : ''}{cotacaoData.variacaoCaroco.toFixed(2)}% <span className="opacity-60">mês</span>
                   </span>
                 )}
               </div>
@@ -688,10 +688,10 @@ export default function Dashboard() {
           <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground/60">
             <span className={cn(
               "flex items-center gap-1.5",
-              cotacaoFonte?.includes('ICE') || cotacaoFonte?.includes('CBOT') ? "text-green-500/70" : "text-yellow-500/70"
+              cotacaoFonte?.includes('ICE') ? "text-green-500/70" : "text-yellow-500/70"
             )}>
               <span className="w-1.5 h-1.5 rounded-full bg-current" />
-              {cotacaoFonte?.includes('ICE') || cotacaoFonte?.includes('CBOT') ? 'Bolsa de Chicago' : 'Aguardando API'}
+              {cotacaoFonte?.includes('ICE') ? 'ICE Futures (NY)' : 'Aguardando API'}
             </span>
             <span>•</span>
             <span>

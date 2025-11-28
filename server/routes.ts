@@ -1488,14 +1488,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           cottonUSD: cottonData.price,
           usdBrl: usdBrlRate,
           dataAtualizacao: new Date().toISOString(),
-          fonte: 'ICE Futures (CBOT)',
+          fonte: 'ICE Futures (NY)',
           variacaoDolar: variacaoDolar ?? undefined,
           variacaoAlgodao: variacaoAlgodao,
           variacaoPluma: variacaoAlgodao, // mesma variação do algodão
           variacaoCaroco: variacaoAlgodao // mesma variação do algodão
         };
 
-        console.log(`Cotton price (ICE Futures): ${cottonData.price} cents/lb -> R$ ${plumaPrice}/@ (USD/BRL: ${usdBrlRate}, var: ${variacaoAlgodao}%)`);
+        console.log(`Cotton price (ICE Futures NY): ${cottonData.price} cents/lb -> R$ ${plumaPrice}/@ (USD/BRL: ${usdBrlRate}, var: ${variacaoAlgodao}%)`);
       } else {
         // Se API falhou mas temos cache válido, retornar cache
         if (cotacaoCache.pluma > 0) {

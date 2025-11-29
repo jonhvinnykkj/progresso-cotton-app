@@ -24,6 +24,8 @@ import {
   BarChart3,
   Wheat,
   Calendar,
+  AlertTriangle,
+  DollarSign,
 } from "lucide-react";
 import { Page, PageContent } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
@@ -79,6 +81,61 @@ export default function TalhaoDetail() {
     enabled: !!selectedSafra,
     staleTime: 60000,
   });
+
+  // Query de perdas do talhão
+  const { data: perdasTalhao = [] } = useQuery<any[]>({
+    queryKey: ["/api/perdas", selectedSafra, talhaoId],
+    queryFn: async () => {
+      const encodedSafra = encodeURIComponent(selectedSafra);
+      const url = API_URL
+        ? `${API_URL}/api/perdas/${encodedSafra}`
+        : `/api/perdas/${encodedSafra}`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return [];
+      const allPerdas = await response.json();
+      // Filtrar apenas as perdas deste talhão
+      return allPerdas.filter((p: any) => p.talhao === talhaoId);
+    },
+    enabled: !!selectedSafra && !!talhaoId,
+    staleTime: 60000,
+  });
+
+  // Query de cotação do algodão
+  interface CotacaoData {
+    pluma: number;
+    caroco: number;
+  }
+  const { data: cotacaoData } = useQuery<CotacaoData>({
+    queryKey: ["/api/cotacao-algodao"],
+    queryFn: async () => {
+      const url = API_URL
+        ? `${API_URL}/api/cotacao-algodao`
+        : `/api/cotacao-algodao`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return { pluma: 140, caroco: 1.2 };
+      return response.json();
+    },
+    staleTime: 300000,
+  });
+
+  // Calcular total de perdas do talhão
+  const perdasStats = useMemo(() => {
+    const totalArrobasHa = perdasTalhao.reduce((acc: number, p: any) => acc + parseFloat(p.arrobasHa || "0"), 0);
+    const cotacaoPluma = cotacaoData?.pluma || 140;
+    // Valor em R$ = arrobas/ha * hectares * cotação
+    const valorTotalPerdas = totalArrobasHa * hectares * cotacaoPluma;
+    return {
+      totalArrobasHa,
+      valorTotalPerdas,
+      quantidade: perdasTalhao.length,
+    };
+  }, [perdasTalhao, hectares, cotacaoData]);
 
   // Stats do talhão
   const stats = useMemo(() => {
@@ -278,6 +335,80 @@ export default function TalhaoDetail() {
               </p>
             </div>
           </div>
+
+          {/* Perdas do Talhão */}
+          {perdasStats.quantidade > 0 && (
+            <div className="glass-card p-5 rounded-xl border-l-4 border-red-500/50">
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-500" />
+                Perdas Registradas
+                <span className="ml-auto text-xs font-normal text-muted-foreground">
+                  {perdasStats.quantidade} {perdasStats.quantidade === 1 ? 'registro' : 'registros'}
+                </span>
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                {/* Total em @/ha */}
+                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Scale className="w-4 h-4 text-red-400" />
+                    <span className="text-xs text-muted-foreground">Perda Total</span>
+                  </div>
+                  <p className="text-2xl font-display font-bold text-red-400">
+                    {perdasStats.totalArrobasHa.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">@/ha</p>
+                </div>
+
+                {/* Valor em R$ */}
+                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="w-4 h-4 text-red-400" />
+                    <span className="text-xs text-muted-foreground">Valor Estimado</span>
+                  </div>
+                  <p className="text-2xl font-display font-bold text-red-400">
+                    {perdasStats.valorTotalPerdas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    @ R$ {(cotacaoData?.pluma || 140).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Lista detalhada de perdas */}
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Detalhamento</p>
+                {perdasTalhao.map((perda: any, index: number) => {
+                  const arrobas = parseFloat(perda.arrobasHa || "0");
+                  const valorPerda = arrobas * hectares * (cotacaoData?.pluma || 140);
+                  return (
+                    <div
+                      key={perda.id || index}
+                      className="flex items-center justify-between p-3 rounded-lg bg-surface/50 border border-border/30"
+                    >
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">
+                          {perda.motivo || 'Perda não especificada'}
+                        </p>
+                        {perda.observacao && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{perda.observacao}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(perda.createdAt).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-red-400">{arrobas.toFixed(2)} @/ha</p>
+                        <p className="text-xs text-muted-foreground">
+                          {valorPerda.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Status dos Fardos */}
           <div className="glass-card p-5 rounded-xl">

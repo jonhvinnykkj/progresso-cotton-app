@@ -38,7 +38,9 @@
       "Bash(/c/Windows/System32/taskkill.exe:*)",
       "Bash(cmd.exe /c \"taskkill /F /PID 22460\")",
       "Bash(MSYS_NO_PATHCONV=1 /c/Windows/System32/taskkill.exe:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git lfs ls-files:*)",
+      "Bash(git cat-file:*)"
     ],
     "deny": [],
     "ask": []

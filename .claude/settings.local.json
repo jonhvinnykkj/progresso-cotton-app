@@ -40,7 +40,8 @@
       "Bash(MSYS_NO_PATHCONV=1 /c/Windows/System32/taskkill.exe:*)",
       "Bash(dir:*)",
       "Bash(git lfs ls-files:*)",
-      "Bash(git cat-file:*)"
+      "Bash(git cat-file:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

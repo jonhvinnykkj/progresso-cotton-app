@@ -154,98 +154,98 @@
   --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Light mode override - iOS Clean Style with Better Contrast */
+/* Light mode override - Warm & Comfortable */
 .light {
-  /* Background: iOS system background */
-  --background: 0 0% 97%;
-  --background-elevated: 0 0% 100%;
-  --foreground: 0 0% 8%;                 /* Darker text for better readability */
+  /* Background: Warm cream tone - easier on eyes */
+  --background: 40 20% 95%;              /* Warm cream */
+  --background-elevated: 40 15% 98%;
+  --foreground: 220 15% 10%;             /* Dark blue-gray text */
 
-  /* Surfaces: Clean neutral with better separation */
-  --surface: 0 0% 94%;                   /* Slightly darker for contrast */
-  --surface-elevated: 0 0% 100%;
-  --surface-hover: 0 0% 90%;
+  /* Surfaces: Warm neutrals */
+  --surface: 40 15% 92%;                 /* Warm gray surface */
+  --surface-elevated: 40 10% 98%;
+  --surface-hover: 40 15% 88%;
 
-  /* Borders: More visible */
-  --border: 0 0% 82%;
-  --border-subtle: 0 0% 88%;
-  --border-strong: 0 0% 72%;
+  /* Borders: Visible warm borders */
+  --border: 40 10% 78%;
+  --border-subtle: 40 10% 85%;
+  --border-strong: 40 10% 65%;
 
-  /* Cards: Pure white with better border */
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 8%;
-  --card-border: 0 0% 85%;
+  /* Cards: Slightly warm white */
+  --card: 40 20% 99%;
+  --card-foreground: 220 15% 10%;
+  --card-border: 40 10% 80%;
 
   /* Popover */
-  --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 8%;
-  --popover-border: 0 0% 82%;
+  --popover: 40 15% 99%;
+  --popover-foreground: 220 15% 10%;
+  --popover-border: 40 10% 78%;
 
-  /* Primary: John Deere Green - Darker for better contrast on white */
-  --primary: 110 55% 32%;                /* Darker JD Green */
+  /* Primary: John Deere Green - Rich and vibrant */
+  --primary: 110 70% 28%;                /* Deep JD Green */
   --primary-foreground: 0 0% 100%;
-  --primary-muted: 110 30% 90%;
+  --primary-muted: 110 40% 88%;
 
   /* Secondary */
-  --secondary: 0 0% 92%;
-  --secondary-foreground: 0 0% 15%;
+  --secondary: 40 12% 88%;
+  --secondary-foreground: 220 15% 15%;
 
-  /* Accent: John Deere Yellow - Darker for readability */
-  --accent: 46 85% 42%;                  /* Darker Gold */
-  --accent-foreground: 0 0% 8%;
+  /* Accent: John Deere Yellow - Rich gold */
+  --accent: 45 100% 40%;                 /* Rich Gold */
+  --accent-foreground: 220 15% 10%;
 
-  /* Muted - MUCH better contrast */
-  --muted: 0 0% 92%;
-  --muted-foreground: 0 0% 35%;
+  /* Muted - Very readable */
+  --muted: 40 10% 88%;
+  --muted-foreground: 220 10% 40%;
 
   /* Destructive */
-  --destructive: 0 72% 50%;
+  --destructive: 0 75% 45%;
   --destructive-foreground: 0 0% 100%;
 
   /* Input */
-  --input: 0 0% 94%;
-  --ring: 110 45% 35%;
+  --input: 40 12% 90%;
+  --ring: 110 70% 28%;
 
-  /* Sidebar: Dark for strong contrast */
-  --sidebar: 220 15% 8%;
+  /* Sidebar: Keep dark for strong contrast */
+  --sidebar: 110 25% 12%;                /* Dark green-tinted */
   --sidebar-foreground: 0 0% 98%;
-  --sidebar-border: 220 8% 18%;
-  --sidebar-primary: 110 55% 42%;
+  --sidebar-border: 110 15% 20%;
+  --sidebar-primary: 110 65% 45%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 220 10% 14%;
+  --sidebar-accent: 110 20% 18%;
   --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-ring: 110 55% 42%;
+  --sidebar-ring: 110 65% 45%;
 
-  /* Charts - Darker, more saturated for light bg */
-  --chart-1: 110 60% 32%;
-  --chart-2: 46 90% 42%;
-  --chart-3: 189 70% 35%;
-  --chart-4: 30 85% 48%;
-  --chart-5: 110 45% 42%;
+  /* Charts - Vibrant, saturated colors */
+  --chart-1: 110 70% 35%;                /* Rich Green */
+  --chart-2: 45 100% 45%;                /* Rich Yellow */
+  --chart-3: 189 80% 40%;                /* Vibrant Teal */
+  --chart-4: 25 95% 50%;                 /* Rich Orange */
+  --chart-5: 110 50% 45%;                /* Medium Green */
 
-  /* Bale status - Darker for light mode */
-  --bale-campo: 110 60% 32%;
-  --bale-patio: 46 90% 42%;
-  --bale-beneficiado: 189 70% 35%;
+  /* Bale status - Vibrant and clear */
+  --bale-campo: 110 70% 35%;             /* Rich Green */
+  --bale-patio: 45 100% 45%;             /* Rich Yellow/Gold */
+  --bale-beneficiado: 189 80% 40%;       /* Vibrant Teal */
 
-  /* Glass effect - iOS blur style */
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(0, 0, 0, 0.06);
-  --glass-highlight: rgba(255, 255, 255, 0.9);
+  /* Glass effect - Warm blur */
+  --glass-bg: rgba(255, 252, 245, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.95);
 
-  /* Shadows - iOS subtle */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.02);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.02);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.05), 0 2px 6px rgba(0, 0, 0, 0.02);
-  --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.02);
+  /* Shadows - More pronounced for depth */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.10), 0 4px 8px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.06);
 
-  /* Glow - very subtle */
-  --glow-emerald: 54, 124, 43;
-  --glow-xs: 0 0 6px rgba(54, 124, 43, 0.06);
-  --glow-sm: 0 0 10px rgba(54, 124, 43, 0.08);
-  --glow-md: 0 0 16px rgba(54, 124, 43, 0.1);
-  --glow-lg: 0 0 24px rgba(54, 124, 43, 0.12);
+  /* Glow - Green tinted */
+  --glow-emerald: 34, 120, 50;
+  --glow-xs: 0 0 6px rgba(34, 120, 50, 0.1);
+  --glow-sm: 0 0 10px rgba(34, 120, 50, 0.15);
+  --glow-md: 0 0 16px rgba(34, 120, 50, 0.2);
+  --glow-lg: 0 0 24px rgba(34, 120, 50, 0.25);
 }
 
 /* ============================================

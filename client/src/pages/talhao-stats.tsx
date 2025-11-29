@@ -764,28 +764,28 @@ export default function TalhaoStats() {
             </TabsTrigger>
             <TabsTrigger
               value="talhoes"
-              className="rounded-lg py-2.5 text-xs font-semibold data-[state=active]:bg-neon-cyan data-[state=active]:text-black"
+              className="rounded-lg py-2.5 text-xs font-semibold data-[state=active]:bg-cyan-500 data-[state=active]:text-white"
             >
               <Wheat className="w-4 h-4 mr-1.5" />
               <span className="hidden sm:inline">Talhões</span>
             </TabsTrigger>
             <TabsTrigger
               value="fluxo"
-              className="rounded-lg py-2.5 text-xs font-semibold data-[state=active]:bg-neon-orange data-[state=active]:text-black"
+              className="rounded-lg py-2.5 text-xs font-semibold data-[state=active]:bg-orange-500 data-[state=active]:text-white"
             >
               <Truck className="w-4 h-4 mr-1.5" />
               <span className="hidden sm:inline">Fluxo</span>
             </TabsTrigger>
             <TabsTrigger
               value="analytics"
-              className="rounded-lg py-2.5 text-xs font-semibold data-[state=active]:bg-purple-500 data-[state=active]:text-black"
+              className="rounded-lg py-2.5 text-xs font-semibold data-[state=active]:bg-purple-500 data-[state=active]:text-white"
             >
               <LineChart className="w-4 h-4 mr-1.5" />
               <span className="hidden sm:inline">Analytics</span>
             </TabsTrigger>
             <TabsTrigger
               value="mapa"
-              className="rounded-lg py-2.5 text-xs font-semibold data-[state=active]:bg-accent data-[state=active]:text-black"
+              className="rounded-lg py-2.5 text-xs font-semibold data-[state=active]:bg-amber-500 data-[state=active]:text-white"
             >
               <MapPin className="w-4 h-4 mr-1.5" />
               <span className="hidden sm:inline">Mapa</span>
@@ -809,8 +809,8 @@ export default function TalhaoStats() {
               {/* Total de Arrobas */}
               <div className="glass-card p-4 rounded-xl bg-gradient-to-br from-neon-cyan/10 to-transparent">
                 <div className="flex items-center justify-between mb-3">
-                  <Scale className="w-5 h-5 text-neon-cyan" />
-                  <span className="text-xs text-muted-foreground px-2 py-0.5 rounded-full bg-neon-cyan/10">Peso</span>
+                  <Scale className="w-5 h-5 text-cyan-500" />
+                  <span className="text-xs text-muted-foreground px-2 py-0.5 rounded-full bg-cyan-500/10">Peso</span>
                 </div>
                 <p className="text-3xl font-bold">{((globalStats?.total || 0) * 2000 / 15 / 1000).toFixed(1)}k</p>
                 <p className="text-xs text-muted-foreground">arrobas estimadas</p>
@@ -819,8 +819,8 @@ export default function TalhaoStats() {
               {/* Área Total */}
               <div className="glass-card p-4 rounded-xl bg-gradient-to-br from-neon-orange/10 to-transparent">
                 <div className="flex items-center justify-between mb-3">
-                  <MapPin className="w-5 h-5 text-neon-orange" />
-                  <span className="text-xs text-muted-foreground px-2 py-0.5 rounded-full bg-neon-orange/10">Área</span>
+                  <MapPin className="w-5 h-5 text-orange-500" />
+                  <span className="text-xs text-muted-foreground px-2 py-0.5 rounded-full bg-orange-500/10">Área</span>
                 </div>
                 <p className="text-3xl font-bold">{totalHectares.toFixed(0)}</p>
                 <p className="text-xs text-muted-foreground">hectares</p>
@@ -880,11 +880,11 @@ export default function TalhaoStats() {
                   <div className="flex flex-col items-center">
                     <div className={cn(
                       "w-16 h-16 rounded-2xl flex items-center justify-center mb-2 relative z-10",
-                      "bg-gradient-to-br from-neon-orange/20 to-neon-orange/5 border-2 border-neon-orange/30"
+                      "bg-gradient-to-br from-neon-orange/20 to-neon-orange/5 border-2 border-orange-500/30"
                     )}>
-                      <Truck className="w-7 h-7 text-neon-orange" />
+                      <Truck className="w-7 h-7 text-orange-500" />
                     </div>
-                    <p className="text-2xl font-bold text-neon-orange">{globalStats?.patio || 0}</p>
+                    <p className="text-2xl font-bold text-orange-500">{globalStats?.patio || 0}</p>
                     <p className="text-xs text-muted-foreground">No Pátio</p>
                     <p className="text-[10px] text-muted-foreground mt-1">
                       {globalStats?.total ? ((globalStats.patio / globalStats.total) * 100).toFixed(0) : 0}%
@@ -895,11 +895,11 @@ export default function TalhaoStats() {
                   <div className="flex flex-col items-center">
                     <div className={cn(
                       "w-16 h-16 rounded-2xl flex items-center justify-center mb-2 relative z-10",
-                      "bg-gradient-to-br from-neon-cyan/20 to-neon-cyan/5 border-2 border-neon-cyan/30"
+                      "bg-gradient-to-br from-neon-cyan/20 to-neon-cyan/5 border-2 border-cyan-500/30"
                     )}>
-                      <CheckCircle className="w-7 h-7 text-neon-cyan" />
+                      <CheckCircle className="w-7 h-7 text-cyan-500" />
                     </div>
-                    <p className="text-2xl font-bold text-neon-cyan">{globalStats?.beneficiado || 0}</p>
+                    <p className="text-2xl font-bold text-cyan-500">{globalStats?.beneficiado || 0}</p>
                     <p className="text-xs text-muted-foreground">Beneficiado</p>
                     <p className="text-[10px] text-muted-foreground mt-1">
                       {globalStats?.total ? ((globalStats.beneficiado / globalStats.total) * 100).toFixed(0) : 0}%
@@ -930,7 +930,7 @@ export default function TalhaoStats() {
               {/* Produtividade Média */}
               <div className="glass-card p-4 rounded-xl">
                 <div className="flex items-center gap-2 mb-3">
-                  <Target className="w-4 h-4 text-neon-cyan" />
+                  <Target className="w-4 h-4 text-cyan-500" />
                   <span className="text-xs font-medium text-muted-foreground">Produtividade</span>
                 </div>
                 <div className="flex items-baseline gap-1">
@@ -966,7 +966,7 @@ export default function TalhaoStats() {
               {/* Carregamentos */}
               <div className="glass-card p-4 rounded-xl">
                 <div className="flex items-center gap-2 mb-3">
-                  <Truck className="w-4 h-4 text-neon-orange" />
+                  <Truck className="w-4 h-4 text-orange-500" />
                   <span className="text-xs font-medium text-muted-foreground">Carregamentos</span>
                 </div>
                 <div className="flex items-baseline gap-1">
@@ -1162,12 +1162,12 @@ export default function TalhaoStats() {
                     </div>
                     <div className={cn(
                       "p-2 rounded-lg",
-                      t.temDadosReais ? "bg-neon-cyan/10" : "bg-surface/50"
+                      t.temDadosReais ? "bg-cyan-500/10" : "bg-surface/50"
                     )}>
                       <p className="text-xs text-muted-foreground">Real</p>
                       <p className={cn(
                         "text-lg font-bold",
-                        t.temDadosReais ? "text-neon-cyan" : "text-muted-foreground"
+                        t.temDadosReais ? "text-cyan-500" : "text-muted-foreground"
                       )}>
                         {t.temDadosReais ? `${t.produtividadeRealArrobas.toFixed(0)} @/ha` : '-'}
                       </p>
@@ -1181,11 +1181,11 @@ export default function TalhaoStats() {
                       style={{ width: `${t.totalFardos > 0 ? (t.campo / t.totalFardos) * 100 : 0}%` }}
                     />
                     <div
-                      className="rounded-full bg-neon-orange"
+                      className="rounded-full bg-orange-500"
                       style={{ width: `${t.totalFardos > 0 ? (t.patio / t.totalFardos) * 100 : 0}%` }}
                     />
                     <div
-                      className="rounded-full bg-neon-cyan"
+                      className="rounded-full bg-cyan-500"
                       style={{ width: `${t.totalFardos > 0 ? (t.beneficiado / t.totalFardos) * 100 : 0}%` }}
                     />
                   </div>
@@ -1207,7 +1207,7 @@ export default function TalhaoStats() {
             {/* KPIs de Carregamento */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="glass-card p-4 rounded-xl">
-                <Truck className="w-5 h-5 text-neon-orange mb-2" />
+                <Truck className="w-5 h-5 text-orange-500 mb-2" />
                 <p className="text-2xl font-bold">{totaisCarregamentos.totalCarregamentos}</p>
                 <p className="text-xs text-muted-foreground">Carregamentos</p>
               </div>
@@ -1217,7 +1217,7 @@ export default function TalhaoStats() {
                 <p className="text-xs text-muted-foreground">Toneladas</p>
               </div>
               <div className="glass-card p-4 rounded-xl">
-                <MapPin className="w-5 h-5 text-neon-cyan mb-2" />
+                <MapPin className="w-5 h-5 text-cyan-500 mb-2" />
                 <p className="text-2xl font-bold">{totaisCarregamentos.talhoesComCarregamentos}</p>
                 <p className="text-xs text-muted-foreground">Talhões</p>
               </div>
@@ -1374,7 +1374,7 @@ export default function TalhaoStats() {
               {/* Radial Progress Status */}
               <div className="glass-card p-4 rounded-xl">
                 <div className="flex items-center gap-2 mb-4">
-                  <Activity className="w-4 h-4 text-neon-cyan" />
+                  <Activity className="w-4 h-4 text-cyan-500" />
                   <h3 className="font-semibold text-sm">Taxa de Processamento</h3>
                 </div>
                 <div className="h-56">
@@ -1449,7 +1449,7 @@ export default function TalhaoStats() {
             {/* ROW 3: Status por Talhão - Stacked Bar */}
             <div className="glass-card p-4 rounded-xl">
               <div className="flex items-center gap-2 mb-4">
-                <Layers className="w-4 h-4 text-neon-orange" />
+                <Layers className="w-4 h-4 text-orange-500" />
                 <h3 className="font-semibold text-sm">Status por Talhão (Top 8)</h3>
               </div>
               <div className="h-72">
@@ -1482,7 +1482,7 @@ export default function TalhaoStats() {
               {/* Comparativo Previsto vs Real */}
               <div className="glass-card p-4 rounded-xl">
                 <div className="flex items-center gap-2 mb-4">
-                  <Target className="w-4 h-4 text-neon-cyan" />
+                  <Target className="w-4 h-4 text-cyan-500" />
                   <h3 className="font-semibold text-sm">Previsto vs Real (@/ha)</h3>
                 </div>
                 <div className="h-64">
@@ -1559,7 +1559,7 @@ export default function TalhaoStats() {
             {/* ROW 5: Carregamentos + Peso por Talhão */}
             <div className="glass-card p-4 rounded-xl">
               <div className="flex items-center gap-2 mb-4">
-                <Truck className="w-4 h-4 text-neon-orange" />
+                <Truck className="w-4 h-4 text-orange-500" />
                 <h3 className="font-semibold text-sm">Carregamentos por Talhão (toneladas)</h3>
               </div>
               <div className="h-72">
@@ -1846,12 +1846,12 @@ export default function TalhaoStats() {
                   <p className="text-xl font-bold text-primary">{globalStats?.total || 0}</p>
                   <p className="text-xs text-muted-foreground">Total Fardos</p>
                 </div>
-                <div className="p-3 rounded-lg bg-neon-cyan/10 text-center">
-                  <p className="text-xl font-bold text-neon-cyan">{taxaBeneficiamento.toFixed(0)}%</p>
+                <div className="p-3 rounded-lg bg-cyan-500/10 text-center">
+                  <p className="text-xl font-bold text-cyan-500">{taxaBeneficiamento.toFixed(0)}%</p>
                   <p className="text-xs text-muted-foreground">Beneficiado</p>
                 </div>
-                <div className="p-3 rounded-lg bg-neon-orange/10 text-center">
-                  <p className="text-xl font-bold text-neon-orange">{totaisCarregamentos.totalCarregamentos}</p>
+                <div className="p-3 rounded-lg bg-orange-500/10 text-center">
+                  <p className="text-xl font-bold text-orange-500">{totaisCarregamentos.totalCarregamentos}</p>
                   <p className="text-xs text-muted-foreground">Carregamentos</p>
                 </div>
                 <div className="p-3 rounded-lg bg-purple-500/10 text-center">
@@ -1889,17 +1889,17 @@ export default function TalhaoStats() {
                 <p className="text-xs text-muted-foreground">No Campo</p>
               </div>
               <div className="glass-card p-4 rounded-xl text-center">
-                <div className="w-8 h-8 rounded-lg bg-neon-orange/20 flex items-center justify-center mx-auto mb-2">
-                  <Truck className="w-4 h-4 text-neon-orange" />
+                <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center mx-auto mb-2">
+                  <Truck className="w-4 h-4 text-orange-500" />
                 </div>
-                <p className="text-2xl font-bold text-neon-orange">{globalStats?.patio || 0}</p>
+                <p className="text-2xl font-bold text-orange-500">{globalStats?.patio || 0}</p>
                 <p className="text-xs text-muted-foreground">No Pátio</p>
               </div>
               <div className="glass-card p-4 rounded-xl text-center">
-                <div className="w-8 h-8 rounded-lg bg-neon-cyan/20 flex items-center justify-center mx-auto mb-2">
-                  <CheckCircle className="w-4 h-4 text-neon-cyan" />
+                <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center mx-auto mb-2">
+                  <CheckCircle className="w-4 h-4 text-cyan-500" />
                 </div>
-                <p className="text-2xl font-bold text-neon-cyan">{globalStats?.beneficiado || 0}</p>
+                <p className="text-2xl font-bold text-cyan-500">{globalStats?.beneficiado || 0}</p>
                 <p className="text-xs text-muted-foreground">Beneficiado</p>
               </div>
             </div>
@@ -1941,7 +1941,7 @@ export default function TalhaoStats() {
                       <p className="text-xs text-muted-foreground">Real</p>
                       <p className={cn(
                         "text-2xl font-bold",
-                        selectedTalhaoData.temDadosReais ? "text-neon-cyan" : "text-muted-foreground"
+                        selectedTalhaoData.temDadosReais ? "text-cyan-500" : "text-muted-foreground"
                       )}>
                         {selectedTalhaoData.temDadosReais
                           ? `${selectedTalhaoData.produtividadeRealArrobas.toFixed(0)} @/ha`
@@ -1971,12 +1971,12 @@ export default function TalhaoStats() {
                       <p className="text-lg font-bold text-primary">{selectedTalhaoData.campo}</p>
                       <p className="text-xs text-muted-foreground">Campo</p>
                     </div>
-                    <div className="p-3 rounded-lg bg-neon-orange/10 text-center">
-                      <p className="text-lg font-bold text-neon-orange">{selectedTalhaoData.patio}</p>
+                    <div className="p-3 rounded-lg bg-orange-500/10 text-center">
+                      <p className="text-lg font-bold text-orange-500">{selectedTalhaoData.patio}</p>
                       <p className="text-xs text-muted-foreground">Pátio</p>
                     </div>
-                    <div className="p-3 rounded-lg bg-neon-cyan/10 text-center">
-                      <p className="text-lg font-bold text-neon-cyan">{selectedTalhaoData.beneficiado}</p>
+                    <div className="p-3 rounded-lg bg-cyan-500/10 text-center">
+                      <p className="text-lg font-bold text-cyan-500">{selectedTalhaoData.beneficiado}</p>
                       <p className="text-xs text-muted-foreground">Beneficiado</p>
                     </div>
                   </div>

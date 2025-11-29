@@ -127,13 +127,20 @@ export default function TalhaoDetail() {
   // Calcular total de perdas do talhão
   const perdasStats = useMemo(() => {
     const totalArrobasHa = perdasTalhao.reduce((acc: number, p: any) => acc + parseFloat(p.arrobasHa || "0"), 0);
-    const cotacaoPluma = cotacaoData?.pluma || 140;
-    // Valor em R$ = arrobas/ha * hectares * cotação
+    // Cotação da pluma em R$/@ (valor típico entre 130-160)
+    // Se a cotação vier muito alta (> 500), usar valor padrão
+    const cotacaoRaw = cotacaoData?.pluma || 140;
+    const cotacaoPluma = cotacaoRaw > 500 ? 140 : cotacaoRaw;
+    // Valor em R$ = arrobas/ha * hectares * cotação por arroba
     const valorTotalPerdas = totalArrobasHa * hectares * cotacaoPluma;
+
+    console.log('Perdas calc:', { totalArrobasHa, hectares, cotacaoPluma, valorTotalPerdas, cotacaoRaw });
+
     return {
       totalArrobasHa,
       valorTotalPerdas,
       quantidade: perdasTalhao.length,
+      cotacaoUsada: cotacaoPluma,
     };
   }, [perdasTalhao, hectares, cotacaoData]);
 

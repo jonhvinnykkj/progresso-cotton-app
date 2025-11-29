@@ -1285,19 +1285,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create perda
   app.post("/api/perdas", authenticateToken, authorizeRoles("campo", "admin", "superadmin"), async (req, res) => {
     try {
+      console.log("POST /api/perdas - body:", req.body);
       const data = createPerdaSchema.parse(req.body);
       const userId = req.user?.userId || "unknown-user";
+      console.log("Creating perda with data:", data, "userId:", userId);
       const perda = await storage.createPerda(data, userId);
       res.status(201).json(perda);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Validation error creating perda:", error.errors);
         return res.status(400).json({
           error: "Dados inválidos",
           details: error.errors,
         });
       }
       console.error("Error creating perda:", error);
-      res.status(500).json({ error: "Erro ao criar perda" });
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      res.status(500).json({ error: "Erro ao criar perda", details: errorMessage });
     }
   });
 

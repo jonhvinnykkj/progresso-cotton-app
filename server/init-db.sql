@@ -103,6 +103,19 @@ CREATE TABLE IF NOT EXISTS notifications (
   is_active INTEGER NOT NULL DEFAULT 1
 );
 
+-- Create perdas table (cotton losses tracking)
+CREATE TABLE IF NOT EXISTS perdas (
+  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+  safra TEXT NOT NULL,
+  talhao TEXT NOT NULL,
+  arrobas_ha TEXT NOT NULL,
+  motivo TEXT NOT NULL,
+  data_perda TIMESTAMP NOT NULL DEFAULT NOW(),
+  observacao TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  created_by TEXT
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_bales_talhao ON bales(talhao);
 CREATE INDEX IF NOT EXISTS idx_bales_safra ON bales(safra);
@@ -115,3 +128,6 @@ CREATE INDEX IF NOT EXISTS idx_users_created_by ON users(created_by);
 CREATE INDEX IF NOT EXISTS idx_notifications_active ON notifications(is_active);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
 CREATE INDEX IF NOT EXISTS idx_notifications_expires_at ON notifications(expires_at);
+CREATE INDEX IF NOT EXISTS idx_perdas_safra ON perdas(safra);
+CREATE INDEX IF NOT EXISTS idx_perdas_talhao ON perdas(talhao);
+CREATE INDEX IF NOT EXISTS idx_perdas_safra_talhao ON perdas(safra, talhao);

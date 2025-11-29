@@ -1,6 +1,6 @@
 // Service Worker for PWA offline functionality
-const CACHE_NAME = 'bale-tracker-v4-superadmin';
-const RUNTIME_CACHE = 'runtime-cache-v4';
+const CACHE_NAME = 'bale-tracker-v5';
+const RUNTIME_CACHE = 'runtime-cache-v5';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -93,8 +93,11 @@ self.addEventListener('fetch', (event) => {
 
       return fetch(request).then((response) => {
         // Cache successful responses (only GET requests)
-        // Skip partial responses (206) - they cannot be cached
-        if (response.ok && request.method === 'GET' && response.status !== 206) {
+        // Skip partial responses (206) and video files - they cannot be cached
+        const isVideo = request.url.endsWith('.mp4') || request.url.endsWith('.webm') || request.url.endsWith('.ogg');
+        const canCache = response.status === 200 && request.method === 'GET' && !isVideo;
+
+        if (canCache) {
           const responseClone = response.clone();
           caches.open(RUNTIME_CACHE).then((cache) => {
             cache.put(request, responseClone);

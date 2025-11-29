@@ -4,6 +4,7 @@ import {
   type Bale,
   type InsertBale,
   type BaleStatus,
+  type BaleType,
   type UserRole,
   type BatchCreateBales,
   type Setting,
@@ -22,6 +23,9 @@ import {
   type Fardinho,
   type CreateFardinho,
   type UpdateFardinho,
+  type Perda,
+  type CreatePerda,
+  type UpdatePerda,
   type TalhaoInfo,
   type Safra,
   type CreateSafra,
@@ -32,7 +36,7 @@ import {
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
-import { users as usersTable, bales as balesTable, settings as settingsTable, talhaoCounters as talhaoCountersTable, notifications as notificationsTable, producaoTalhao as producaoTalhaoTable, carregamentos as carregamentosTable, rendimentoTalhao as rendimentoTalhaoTable, lotes as lotesTable, fardinhos as fardinhosTable, talhoesInfo as talhoesInfoTable, safras as safrasTable, talhoesSafra as talhoesSafraTable } from "@shared/schema";
+import { users as usersTable, bales as balesTable, settings as settingsTable, talhaoCounters as talhaoCountersTable, notifications as notificationsTable, producaoTalhao as producaoTalhaoTable, carregamentos as carregamentosTable, rendimentoTalhao as rendimentoTalhaoTable, lotes as lotesTable, fardinhos as fardinhosTable, perdas as perdasTable, talhoesInfo as talhoesInfoTable, safras as safrasTable, talhoesSafra as talhoesSafraTable } from "@shared/schema";
 import { eq, sql, inArray } from "drizzle-orm";
 import { hashPassword } from "./auth";
 
@@ -141,6 +145,18 @@ export interface IStorage {
   createTalhaoSafra(data: CreateTalhaoSafra, userId: string): Promise<TalhaoSafra>;
   batchCreateTalhoesSafra(data: BatchCreateTalhoesSafra, userId: string): Promise<TalhaoSafra[]>;
   deleteTalhoesBySafra(safraId: string): Promise<void>;
+
+  // Perdas methods
+  getAllPerdasBySafra(safra: string): Promise<Perda[]>;
+  getPerdasByTalhao(safra: string, talhao: string): Promise<Perda[]>;
+  createPerda(data: CreatePerda, userId: string): Promise<Perda>;
+  updatePerda(id: string, data: UpdatePerda): Promise<Perda>;
+  deletePerda(id: string): Promise<void>;
+  getTotalPerdasBySafra(safra: string): Promise<number>;
+  getPerdasByTalhaoTotais(safra: string): Promise<{ talhao: string; totalPerdas: number; quantidadeRegistros: number }[]>;
+
+  // Bale type update
+  updateBaleType(id: string, tipo: BaleType, userId: string): Promise<Bale>;
 }
 
 export class PostgresStorage implements IStorage {
@@ -305,7 +321,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async batchCreateBales(data: BatchCreateBales, userId: string): Promise<Bale[]> {
-    const { safra, talhao, quantidade } = data;
+    const { safra, talhao, quantidade, tipo = "normal" } = data;
     const now = new Date();
 
     // Gerar números sequenciais (zera a cada nova safra)
@@ -319,7 +335,7 @@ export class PostgresStorage implements IStorage {
       .select({ id: balesTable.id })
       .from(balesTable)
       .where(inArray(balesTable.id, allIds));
-    
+
     const existingIds = new Set(existingBales.map(b => b.id));
     const skippedIds: string[] = [];
 
@@ -327,7 +343,7 @@ export class PostgresStorage implements IStorage {
     const balesData = numbers
       .map(numero => {
         const id = `S${safra}-T${talhao}-${numero}`;
-        
+
         if (existingIds.has(id)) {
           skippedIds.push(id);
           return null;
@@ -338,6 +354,7 @@ export class PostgresStorage implements IStorage {
           safra: safra,
           talhao,
           numero: parseInt(numero),
+          tipo: tipo as BaleType,
           status: "campo" as BaleStatus,
           createdBy: userId,
           createdAt: now,
@@ -1442,6 +1459,157 @@ export class PostgresStorage implements IStorage {
       }
     } catch (error) {
       console.warn('⚠️ Error syncing safra with settings:', error);
+    }
+  }
+
+  // ==================== PERDAS METHODS ====================
+
+  async getAllPerdasBySafra(safra: string): Promise<Perda[]> {
+    try {
+      const result = await db
+        .select()
+        .from(perdasTable)
+        .where(eq(perdasTable.safra, safra))
+        .orderBy(sql`${perdasTable.dataPerda} DESC`);
+      return result;
+    } catch (error) {
+      console.warn('⚠️ perdas table may not exist:', error);
+      return [];
+    }
+  }
+
+  async getPerdasByTalhao(safra: string, talhao: string): Promise<Perda[]> {
+    try {
+      const result = await db
+        .select()
+        .from(perdasTable)
+        .where(sql`${perdasTable.safra} = ${safra} AND ${perdasTable.talhao} = ${talhao}`)
+        .orderBy(sql`${perdasTable.dataPerda} DESC`);
+      return result;
+    } catch (error) {
+      console.warn('⚠️ perdas table may not exist:', error);
+      return [];
+    }
+  }
+
+  async createPerda(data: CreatePerda, userId: string): Promise<Perda> {
+    try {
+      const now = new Date();
+      const dataPerda = data.dataPerda ? new Date(data.dataPerda) : now;
+
+      console.log('Creating perda:', { data, userId });
+
+      const result = await db
+        .insert(perdasTable)
+        .values({
+          safra: data.safra,
+          talhao: data.talhao,
+          pesoKg: data.pesoKg,
+          motivo: data.motivo,
+          dataPerda,
+          observacao: data.observacao || null,
+          createdAt: now,
+          createdBy: userId,
+        })
+        .returning();
+
+      console.log('Perda created:', result[0]);
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error creating perda:', error);
+      throw error;
+    }
+  }
+
+  async updatePerda(id: string, data: UpdatePerda): Promise<Perda> {
+    try {
+      const updateData: Record<string, unknown> = {};
+      if (data.pesoKg !== undefined) updateData.pesoKg = data.pesoKg;
+      if (data.motivo !== undefined) updateData.motivo = data.motivo;
+      if (data.observacao !== undefined) updateData.observacao = data.observacao;
+
+      const result = await db
+        .update(perdasTable)
+        .set(updateData)
+        .where(eq(perdasTable.id, id))
+        .returning();
+
+      if (!result[0]) throw new Error('Perda não encontrada');
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error updating perda:', error);
+      throw error;
+    }
+  }
+
+  async deletePerda(id: string): Promise<void> {
+    try {
+      await db.delete(perdasTable).where(eq(perdasTable.id, id));
+    } catch (error) {
+      console.error('❌ Error deleting perda:', error);
+      throw new Error('Erro ao deletar perda');
+    }
+  }
+
+  async getTotalPerdasBySafra(safra: string): Promise<number> {
+    try {
+      const result = await db
+        .select({
+          total: sql<number>`COALESCE(SUM(CAST(${perdasTable.pesoKg} AS DECIMAL)), 0)`,
+        })
+        .from(perdasTable)
+        .where(eq(perdasTable.safra, safra));
+      return Number(result[0]?.total) || 0;
+    } catch (error) {
+      console.warn('⚠️ perdas table may not exist:', error);
+      return 0;
+    }
+  }
+
+  async getPerdasByTalhaoTotais(safra: string): Promise<{ talhao: string; totalPerdas: number; quantidadeRegistros: number }[]> {
+    try {
+      const result = await db
+        .select({
+          talhao: perdasTable.talhao,
+          totalPerdas: sql<number>`COALESCE(SUM(CAST(${perdasTable.pesoKg} AS DECIMAL)), 0)`,
+          quantidadeRegistros: sql<number>`COUNT(*)`,
+        })
+        .from(perdasTable)
+        .where(eq(perdasTable.safra, safra))
+        .groupBy(perdasTable.talhao);
+
+      return result.map(r => ({
+        talhao: r.talhao,
+        totalPerdas: Number(r.totalPerdas) || 0,
+        quantidadeRegistros: Number(r.quantidadeRegistros) || 0,
+      }));
+    } catch (error) {
+      console.warn('⚠️ Error fetching perdas by talhao:', error);
+      return [];
+    }
+  }
+
+  // ==================== BALE TYPE UPDATE ====================
+
+  async updateBaleType(id: string, tipo: BaleType, userId: string): Promise<Bale> {
+    try {
+      const now = new Date();
+
+      const result = await db
+        .update(balesTable)
+        .set({
+          tipo,
+          updatedAt: now,
+          updatedBy: userId,
+        })
+        .where(eq(balesTable.id, id))
+        .returning();
+
+      if (!result[0]) throw new Error('Fardo não encontrado');
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error updating bale type:', error);
+      throw error;
     }
   }
 }

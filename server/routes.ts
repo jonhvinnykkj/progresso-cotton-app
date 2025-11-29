@@ -15,6 +15,9 @@ import {
   updateLoteSchema,
   createFardinhoSchema,
   updateFardinhoSchema,
+  createPerdaSchema,
+  updatePerdaSchema,
+  updateBaleTypeSchema,
   createSafraSchema,
   updateSafraSchema,
   batchCreateTalhoesSafraSchema,
@@ -1238,6 +1241,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting talhoes:", error);
       res.status(500).json({ error: "Erro ao deletar talhões" });
+    }
+  });
+
+  // ========== PERDAS ENDPOINTS ==========
+
+  // Get all perdas by safra
+  app.get("/api/perdas/:safra", authenticateToken, async (req, res) => {
+    try {
+      const { safra } = req.params;
+      const perdas = await storage.getAllPerdasBySafra(decodeURIComponent(safra));
+      res.json(perdas);
+    } catch (error) {
+      console.error("Error fetching perdas:", error);
+      res.status(500).json({ error: "Erro ao buscar perdas" });
+    }
+  });
+
+  // Get total perdas by safra
+  app.get("/api/perdas-total/:safra", authenticateToken, async (req, res) => {
+    try {
+      const { safra } = req.params;
+      const total = await storage.getTotalPerdasBySafra(decodeURIComponent(safra));
+      res.json({ totalPerdas: total });
+    } catch (error) {
+      console.error("Error fetching total perdas:", error);
+      res.status(500).json({ error: "Erro ao buscar total de perdas" });
+    }
+  });
+
+  // Get perdas totais by talhao
+  app.get("/api/perdas-totais/:safra", authenticateToken, async (req, res) => {
+    try {
+      const { safra } = req.params;
+      const totais = await storage.getPerdasByTalhaoTotais(decodeURIComponent(safra));
+      res.json(totais);
+    } catch (error) {
+      console.error("Error fetching perdas totais:", error);
+      res.status(500).json({ error: "Erro ao buscar totais de perdas" });
+    }
+  });
+
+  // Create perda
+  app.post("/api/perdas", authenticateToken, authorizeRoles("campo", "admin", "superadmin"), async (req, res) => {
+    try {
+      const data = createPerdaSchema.parse(req.body);
+      const userId = req.user?.userId || "unknown-user";
+      const perda = await storage.createPerda(data, userId);
+      res.status(201).json(perda);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error creating perda:", error);
+      res.status(500).json({ error: "Erro ao criar perda" });
+    }
+  });
+
+  // Update perda
+  app.patch("/api/perdas/:id", authenticateToken, authorizeRoles("campo", "admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const data = updatePerdaSchema.parse(req.body);
+      const perda = await storage.updatePerda(id, data);
+      res.json(perda);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error updating perda:", error);
+      res.status(500).json({ error: "Erro ao atualizar perda" });
+    }
+  });
+
+  // Delete perda
+  app.delete("/api/perdas/:id", authenticateToken, authorizeRoles("campo", "admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deletePerda(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting perda:", error);
+      res.status(500).json({ error: "Erro ao deletar perda" });
+    }
+  });
+
+  // ========== BALE TYPE UPDATE ==========
+
+  // Update bale type (bordadura/bituca/normal)
+  app.patch("/api/bales/:id/tipo", authenticateToken, authorizeRoles("campo", "admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { tipo } = updateBaleTypeSchema.parse(req.body);
+      const userId = req.user?.userId || "unknown-user";
+      const bale = await storage.updateBaleType(decodeURIComponent(id), tipo, userId);
+
+      // Notificar mudança em tempo real
+      notifyBaleChange(bale.id, 'updated');
+
+      res.json(bale);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error updating bale type:", error);
+      res.status(500).json({ error: "Erro ao atualizar tipo do fardo" });
     }
   });
 

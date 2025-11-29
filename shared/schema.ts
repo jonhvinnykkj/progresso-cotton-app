@@ -9,6 +9,9 @@ export type UserRole = "superadmin" | "admin" | "campo" | "transporte" | "algodo
 // Bale status flow: campo -> patio -> beneficiado
 export type BaleStatus = "campo" | "patio" | "beneficiado";
 
+// Bale type classification
+export type BaleType = "normal" | "bordadura" | "bituca";
+
 // Users table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -26,6 +29,7 @@ export const bales = pgTable("bales", {
   safra: text("safra").notNull(),
   talhao: text("talhao").notNull(),
   numero: integer("numero").notNull(), // Sequential number: 1, 2, 3...
+  tipo: text("tipo").notNull().$type<BaleType>().default("normal"), // Tipo: normal, bordadura, bituca
   status: text("status").notNull().$type<BaleStatus>().default("campo"),
   statusHistory: text("status_history"), // JSON array of status changes with timestamps
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -114,6 +118,19 @@ export const fardinhos = pgTable("fardinhos", {
   createdBy: text("created_by"), // Usuário que cadastrou
 });
 
+// Perdas de algodão (por talhão e safra)
+export const perdas = pgTable("perdas", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  safra: text("safra").notNull(),
+  talhao: text("talhao").notNull(),
+  pesoKg: text("peso_kg").notNull(), // Peso perdido em KG
+  motivo: text("motivo").notNull(), // Motivo da perda (causa natural, praga, etc.)
+  dataPerda: timestamp("data_perda").notNull().defaultNow(),
+  observacao: text("observacao"), // Observação opcional
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: text("created_by"), // Usuário que cadastrou
+});
+
 // DEPRECATED: Mantido para compatibilidade - usar carregamentos + rendimentoTalhao
 export const producaoTalhao = pgTable("producao_talhao", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -158,6 +175,7 @@ export const batchCreateBalesSchema = z.object({
   safra: z.string().min(1, "Safra é obrigatória"),
   talhao: z.string().min(1, "Talhão é obrigatório"),
   quantidade: z.number().min(1, "Quantidade deve ser maior que 0").max(1000, "Máximo 1000 fardos por vez"),
+  tipo: z.enum(["normal", "bordadura", "bituca"]).default("normal"),
 });
 
 // Schema para criação de fardo individual (usado internamente)
@@ -287,6 +305,31 @@ export const updateFardinhoSchema = z.object({
 export type CreateFardinho = z.infer<typeof createFardinhoSchema>;
 export type UpdateFardinho = z.infer<typeof updateFardinhoSchema>;
 export type Fardinho = typeof fardinhos.$inferSelect;
+
+// Perdas schemas
+export const createPerdaSchema = z.object({
+  safra: z.string().min(1, "Safra é obrigatória"),
+  talhao: z.string().min(1, "Talhão é obrigatório"),
+  pesoKg: z.string().min(1, "Peso é obrigatório"),
+  motivo: z.string().min(1, "Motivo é obrigatório"),
+  dataPerda: z.string().optional(),
+  observacao: z.string().optional(),
+});
+
+export const updatePerdaSchema = z.object({
+  pesoKg: z.string().min(1, "Peso é obrigatório").optional(),
+  motivo: z.string().min(1, "Motivo é obrigatório").optional(),
+  observacao: z.string().optional(),
+});
+
+export type CreatePerda = z.infer<typeof createPerdaSchema>;
+export type UpdatePerda = z.infer<typeof updatePerdaSchema>;
+export type Perda = typeof perdas.$inferSelect;
+
+// Update bale type schema
+export const updateBaleTypeSchema = z.object({
+  tipo: z.enum(["normal", "bordadura", "bituca"]),
+});
 
 // DEPRECATED: Produção Talhão schemas (usar carregamentos + rendimentoTalhao)
 export const upsertProducaoTalhaoSchema = z.object({

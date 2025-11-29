@@ -717,7 +717,7 @@ export default function Algodoeira() {
 
   return (
     <Page>
-      <PageContent className="max-w-2xl space-y-6">
+      <PageContent className="max-w-4xl mx-auto space-y-6">
         {/* Hero Header - Cotton Dark Premium */}
         <div className="relative overflow-hidden rounded-2xl glass-card">
           {/* Background gradients */}

@@ -13,6 +13,7 @@ import {
   Truck,
   CheckCircle,
   TrendingUp,
+  TrendingDown,
   Sparkles,
   Scale,
   Wheat,
@@ -27,6 +28,7 @@ import {
   DollarSign,
   X,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { Page, PageContent } from "@/components/layout/page";
 import { cn } from "@/lib/utils";
@@ -120,6 +122,27 @@ export default function Dashboard() {
     enabled: !!selectedSafra,
     staleTime: 60000,
   });
+
+  // Query de perdas totais
+  const { data: perdasData } = useQuery<{ totalPerdas: number }>({
+    queryKey: ["/api/perdas-total", selectedSafra],
+    queryFn: async () => {
+      const encodedSafra = encodeURIComponent(selectedSafra);
+      const url = API_URL
+        ? `${API_URL}/api/perdas-total/${encodedSafra}`
+        : `/api/perdas-total/${encodedSafra}`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return { totalPerdas: 0 };
+      return response.json();
+    },
+    enabled: !!selectedSafra,
+    staleTime: 60000,
+  });
+
+  const totalPerdasKg = perdasData?.totalPerdas || 0;
 
   // Cálculos principais - usando talhões dinâmicos da safra
   const totalHectares = useMemo(() =>
@@ -373,6 +396,15 @@ export default function Dashboard() {
     const valorCarocoUSD = usdBrl > 0 ? valorCarocoBRL / usdBrl : 0;
     const valorTotalUSD = usdBrl > 0 ? valorTotalBRL / usdBrl : 0;
 
+    // Perdas registradas no campo (de causa natural, pragas, etc.)
+    const perdasCampoArrobas = totalPerdasKg / 15;
+    const perdasCampoValorBRL = perdasCampoArrobas * valorMedioPorArroba;
+
+    // Percentual de perdas em relação à produção pesada
+    const percentualPerdasCampo = totaisCarregamentos.totalPesoKg > 0
+      ? (totalPerdasKg / totaisCarregamentos.totalPesoKg) * 100
+      : 0;
+
     return {
       arrobasBruto: pesoArrobasBruto,
       arrobasPluma: pesoArrobasPluma,
@@ -385,9 +417,15 @@ export default function Dashboard() {
       valorPerdasBRL,
       valorPlumaUSD,
       valorCarocoUSD,
-      valorTotalUSD
+      valorTotalUSD,
+      // Perdas de campo
+      perdasCampoKg: totalPerdasKg,
+      perdasCampoTon: totalPerdasKg / 1000,
+      perdasCampoArrobas,
+      perdasCampoValorBRL,
+      percentualPerdasCampo
     };
-  }, [totaisCarregamentos.totalPesoKg, cotacaoPluma, cotacaoCaroco, usdBrl]);
+  }, [totaisCarregamentos.totalPesoKg, cotacaoPluma, cotacaoCaroco, usdBrl, totalPerdasKg]);
 
   return (
     <Page>
@@ -532,7 +570,7 @@ export default function Dashboard() {
                   </div>
 
                   {/* Breakdown Pluma/Caroço/Perdas */}
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className={cn("grid gap-2", valorEstimado.perdasCampoKg > 0 ? "grid-cols-4" : "grid-cols-3")}>
                     <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white/5 backdrop-blur border border-white/10">
                       <div className="flex items-center justify-between mb-0.5 sm:mb-1">
                         <span className="text-[10px] sm:text-xs text-purple-300 font-medium">Pluma</span>
@@ -555,7 +593,7 @@ export default function Dashboard() {
                     </div>
                     <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white/5 backdrop-blur border border-red-500/20">
                       <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-                        <span className="text-[10px] sm:text-xs text-red-300 font-medium">Perdas</span>
+                        <span className="text-[10px] sm:text-xs text-red-300 font-medium">Impurezas</span>
                         <span className="text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded bg-red-500/30 text-red-300">3%</span>
                       </div>
                       <p className="text-sm sm:text-lg font-bold text-red-200 tracking-tight">
@@ -563,6 +601,24 @@ export default function Dashboard() {
                       </p>
                       <p className="text-[9px] sm:text-[10px] text-white/50">{valorEstimado.arrobasPerdas.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @</p>
                     </div>
+                    {/* Perdas de Campo (só aparece se houver perdas registradas) */}
+                    {valorEstimado.perdasCampoKg > 0 && (
+                      <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-red-950/50 backdrop-blur border border-red-500/30">
+                        <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                          <span className="text-[10px] sm:text-xs text-red-400 font-medium flex items-center gap-1">
+                            <AlertTriangle className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                            Campo
+                          </span>
+                          <span className="text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded bg-red-500/40 text-red-300">
+                            {valorEstimado.percentualPerdasCampo.toFixed(1)}%
+                          </span>
+                        </div>
+                        <p className="text-sm sm:text-lg font-bold text-red-300 tracking-tight">
+                          -{(valorEstimado.perdasCampoValorBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
+                        </p>
+                        <p className="text-[9px] sm:text-[10px] text-red-400/60">{valorEstimado.perdasCampoTon.toFixed(1)} t</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

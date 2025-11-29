@@ -42,6 +42,11 @@ import {
   Filter,
   LogOut,
   Sparkles,
+  AlertTriangle,
+  Trash2,
+  TrendingDown,
+  CircleDot,
+  Layers,
 } from "lucide-react";
 import { z } from "zod";
 import type { Bale } from "@shared/schema";
@@ -423,6 +428,369 @@ function EtiquetasTab({ defaultSafra }: { defaultSafra: string }) {
   );
 }
 
+// Componente para registrar perdas
+function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talhoesSafra: { id: string; nome: string; hectares: string }[] }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isCreating, setIsCreating] = useState(false);
+
+  const perdaForm = useForm<PerdaForm>({
+    resolver: zodResolver(perdaSchema),
+    defaultValues: {
+      talhao: "",
+      pesoKg: "",
+      motivo: "",
+      observacao: "",
+    },
+  });
+
+  // Query para buscar perdas
+  const { data: perdas = [], isLoading: perdasLoading } = useQuery({
+    queryKey: ["/api/perdas", defaultSafra],
+    queryFn: async () => {
+      if (!defaultSafra) return [];
+      const token = localStorage.getItem("auth_token");
+      const res = await fetch(`/api/perdas/${encodeURIComponent(defaultSafra)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Erro ao buscar perdas");
+      return res.json();
+    },
+    enabled: !!defaultSafra,
+  });
+
+  // Calcular total de perdas
+  const totalPerdas = perdas.reduce((acc: number, perda: any) => acc + parseFloat(perda.pesoKg || "0"), 0);
+
+  const handleCreatePerda = async (data: PerdaForm) => {
+    if (!defaultSafra) {
+      toast({
+        variant: "destructive",
+        title: "Safra não configurada",
+        description: "Configure a safra nas configurações.",
+      });
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const token = localStorage.getItem("auth_token");
+      const res = await fetch("/api/perdas", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          safra: defaultSafra,
+          talhao: data.talhao,
+          pesoKg: data.pesoKg,
+          motivo: data.motivo,
+          observacao: data.observacao || undefined,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Erro ao registrar perda");
+
+      toast({
+        variant: "success",
+        title: "Perda registrada",
+        description: `${data.pesoKg} kg de perda registrados com sucesso.`,
+      });
+
+      perdaForm.reset();
+      queryClient.invalidateQueries({ queryKey: ["/api/perdas"] });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível registrar a perda.",
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleDeletePerda = async (id: string) => {
+    try {
+      const token = localStorage.getItem("auth_token");
+      const res = await fetch(`/api/perdas/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) throw new Error("Erro ao deletar perda");
+
+      toast({
+        variant: "success",
+        title: "Perda removida",
+        description: "Registro de perda excluído com sucesso.",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["/api/perdas"] });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível excluir a perda.",
+      });
+    }
+  };
+
+  const motivos = [
+    "Causa Natural (clima)",
+    "Praga/Doença",
+    "Fogo",
+    "Perda Mecânica",
+    "Outro",
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Formulário de registro de perdas */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-destructive/20 text-destructive">
+            <TrendingDown className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="font-bold text-base">Registrar Perda</h3>
+            <p className="text-xs text-muted-foreground">
+              Informe as perdas de algodão na produção
+            </p>
+          </div>
+        </div>
+
+        <Form {...perdaForm}>
+          <form onSubmit={perdaForm.handleSubmit(handleCreatePerda)} className="glass-card p-5 rounded-xl space-y-4">
+            <FormField
+              control={perdaForm.control}
+              name="talhao"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-semibold flex items-center gap-2">
+                    <Wheat className="w-4 h-4 text-primary" />
+                    Talhão
+                  </FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange} disabled={isCreating}>
+                    <FormControl>
+                      <SelectTrigger className="h-12 rounded-xl bg-surface border-border/50">
+                        <SelectValue placeholder="Selecione o talhão" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="rounded-xl border-border/50 bg-popover">
+                      {talhoesSafra.map((talhao) => (
+                        <SelectItem key={talhao.id} value={talhao.nome} className="rounded-lg my-0.5">
+                          <div className="flex items-center justify-between gap-3 w-full py-1">
+                            <span className="font-semibold">{talhao.nome}</span>
+                            <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full">{talhao.hectares} ha</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={perdaForm.control}
+                name="pesoKg"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-semibold flex items-center gap-2">
+                      <Package className="w-4 h-4 text-primary" />
+                      Peso (kg)
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="Ex: 1500"
+                        {...field}
+                        disabled={isCreating}
+                        className="h-12 rounded-xl bg-surface border-border/50"
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={perdaForm.control}
+                name="motivo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-semibold flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-destructive" />
+                      Motivo
+                    </FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange} disabled={isCreating}>
+                      <FormControl>
+                        <SelectTrigger className="h-12 rounded-xl bg-surface border-border/50">
+                          <SelectValue placeholder="Selecione o motivo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="rounded-xl border-border/50 bg-popover">
+                        {motivos.map((motivo) => (
+                          <SelectItem key={motivo} value={motivo} className="rounded-lg my-0.5">
+                            {motivo}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={perdaForm.control}
+              name="observacao"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-semibold flex items-center gap-2">
+                    <Lightbulb className="w-4 h-4 text-primary" />
+                    Observação (opcional)
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Detalhes adicionais..."
+                      {...field}
+                      disabled={isCreating}
+                      className="h-12 rounded-xl bg-surface border-border/50"
+                    />
+                  </FormControl>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+
+            <Button
+              type="submit"
+              className="w-full h-12 rounded-xl text-base font-semibold bg-destructive hover:bg-destructive/90"
+              disabled={isCreating}
+            >
+              {isCreating ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Registrando...
+                </>
+              ) : (
+                <>
+                  <TrendingDown className="w-5 h-5 mr-2" />
+                  Registrar Perda
+                </>
+              )}
+            </Button>
+          </form>
+        </Form>
+      </div>
+
+      {/* Resumo de perdas */}
+      <div className="glass-card p-5 rounded-xl space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-destructive/20 text-destructive">
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-base">Perdas Registradas</h3>
+            <p className="text-xs text-muted-foreground">
+              Total perdido nesta safra
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="rounded-xl p-5 bg-destructive/10 border border-destructive/20">
+            <div className="text-3xl font-display font-bold text-destructive mb-2">
+              {(totalPerdas / 1000).toFixed(1)}t
+            </div>
+            <div className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
+              <TrendingDown className="w-4 h-4 text-destructive" />
+              Total Perdido
+            </div>
+          </div>
+          <div className="rounded-xl p-5 bg-amber-500/10 border border-amber-500/20">
+            <div className="text-3xl font-display font-bold text-amber-500 mb-2">
+              {perdas.length}
+            </div>
+            <div className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              Ocorrências
+            </div>
+          </div>
+        </div>
+
+        {/* Lista de perdas */}
+        {!perdasLoading && perdas.length > 0 && (
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-border/30"></div>
+              <p className="text-xs font-bold text-muted-foreground/70 uppercase tracking-wider">
+                Histórico de Perdas
+              </p>
+              <div className="h-px flex-1 bg-border/30"></div>
+            </div>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {perdas.map((perda: any) => (
+                <div
+                  key={perda.id}
+                  className="flex items-center justify-between rounded-lg p-3 border border-border/30 bg-surface/50"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-primary text-sm">{perda.talhao}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/20 text-destructive font-semibold">
+                        {parseFloat(perda.pesoKg).toLocaleString()} kg
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{perda.motivo}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => handleDeletePerda(perda.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!perdasLoading && perdas.length === 0 && (
+          <div className="text-center p-8 rounded-xl border-2 border-dashed border-border/30 bg-surface/30">
+            <div className="inline-flex p-4 bg-surface rounded-xl mb-4">
+              <CheckCircle className="w-8 h-8 text-neon-cyan/40" />
+            </div>
+            <p className="text-sm font-bold text-foreground/80 mb-1">
+              Nenhuma perda registrada
+            </p>
+            <p className="text-xs text-muted-foreground/70">
+              Ótimo! Sem perdas até o momento.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const perdaSchema = z.object({
+  talhao: z.string().min(1, "Talhão é obrigatório"),
+  pesoKg: z.string().min(1, "Peso é obrigatório"),
+  motivo: z.string().min(1, "Motivo é obrigatório"),
+  observacao: z.string().optional(),
+});
+
+type PerdaForm = z.infer<typeof perdaSchema>;
+
 const batchCreateSchema = z.object({
   talhao: z.string().min(1, "Talhão é obrigatório"),
   quantidade: z.preprocess(
@@ -432,6 +800,7 @@ const batchCreateSchema = z.object({
       .min(1, "Quantidade deve ser maior que 0")
       .max(1000, "Máximo 1000 fardos por vez")
   ),
+  tipo: z.enum(["normal", "bordadura", "bituca"]).default("normal"),
 });
 
 const singleCreateSchema = z.object({
@@ -445,6 +814,7 @@ const singleCreateSchema = z.object({
 type BatchCreateForm = {
   talhao: string;
   quantidade: number | "";
+  tipo: "normal" | "bordadura" | "bituca";
 };
 type SingleCreateForm = z.infer<typeof singleCreateSchema>;
 
@@ -467,6 +837,7 @@ export default function Campo() {
     defaultValues: {
       talhao: "",
       quantidade: "",
+      tipo: "normal",
     },
   });
 
@@ -536,6 +907,7 @@ export default function Campo() {
         safra: defaultSafra,
         talhao: data.talhao,
         quantidade: quantidade,
+        tipo: data.tipo || "normal",
       });
 
       if (result?.bales && Array.isArray(result.bales)) {
@@ -563,7 +935,7 @@ export default function Campo() {
 
   return (
     <Page>
-      <PageContent className="max-w-2xl space-y-6">
+      <PageContent className="max-w-4xl mx-auto space-y-6">
         {/* Hero Header - Cotton Dark Premium */}
         <div className="relative overflow-hidden rounded-2xl glass-card">
           {/* Background gradients */}
@@ -654,13 +1026,13 @@ export default function Campo() {
           <div className="p-5 space-y-5">
             {/* Tabs */}
             <Tabs defaultValue="lote" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-6 p-1.5 bg-surface rounded-xl h-14">
+              <TabsList className="grid w-full grid-cols-4 mb-6 p-1.5 bg-surface rounded-xl h-14">
                 <TabsTrigger
                   value="lote"
                   className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-glow-sm transition-all"
                 >
-                  <Package className="w-4 h-4 mr-2" />
-                  <span className="font-semibold text-xs sm:text-sm">
+                  <Package className="w-4 h-4 sm:mr-2" />
+                  <span className="font-semibold text-xs sm:text-sm hidden sm:inline">
                     Em Lote
                   </span>
                 </TabsTrigger>
@@ -668,8 +1040,8 @@ export default function Campo() {
                   value="individual"
                   className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-glow-sm transition-all"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  <span className="font-semibold text-xs sm:text-sm">
+                  <Plus className="w-4 h-4 sm:mr-2" />
+                  <span className="font-semibold text-xs sm:text-sm hidden sm:inline">
                     Individual
                   </span>
                 </TabsTrigger>
@@ -677,9 +1049,18 @@ export default function Campo() {
                   value="etiquetas"
                   className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-glow-sm transition-all"
                 >
-                  <QrCode className="w-4 h-4 mr-2" />
-                  <span className="font-semibold text-xs sm:text-sm">
+                  <QrCode className="w-4 h-4 sm:mr-2" />
+                  <span className="font-semibold text-xs sm:text-sm hidden sm:inline">
                     Etiquetas
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="perdas"
+                  className="rounded-lg data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground data-[state=active]:shadow-glow-sm transition-all"
+                >
+                  <TrendingDown className="w-4 h-4 sm:mr-2" />
+                  <span className="font-semibold text-xs sm:text-sm hidden sm:inline">
+                    Perdas
                   </span>
                 </TabsTrigger>
               </TabsList>
@@ -783,6 +1164,67 @@ export default function Campo() {
                           <FormDescription className="flex items-center gap-1.5 text-xs">
                             <Zap className="w-3.5 h-3.5 text-neon-orange" />
                             Crie até 1000 fardos de uma só vez
+                          </FormDescription>
+                          <FormMessage className="text-xs" />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="tipo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-semibold flex items-center gap-2">
+                            <Layers className="w-4 h-4 text-primary" />
+                            Tipo de Fardo
+                          </FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            disabled={isCreating}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="h-12 rounded-xl bg-surface border-border/50">
+                                <SelectValue placeholder="Selecione o tipo" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="rounded-xl border-border/50 bg-popover">
+                              <SelectItem
+                                value="normal"
+                                className="rounded-lg my-0.5 data-[highlighted]:bg-primary/20"
+                              >
+                                <div className="flex items-center gap-2 py-1">
+                                  <CircleDot className="w-3.5 h-3.5 text-primary" />
+                                  <span className="font-semibold">Normal</span>
+                                  <span className="text-xs text-muted-foreground">- Fardo padrão</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem
+                                value="bordadura"
+                                className="rounded-lg my-0.5 data-[highlighted]:bg-neon-orange/20"
+                              >
+                                <div className="flex items-center gap-2 py-1">
+                                  <CircleDot className="w-3.5 h-3.5 text-neon-orange" />
+                                  <span className="font-semibold">Bordadura</span>
+                                  <span className="text-xs text-muted-foreground">- Bordas do talhão</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem
+                                value="bituca"
+                                className="rounded-lg my-0.5 data-[highlighted]:bg-amber-500/20"
+                              >
+                                <div className="flex items-center gap-2 py-1">
+                                  <CircleDot className="w-3.5 h-3.5 text-amber-500" />
+                                  <span className="font-semibold">Bituca</span>
+                                  <span className="text-xs text-muted-foreground">- Algodão restante</span>
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription className="flex items-center gap-1.5 text-xs">
+                            <Lightbulb className="w-3.5 h-3.5 text-primary" />
+                            Classifique o tipo de fardo para rastreamento
                           </FormDescription>
                           <FormMessage className="text-xs" />
                         </FormItem>
@@ -926,6 +1368,11 @@ export default function Campo() {
               {/* Tab: Buscar Etiquetas */}
               <TabsContent value="etiquetas">
                 <EtiquetasTab defaultSafra={defaultSafra} />
+              </TabsContent>
+
+              {/* Tab: Perdas */}
+              <TabsContent value="perdas">
+                <PerdasTab defaultSafra={defaultSafra} talhoesSafra={talhoesSafra} />
               </TabsContent>
             </Tabs>
           </div>

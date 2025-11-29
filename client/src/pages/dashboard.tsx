@@ -272,12 +272,8 @@ export default function Dashboard() {
     staleTime: 60000, // 1 minuto
   });
 
-  // Cotação da pluma em R$/@ (valor típico entre 130-160)
-  // Se a cotação vier muito alta (> 500), usar valor padrão
-  const cotacaoRawPluma = cotacaoData?.pluma || 140;
-  const cotacaoRawCaroco = cotacaoData?.caroco || 38;
-  const cotacaoPluma = cotacaoRawPluma > 500 ? 140 : cotacaoRawPluma;
-  const cotacaoCaroco = cotacaoRawCaroco > 200 ? 38 : cotacaoRawCaroco;
+  const cotacaoPluma = cotacaoData?.pluma || 140;
+  const cotacaoCaroco = cotacaoData?.caroco || 38;
   const cotacaoFonte = cotacaoData?.fonte || 'manual';
   const cotacaoDataAtualizacao = cotacaoData?.dataAtualizacao;
 
@@ -440,8 +436,13 @@ export default function Dashboard() {
     const valorTotalUSD = usdBrl > 0 ? valorTotalBRL / usdBrl : 0;
 
     // Perdas registradas no campo em @/ha (de causa natural, pragas, etc.)
-    // Convertendo @/ha para arrobas totais: @/ha * hectares totais
-    const perdasCampoArrobasTotais = totalPerdasArrobasHa * totalHectares;
+    // Calcular arrobas totais somando perdas de cada talhão * hectares do talhão
+    let perdasCampoArrobasTotais = 0;
+    perdasPorTalhao.forEach(p => {
+      const talhaoInfo = talhoesSafra.find(t => t.nome === p.talhao);
+      const hectaresTalhao = talhaoInfo ? parseFloat(talhaoInfo.hectares.replace(",", ".")) : 0;
+      perdasCampoArrobasTotais += p.totalPerdas * hectaresTalhao;
+    });
     const perdasCampoValorBRL = perdasCampoArrobasTotais * valorMedioPorArroba;
 
     // Percentual de perdas em relação à produção real
@@ -468,7 +469,7 @@ export default function Dashboard() {
       perdasCampoValorBRL,
       percentualPerdasCampo
     };
-  }, [totaisCarregamentos.totalPesoKg, cotacaoPluma, cotacaoCaroco, usdBrl, totalPerdasArrobasHa, totalHectares]);
+  }, [totaisCarregamentos.totalPesoKg, cotacaoPluma, cotacaoCaroco, usdBrl, totalPerdasArrobasHa, totalHectares, perdasPorTalhao, talhoesSafra]);
 
   // Perdas por talhão com valor em R$ (para modal)
   const perdasPorTalhaoComValor = useMemo(() => {

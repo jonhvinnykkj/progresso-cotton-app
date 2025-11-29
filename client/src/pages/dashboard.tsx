@@ -662,12 +662,12 @@ export default function Dashboard() {
             <div className="space-y-6">
               {/* Hero Value Card - Enhanced */}
               {totaisCarregamentos.totalPesoKg > 0 && (
-                <section className="relative p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-emerald-950/80 to-green-950/50 border border-emerald-500/20 overflow-hidden">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                <section className="relative p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/20 overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-primary/8 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
                   <div className="relative">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-emerald-300/70 text-sm font-medium">
+                      <p className="text-primary/70 text-sm font-medium">
                         Valor Líquido Estimado
                       </p>
                       {valorEstimado.variacaoDia !== 0 && (
@@ -698,7 +698,7 @@ export default function Dashboard() {
                         })}
                       </span>
                       {usdBrl > 0 && (
-                        <span className="text-lg text-emerald-300/60">
+                        <span className="text-lg text-primary/50">
                           US${" "}
                           {(valorEstimado.valorLiquidoBRL / usdBrl).toLocaleString(
                             "en-US",
@@ -747,7 +747,7 @@ export default function Dashboard() {
                 {/* Fardos */}
                 <button
                   onClick={() => setKpiModal({ open: true, tipo: "fardos" })}
-                  className="p-4 sm:p-5 rounded-xl bg-card border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all text-left group"
+                  className="p-4 sm:p-5 rounded-xl glass-card hover:border-primary/30 transition-all text-left group"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -774,7 +774,7 @@ export default function Dashboard() {
                 {/* Peso */}
                 <button
                   onClick={() => setKpiModal({ open: true, tipo: "peso" })}
-                  className="p-4 sm:p-5 rounded-xl bg-card border border-border/50 hover:border-orange-500/30 hover:shadow-lg transition-all text-left group"
+                  className="p-4 sm:p-5 rounded-xl glass-card hover:border-orange-500/30 transition-all text-left group"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -803,7 +803,7 @@ export default function Dashboard() {
                   onClick={() =>
                     setKpiModal({ open: true, tipo: "produtividade" })
                   }
-                  className="p-4 sm:p-5 rounded-xl bg-card border border-border/50 hover:border-cyan-500/30 hover:shadow-lg transition-all text-left group"
+                  className="p-4 sm:p-5 rounded-xl glass-card hover:border-cyan-500/30 transition-all text-left group"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -844,7 +844,7 @@ export default function Dashboard() {
                 {/* Área */}
                 <button
                   onClick={() => setKpiModal({ open: true, tipo: "area" })}
-                  className="p-4 sm:p-5 rounded-xl bg-card border border-border/50 hover:border-green-500/30 hover:shadow-lg transition-all text-left group"
+                  className="p-4 sm:p-5 rounded-xl glass-card hover:border-primary/30 transition-all text-left group"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -867,7 +867,7 @@ export default function Dashboard() {
               </section>
 
               {/* Pipeline - Animated Flow */}
-              <section className="p-5 rounded-xl bg-card border border-border/50">
+              <section className="p-5 rounded-xl glass-card">
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="font-semibold flex items-center gap-2">
                     <Activity className="w-4 h-4 text-primary" />
@@ -997,7 +997,7 @@ export default function Dashboard() {
               {/* Top Talhões with Bar Chart + Quick Actions */}
               <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Top Talhões with horizontal bars */}
-                <div className="p-5 rounded-xl bg-card border border-border/50">
+                <div className="p-5 rounded-xl glass-card">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="font-semibold flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-primary" />
@@ -1072,7 +1072,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="p-5 rounded-xl bg-card border border-border/50">
+                <div className="p-5 rounded-xl glass-card">
                   <h2 className="font-semibold mb-4">Acesso Rápido</h2>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -1126,7 +1126,7 @@ export default function Dashboard() {
               </section>
 
               {/* Heat Map - Talhões */}
-              <section className="p-5 rounded-xl bg-card border border-border/50">
+              <section className="p-5 rounded-xl glass-card">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-semibold flex items-center gap-2">
                     <Zap className="w-4 h-4 text-primary" />
@@ -1217,7 +1217,7 @@ export default function Dashboard() {
                       periodo: 30,
                     })
                   }
-                  className="p-5 rounded-xl bg-card border border-border/50 hover:border-green-500/30 hover:shadow-lg transition-all text-left"
+                  className="p-5 rounded-xl glass-card hover:border-primary/30 transition-all text-left"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -1276,7 +1276,7 @@ export default function Dashboard() {
                       periodo: 30,
                     })
                   }
-                  className="p-5 rounded-xl bg-card border border-border/50 hover:border-purple-500/30 hover:shadow-lg transition-all text-left"
+                  className="p-5 rounded-xl glass-card hover:border-purple-500/30 transition-all text-left"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -1337,7 +1337,7 @@ export default function Dashboard() {
                       periodo: 30,
                     })
                   }
-                  className="p-5 rounded-xl bg-card border border-border/50 hover:border-orange-500/30 hover:shadow-lg transition-all text-left"
+                  className="p-5 rounded-xl glass-card hover:border-orange-500/30 transition-all text-left"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -1373,7 +1373,7 @@ export default function Dashboard() {
               </section>
 
               {/* Valor por Componente */}
-              <section className="p-5 rounded-xl bg-card border border-border/50">
+              <section className="p-5 rounded-xl glass-card">
                 <h2 className="font-semibold flex items-center gap-2 mb-4">
                   <BarChart3 className="w-4 h-4 text-primary" />
                   Composição do Valor
@@ -1473,18 +1473,18 @@ export default function Dashboard() {
           {activeTab === "projections" && (
             <div className="space-y-6">
               {/* Projeção de Valor */}
-              <section className="p-6 rounded-xl bg-gradient-to-br from-blue-950/50 to-indigo-950/30 border border-blue-500/20">
+              <section className="p-6 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-primary/5 to-transparent border border-cyan-500/20">
                 <div className="flex items-center gap-2 mb-4">
-                  <Sparkles className="w-5 h-5 text-blue-400" />
-                  <h2 className="font-semibold text-blue-100">
+                  <Sparkles className="w-5 h-5 text-cyan-400" />
+                  <h2 className="font-semibold">
                     Projeção de Valor Final
                   </h2>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <p className="text-sm text-blue-300/70 mb-1">Valor Atual</p>
-                    <p className="text-3xl font-bold text-white">
+                    <p className="text-sm text-muted-foreground mb-1">Valor Atual</p>
+                    <p className="text-3xl font-bold text-foreground">
                       R${" "}
                       {projections.currentValue.toLocaleString("pt-BR", {
                         maximumFractionDigits: 0,
@@ -1492,10 +1492,10 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-blue-300/70 mb-1">
+                    <p className="text-sm text-muted-foreground mb-1">
                       Projeção Final
                     </p>
-                    <p className="text-3xl font-bold text-blue-300">
+                    <p className="text-3xl font-bold text-cyan-400">
                       R${" "}
                       {projections.projectedValue.toLocaleString("pt-BR", {
                         maximumFractionDigits: 0,
@@ -1506,16 +1506,16 @@ export default function Dashboard() {
 
                 <div className="mt-6">
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-blue-300/70">
+                    <span className="text-muted-foreground">
                       Progresso da Colheita
                     </span>
-                    <span className="text-white font-medium">
+                    <span className="text-foreground font-medium">
                       {projections.completionPercent.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="h-3 rounded-full bg-blue-950 overflow-hidden">
+                  <div className="h-3 rounded-full bg-surface overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-1000"
+                      className="h-full bg-gradient-to-r from-primary to-cyan-400 transition-all duration-1000"
                       style={{ width: `${projections.completionPercent}%` }}
                     />
                   </div>
@@ -1523,7 +1523,7 @@ export default function Dashboard() {
               </section>
 
               {/* Evolução Diária */}
-              <section className="p-5 rounded-xl bg-card border border-border/50">
+              <section className="p-5 rounded-xl glass-card">
                 <h2 className="font-semibold flex items-center gap-2 mb-4">
                   <LineChart className="w-4 h-4 text-primary" />
                   Evolução dos Últimos 14 Dias
@@ -1582,7 +1582,7 @@ export default function Dashboard() {
 
               {/* Métricas de Projeção */}
               <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-4 rounded-xl bg-card border border-border/50">
+                <div className="p-4 rounded-xl glass-card">
                   <div className="flex items-center gap-2 text-muted-foreground mb-2">
                     <Factory className="w-4 h-4" />
                     <span className="text-xs uppercase">Rendimento</span>
@@ -1593,7 +1593,7 @@ export default function Dashboard() {
                   </p>
                 </div>
 
-                <div className="p-4 rounded-xl bg-card border border-border/50">
+                <div className="p-4 rounded-xl glass-card">
                   <div className="flex items-center gap-2 text-muted-foreground mb-2">
                     <Scale className="w-4 h-4" />
                     <span className="text-xs uppercase">Peso Médio</span>
@@ -1606,7 +1606,7 @@ export default function Dashboard() {
                   <p className="text-xs text-muted-foreground">ton/fardo</p>
                 </div>
 
-                <div className="p-4 rounded-xl bg-card border border-border/50">
+                <div className="p-4 rounded-xl glass-card">
                   <div className="flex items-center gap-2 text-muted-foreground mb-2">
                     <Target className="w-4 h-4" />
                     <span className="text-xs uppercase">Meta</span>
@@ -1615,7 +1615,7 @@ export default function Dashboard() {
                   <p className="text-xs text-muted-foreground">@/ha objetivo</p>
                 </div>
 
-                <div className="p-4 rounded-xl bg-card border border-border/50">
+                <div className="p-4 rounded-xl glass-card">
                   <div className="flex items-center gap-2 text-muted-foreground mb-2">
                     <TrendingUp className="w-4 h-4" />
                     <span className="text-xs uppercase">Tendência</span>

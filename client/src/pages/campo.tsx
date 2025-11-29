@@ -430,21 +430,13 @@ function EtiquetasTab({ defaultSafra }: { defaultSafra: string }) {
   );
 }
 
-// Componente para registrar perdas
+// Componente para registrar perdas - Interface por Talhão
 function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talhoesSafra: { id: string; nome: string; hectares: string }[] }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreating, setIsCreating] = useState(false);
-
-  const perdaForm = useForm<PerdaForm>({
-    resolver: zodResolver(perdaSchema),
-    defaultValues: {
-      talhao: "",
-      arrobasHa: "",
-      motivo: "",
-      observacao: "",
-    },
-  });
+  const [selectedTalhao, setSelectedTalhao] = useState<{ nome: string; hectares: string } | null>(null);
+  const [formData, setFormData] = useState({ arrobasHa: "", motivo: "", observacao: "" });
 
   // Query para buscar perdas
   const { data: perdas = [], isLoading: perdasLoading } = useQuery({
@@ -465,15 +457,30 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
     enabled: !!defaultSafra,
   });
 
-  // Calcular total de perdas em @/ha
+  // Agrupar perdas por talhão
+  const perdasPorTalhao = useMemo(() => {
+    const grouped: Record<string, { total: number; count: number; perdas: any[] }> = {};
+    perdas.forEach((p: any) => {
+      if (!grouped[p.talhao]) {
+        grouped[p.talhao] = { total: 0, count: 0, perdas: [] };
+      }
+      grouped[p.talhao].total += parseFloat(p.arrobasHa || "0");
+      grouped[p.talhao].count += 1;
+      grouped[p.talhao].perdas.push(p);
+    });
+    return grouped;
+  }, [perdas]);
+
+  // Total geral
   const totalPerdas = perdas.reduce((acc: number, perda: any) => acc + parseFloat(perda.arrobasHa || "0"), 0);
 
-  const handleCreatePerda = async (data: PerdaForm) => {
-    if (!defaultSafra) {
+  const handleCreatePerda = async () => {
+    if (!defaultSafra || !selectedTalhao) return;
+    if (!formData.arrobasHa || !formData.motivo) {
       toast({
         variant: "destructive",
-        title: "Safra não configurada",
-        description: "Configure a safra nas configurações.",
+        title: "Campos obrigatórios",
+        description: "Preencha a perda em @/ha e o motivo.",
       });
       return;
     }
@@ -490,10 +497,10 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
         credentials: "include",
         body: JSON.stringify({
           safra: defaultSafra,
-          talhao: data.talhao,
-          arrobasHa: data.arrobasHa,
-          motivo: data.motivo,
-          observacao: data.observacao || undefined,
+          talhao: selectedTalhao.nome,
+          arrobasHa: formData.arrobasHa,
+          motivo: formData.motivo,
+          observacao: formData.observacao || undefined,
         }),
       });
 
@@ -502,10 +509,11 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
       toast({
         variant: "success",
         title: "Perda registrada",
-        description: `${data.arrobasHa} @/ha de perda registrados com sucesso.`,
+        description: `${formData.arrobasHa} @/ha registrados no talhão ${selectedTalhao.nome}.`,
       });
 
-      perdaForm.reset();
+      setFormData({ arrobasHa: "", motivo: "", observacao: "" });
+      setSelectedTalhao(null);
       queryClient.invalidateQueries({ queryKey: ["/api/perdas"] });
     } catch (error) {
       toast({
@@ -532,7 +540,6 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
       toast({
         variant: "success",
         title: "Perda removida",
-        description: "Registro de perda excluído com sucesso.",
       });
 
       queryClient.invalidateQueries({ queryKey: ["/api/perdas"] });
@@ -555,238 +562,233 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
 
   return (
     <div className="space-y-6">
-      {/* Formulário de registro de perdas */}
-      <div className="space-y-4">
+      {/* Header com resumo */}
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-destructive/20 text-destructive">
-            <TrendingDown className="w-4 h-4" />
+          <div className="p-2.5 rounded-xl bg-red-500/20 text-red-500">
+            <TrendingDown className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold text-base">Registrar Perda</h3>
+            <h3 className="font-bold text-lg">Perdas por Talhão</h3>
             <p className="text-xs text-muted-foreground">
-              Informe as perdas de algodão na produção
+              Clique em um talhão para registrar perda
             </p>
           </div>
         </div>
+        {totalPerdas > 0 && (
+          <div className="text-right">
+            <p className="text-2xl font-bold text-red-500">{totalPerdas.toFixed(1)} @/ha</p>
+            <p className="text-xs text-muted-foreground">{perdas.length} ocorrências</p>
+          </div>
+        )}
+      </div>
 
-        <Form {...perdaForm}>
-          <form onSubmit={perdaForm.handleSubmit(handleCreatePerda)} className="glass-card p-5 rounded-xl space-y-4">
-            <FormField
-              control={perdaForm.control}
-              name="talhao"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold flex items-center gap-2">
-                    <Wheat className="w-4 h-4 text-primary" />
-                    Talhão
-                  </FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange} disabled={isCreating}>
-                    <FormControl>
-                      <SelectTrigger className="h-12 rounded-xl bg-surface border-border/50">
-                        <SelectValue placeholder="Selecione o talhão" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="rounded-xl border-border/50 bg-popover">
-                      {talhoesSafra.map((talhao) => (
-                        <SelectItem key={talhao.id} value={talhao.nome} className="rounded-lg my-0.5">
-                          <div className="flex items-center justify-between gap-3 w-full py-1">
-                            <span className="font-semibold">{talhao.nome}</span>
-                            <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full">{talhao.hectares} ha</span>
-                          </div>
-                        </SelectItem>
+      {/* Grid de Talhões */}
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+        {talhoesSafra.map((talhao) => {
+          const perdasTalhao = perdasPorTalhao[talhao.nome];
+          const temPerda = perdasTalhao && perdasTalhao.total > 0;
+
+          return (
+            <button
+              key={talhao.id}
+              onClick={() => setSelectedTalhao(talhao)}
+              className={cn(
+                "relative p-4 rounded-xl border-2 transition-all hover:scale-105 text-left",
+                temPerda
+                  ? "bg-red-500/10 border-red-500/30 hover:border-red-500/50"
+                  : "bg-card border-border/50 hover:border-primary/50"
+              )}
+            >
+              <p className="text-lg font-bold text-foreground">{talhao.nome}</p>
+              <p className="text-xs text-muted-foreground">{talhao.hectares} ha</p>
+
+              {temPerda && (
+                <div className="mt-2 pt-2 border-t border-red-500/20">
+                  <p className="text-sm font-bold text-red-500">{perdasTalhao.total.toFixed(1)} @/ha</p>
+                  <p className="text-[10px] text-red-400">{perdasTalhao.count} registro(s)</p>
+                </div>
+              )}
+
+              {!temPerda && (
+                <div className="mt-2 pt-2 border-t border-border/30">
+                  <p className="text-xs text-muted-foreground/50">Sem perdas</p>
+                </div>
+              )}
+
+              {/* Indicador de adicionar */}
+              <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Plus className="w-3 h-3 text-primary" />
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Modal de adicionar perda */}
+      {selectedTalhao && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-border/50">
+              <div>
+                <h3 className="font-bold text-lg">Talhão {selectedTalhao.nome}</h3>
+                <p className="text-xs text-muted-foreground">{selectedTalhao.hectares} hectares</p>
+              </div>
+              <button
+                onClick={() => setSelectedTalhao(null)}
+                className="p-2 rounded-lg hover:bg-muted transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Perdas existentes do talhão */}
+            {perdasPorTalhao[selectedTalhao.nome]?.perdas.length > 0 && (
+              <div className="p-4 border-b border-border/50 bg-muted/30">
+                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Perdas Registradas</p>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {perdasPorTalhao[selectedTalhao.nome].perdas.map((p: any) => (
+                    <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                      <div>
+                        <span className="text-sm font-bold text-red-500">{parseFloat(p.arrobasHa).toFixed(1)} @/ha</span>
+                        <p className="text-xs text-muted-foreground">{p.motivo}</p>
+                      </div>
+                      <button
+                        onClick={() => handleDeletePerda(p.id)}
+                        className="p-1.5 rounded hover:bg-red-500/20 text-red-500"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Formulário */}
+            <div className="p-5 space-y-4">
+              <p className="text-sm font-semibold text-foreground">Nova Perda</p>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Perda em @/ha *</label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    placeholder="Ex: 8.5"
+                    value={formData.arrobasHa}
+                    onChange={(e) => setFormData({ ...formData, arrobasHa: e.target.value })}
+                    className="h-11 rounded-xl"
+                    disabled={isCreating}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Motivo *</label>
+                  <Select
+                    value={formData.motivo}
+                    onValueChange={(v) => setFormData({ ...formData, motivo: v })}
+                    disabled={isCreating}
+                  >
+                    <SelectTrigger className="h-11 rounded-xl">
+                      <SelectValue placeholder="Selecione o motivo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {motivos.map((m) => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField
-                control={perdaForm.control}
-                name="arrobasHa"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold flex items-center gap-2">
-                      <Package className="w-4 h-4 text-primary" />
-                      Perda (@/ha)
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="Ex: 15.5"
-                        {...field}
-                        disabled={isCreating}
-                        className="h-12 rounded-xl bg-surface border-border/50"
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={perdaForm.control}
-                name="motivo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-destructive" />
-                      Motivo
-                    </FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange} disabled={isCreating}>
-                      <FormControl>
-                        <SelectTrigger className="h-12 rounded-xl bg-surface border-border/50">
-                          <SelectValue placeholder="Selecione o motivo" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="rounded-xl border-border/50 bg-popover">
-                        {motivos.map((motivo) => (
-                          <SelectItem key={motivo} value={motivo} className="rounded-lg my-0.5">
-                            {motivo}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={perdaForm.control}
-              name="observacao"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold flex items-center gap-2">
-                    <Lightbulb className="w-4 h-4 text-primary" />
-                    Observação (opcional)
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Detalhes adicionais..."
-                      {...field}
-                      disabled={isCreating}
-                      className="h-12 rounded-xl bg-surface border-border/50"
-                    />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-
-            <Button
-              type="submit"
-              className="w-full h-12 rounded-xl text-base font-semibold bg-destructive hover:bg-destructive/90"
-              disabled={isCreating}
-            >
-              {isCreating ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Registrando...
-                </>
-              ) : (
-                <>
-                  <TrendingDown className="w-5 h-5 mr-2" />
-                  Registrar Perda
-                </>
-              )}
-            </Button>
-          </form>
-        </Form>
-      </div>
-
-      {/* Resumo de perdas */}
-      <div className="glass-card p-5 rounded-xl space-y-5">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-destructive/20 text-destructive">
-            <AlertTriangle className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="font-bold text-base">Perdas Registradas</h3>
-            <p className="text-xs text-muted-foreground">
-              Total perdido nesta safra
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-xl p-5 bg-destructive/10 border border-destructive/20">
-            <div className="text-3xl font-display font-bold text-destructive mb-2">
-              {totalPerdas.toFixed(1)}
-            </div>
-            <div className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-              <TrendingDown className="w-4 h-4 text-destructive" />
-              Total @/ha Perdido
-            </div>
-          </div>
-          <div className="rounded-xl p-5 bg-amber-500/10 border border-amber-500/20">
-            <div className="text-3xl font-display font-bold text-amber-500 mb-2">
-              {perdas.length}
-            </div>
-            <div className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
-              Ocorrências
-            </div>
-          </div>
-        </div>
-
-        {/* Lista de perdas */}
-        {!perdasLoading && perdas.length > 0 && (
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-border/30"></div>
-              <p className="text-xs font-bold text-muted-foreground/70 uppercase tracking-wider">
-                Histórico de Perdas
-              </p>
-              <div className="h-px flex-1 bg-border/30"></div>
-            </div>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {perdas.map((perda: any) => (
-                <div
-                  key={perda.id}
-                  className="flex items-center justify-between rounded-lg p-3 border border-border/30 bg-surface/50"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-primary text-sm">{perda.talhao}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/20 text-destructive font-semibold">
-                        {parseFloat(perda.arrobasHa).toLocaleString()} @/ha
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">{perda.motivo}</p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => handleDeletePerda(perda.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
 
-        {!perdasLoading && perdas.length === 0 && (
-          <div className="text-center p-8 rounded-xl border-2 border-dashed border-border/30 bg-surface/30">
-            <div className="inline-flex p-4 bg-surface rounded-xl mb-4">
-              <CheckCircle className="w-8 h-8 text-neon-cyan/40" />
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Observação</label>
+                  <Input
+                    placeholder="Detalhes opcionais..."
+                    value={formData.observacao}
+                    onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
+                    className="h-11 rounded-xl"
+                    disabled={isCreating}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 h-11 rounded-xl"
+                  onClick={() => setSelectedTalhao(null)}
+                  disabled={isCreating}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="flex-1 h-11 rounded-xl bg-red-500 hover:bg-red-600"
+                  onClick={handleCreatePerda}
+                  disabled={isCreating || !formData.arrobasHa || !formData.motivo}
+                >
+                  {isCreating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Registrar
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-            <p className="text-sm font-bold text-foreground/80 mb-1">
-              Nenhuma perda registrada
-            </p>
-            <p className="text-xs text-muted-foreground/70">
-              Ótimo! Sem perdas até o momento.
-            </p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Lista geral de perdas (colapsável) */}
+      {perdas.length > 0 && (
+        <div className="glass-card rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-border/30 flex items-center justify-between">
+            <p className="text-sm font-semibold">Todas as Perdas ({perdas.length})</p>
+            <p className="text-sm font-bold text-red-500">{totalPerdas.toFixed(1)} @/ha total</p>
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {perdas.map((perda: any) => (
+              <div
+                key={perda.id}
+                className="flex items-center justify-between p-3 border-b border-border/20 last:border-0 hover:bg-muted/30"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="font-mono font-bold text-primary text-sm w-10">{perda.talhao}</span>
+                  <div>
+                    <span className="text-sm font-semibold text-red-500">{parseFloat(perda.arrobasHa).toFixed(1)} @/ha</span>
+                    <p className="text-xs text-muted-foreground">{perda.motivo}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleDeletePerda(perda.id)}
+                  className="p-2 rounded-lg hover:bg-red-500/20 text-muted-foreground hover:text-red-500"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!perdasLoading && perdas.length === 0 && (
+        <div className="text-center p-8 rounded-xl border-2 border-dashed border-border/30 bg-surface/30">
+          <div className="inline-flex p-4 bg-surface rounded-xl mb-4">
+            <CheckCircle className="w-8 h-8 text-green-500/40" />
+          </div>
+          <p className="text-sm font-bold text-foreground/80 mb-1">
+            Nenhuma perda registrada
+          </p>
+          <p className="text-xs text-muted-foreground/70">
+            Clique em um talhão acima para registrar perdas
+          </p>
+        </div>
+      )}
     </div>
   );
 }

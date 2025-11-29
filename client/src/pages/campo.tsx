@@ -1227,8 +1227,12 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
   const [selectedTalhao, setSelectedTalhao] = useState<{ nome: string; hectares: string } | null>(null);
   const [formData, setFormData] = useState({ arrobasHa: "", motivo: "", observacao: "" });
 
+  // Toggle para mostrar histórico
+  const [showHistory, setShowHistory] = useState(false);
+
   // Ref para scroll automático ao wizard
   const wizardRef = useRef<HTMLDivElement>(null);
+  const historyRef = useRef<HTMLDivElement>(null);
 
   // Scroll para o wizard quando abrir
   useEffect(() => {
@@ -1238,6 +1242,15 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
       }, 100);
     }
   }, [wizardOpen]);
+
+  // Scroll para o histórico quando abrir
+  useEffect(() => {
+    if (showHistory && historyRef.current) {
+      setTimeout(() => {
+        historyRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+  }, [showHistory]);
 
   // Query para buscar perdas
   const { data: perdas = [], isLoading: perdasLoading } = useQuery({
@@ -1533,116 +1546,76 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
 
   return (
     <div className="space-y-6">
-      {/* Header com resumo e botão de adicionar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-red-500/20 text-red-500">
-            <TrendingDown className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="font-bold text-lg">Perdas da Safra</h3>
-            <p className="text-xs text-muted-foreground">
-              {perdas.length > 0 ? `${perdas.length} ocorrência(s) registrada(s)` : "Nenhuma perda registrada"}
-            </p>
-          </div>
-        </div>
-        <Button
-          onClick={() => setWizardOpen(true)}
-          className="h-10 px-4 rounded-xl bg-red-500 hover:bg-red-600"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Registrar Perda
-        </Button>
-      </div>
+      {/* Hero Card - Design limpo e focado */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500/10 via-red-500/5 to-transparent border border-red-500/20">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-3xl" />
 
-      {/* Resumo por Talhão */}
-      {perdas.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {Object.entries(perdasPorTalhao).map(([talhao, data]) => (
-            <div
-              key={talhao}
-              className="p-4 rounded-xl bg-red-500/5 border border-red-500/20"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-primary">{talhao}</span>
-                <span className="text-xs text-muted-foreground">{data.count}x</span>
+        <div className="relative p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-2xl bg-red-500/20">
+                <TrendingDown className="w-6 h-6 text-red-500" />
               </div>
-              <p className="text-xl font-bold text-red-500">{data.total.toFixed(1)} @/ha</p>
+              <div>
+                <h3 className="text-xl font-bold">Registro de Perdas</h3>
+                <p className="text-sm text-muted-foreground">Safra {defaultSafra}</p>
+              </div>
             </div>
-          ))}
-          <div className="p-4 rounded-xl bg-red-500/10 border-2 border-red-500/30">
-            <p className="text-xs text-muted-foreground mb-2">Total Geral</p>
-            <p className="text-2xl font-bold text-red-500">{totalPerdas.toFixed(1)} @/ha</p>
           </div>
-        </div>
-      )}
 
-      {/* Lista de perdas */}
-      {perdas.length > 0 && (
-        <div className="glass-card rounded-xl overflow-hidden">
-          <div className="p-4 border-b border-border/30">
-            <p className="text-sm font-semibold">Histórico de Perdas</p>
+          {/* Resumo compacto */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="p-4 rounded-xl bg-card/50 border border-border/30">
+              <p className="text-xs text-muted-foreground mb-1">Total de Perdas</p>
+              <p className="text-2xl font-bold text-red-500">
+                {totalPerdas > 0 ? `${totalPerdas.toFixed(1)} @/ha` : "0"}
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-card/50 border border-border/30">
+              <p className="text-xs text-muted-foreground mb-1">Ocorrências</p>
+              <p className="text-2xl font-bold text-foreground">{perdas.length}</p>
+            </div>
           </div>
-          <div className="divide-y divide-border/20">
-            {perdas.map((perda: any) => (
-              <div
-                key={perda.id}
-                className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <span className="font-bold text-primary">{perda.talhao}</span>
-                  </div>
-                  <div>
-                    <p className="font-bold text-red-500">{parseFloat(perda.arrobasHa).toFixed(1)} @/ha</p>
-                    <p className="text-xs text-muted-foreground">{perda.motivo}</p>
-                    {perda.observacao && (
-                      <p className="text-xs text-muted-foreground/70 mt-0.5">{perda.observacao}</p>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleDeletePerda(perda.id)}
-                  className="p-2 rounded-lg hover:bg-red-500/20 text-muted-foreground hover:text-red-500 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* Empty state */}
-      {!perdasLoading && perdas.length === 0 && (
-        <div className="text-center p-12 rounded-2xl border-2 border-dashed border-border/30 bg-surface/30">
-          <div className="inline-flex p-4 bg-green-500/10 rounded-2xl mb-4">
-            <CheckCircle className="w-10 h-10 text-green-500/50" />
-          </div>
-          <p className="text-lg font-bold text-foreground/80 mb-2">
-            Nenhuma perda registrada
-          </p>
-          <p className="text-sm text-muted-foreground/70 mb-6">
-            Clique no botão acima para registrar uma perda
-          </p>
+          {/* Botão principal grande */}
           <Button
             onClick={() => setWizardOpen(true)}
-            variant="outline"
-            className="rounded-xl"
+            className="w-full h-14 rounded-xl text-base font-semibold bg-red-500 hover:bg-red-600"
+            disabled={wizardOpen}
           >
-            <Plus className="w-4 h-4 mr-2" />
-            Registrar Primeira Perda
+            <Plus className="w-5 h-5 mr-2" />
+            Registrar Nova Perda
           </Button>
+
+          {/* Link para ver histórico */}
+          {perdas.length > 0 && !wizardOpen && (
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="w-full mt-4 py-3 text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-2"
+            >
+              {showHistory ? (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Ocultar Histórico
+                </>
+              ) : (
+                <>
+                  <Search className="w-4 h-4" />
+                  Ver Histórico ({perdas.length} registro{perdas.length > 1 ? "s" : ""})
+                </>
+              )}
+            </button>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Wizard Inline */}
       {wizardOpen && (
-        <div ref={wizardRef} className="bg-card border-2 border-primary/30 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+        <div ref={wizardRef} className="bg-card border-2 border-red-500/30 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
           {/* Progress bar */}
           <div className="h-1.5 bg-muted">
             <div
-              className="h-full bg-primary transition-all duration-300"
+              className="h-full bg-red-500 transition-all duration-300"
               style={{ width: `${(wizardStep / 4) * 100}%` }}
             />
           </div>
@@ -1660,7 +1633,7 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
                   className={cn(
                     "w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all",
                     wizardStep === step.num
-                      ? "bg-primary text-primary-foreground scale-110 shadow-lg"
+                      ? "bg-red-500 text-white scale-110 shadow-lg"
                       : wizardStep > step.num
                       ? "bg-green-500 text-white"
                       : "bg-muted text-muted-foreground"
@@ -1670,7 +1643,7 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
                 </div>
                 <span className={cn(
                   "text-[10px] font-medium",
-                  wizardStep === step.num ? "text-primary" : "text-muted-foreground"
+                  wizardStep === step.num ? "text-red-500" : "text-muted-foreground"
                 )}>
                   {step.label}
                 </span>
@@ -1702,7 +1675,7 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
             <Button
               className={cn(
                 "flex-1 h-12 rounded-xl text-base",
-                wizardStep === 4 ? "bg-green-500 hover:bg-green-600" : ""
+                wizardStep === 4 ? "bg-green-500 hover:bg-green-600" : "bg-red-500 hover:bg-red-600"
               )}
               onClick={() => {
                 if (wizardStep === 4) {
@@ -1725,6 +1698,89 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
               )}
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Histórico expandível */}
+      {showHistory && perdas.length > 0 && (
+        <div ref={historyRef} className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+          {/* Resumo por Talhão */}
+          <div className="glass-card rounded-xl p-4">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-semibold">Perdas por Talhão</p>
+              <button
+                onClick={() => setShowHistory(false)}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Fechar
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              {Object.entries(perdasPorTalhao).map(([talhao, data]) => (
+                <div
+                  key={talhao}
+                  className="p-3 rounded-lg bg-red-500/5 border border-red-500/10"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-sm text-primary">{talhao}</span>
+                    <span className="text-[10px] text-muted-foreground">{data.count}x</span>
+                  </div>
+                  <p className="text-lg font-bold text-red-500">{data.total.toFixed(1)}</p>
+                  <p className="text-[10px] text-muted-foreground">@/ha</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Lista detalhada */}
+          <div className="glass-card rounded-xl overflow-hidden">
+            <div className="p-4 border-b border-border/30 flex items-center justify-between">
+              <p className="text-sm font-semibold">Histórico Detalhado</p>
+              <span className="text-xs text-muted-foreground">{perdas.length} registro(s)</span>
+            </div>
+            <div className="divide-y divide-border/20 max-h-[400px] overflow-y-auto">
+              {perdas.map((perda: any) => (
+                <div
+                  key={perda.id}
+                  className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                      <span className="font-bold text-red-500 text-sm">{perda.talhao}</span>
+                    </div>
+                    <div>
+                      <p className="font-bold text-red-500">{parseFloat(perda.arrobasHa).toFixed(1)} @/ha</p>
+                      <p className="text-xs text-muted-foreground">{perda.motivo}</p>
+                      {perda.observacao && (
+                        <p className="text-xs text-muted-foreground/60 mt-0.5">{perda.observacao}</p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDeletePerda(perda.id)}
+                    className="p-2 rounded-lg hover:bg-red-500/20 text-muted-foreground hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Empty state - apenas quando não está no wizard */}
+      {!perdasLoading && perdas.length === 0 && !wizardOpen && (
+        <div className="text-center p-8 rounded-xl border border-dashed border-border/30 bg-surface/30">
+          <div className="inline-flex p-3 bg-green-500/10 rounded-xl mb-3">
+            <CheckCircle className="w-8 h-8 text-green-500/50" />
+          </div>
+          <p className="text-sm font-medium text-foreground/70 mb-1">
+            Nenhuma perda registrada
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Use o botão acima para registrar
+          </p>
         </div>
       )}
     </div>

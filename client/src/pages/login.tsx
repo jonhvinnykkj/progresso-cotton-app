@@ -13,16 +13,8 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
@@ -38,9 +30,9 @@ import {
   Lock,
   Eye,
   EyeOff,
-  ChevronRight,
   Sun,
   Moon,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoProgresso from "/favicon.png";
@@ -51,77 +43,50 @@ const roles: {
   label: string;
   icon: typeof User;
   description: string;
-  color: "purple" | "blue" | "primary" | "orange" | "cyan";
+  gradient: string;
+  glowColor: string;
 }[] = [
   {
     value: "superadmin",
     label: "Super Admin",
     icon: ShieldCheck,
-    description: "Acesso total + gestão de usuários",
-    color: "purple",
+    description: "Acesso total",
+    gradient: "from-purple-500 to-pink-500",
+    glowColor: "rgba(168, 85, 247, 0.4)",
   },
   {
     value: "admin",
-    label: "Administrador",
+    label: "Admin",
     icon: ShieldCheck,
-    description: "Acesso completo ao sistema",
-    color: "blue",
+    description: "Acesso completo",
+    gradient: "from-blue-500 to-cyan-500",
+    glowColor: "rgba(59, 130, 246, 0.4)",
   },
   {
     value: "campo",
-    label: "Operador de Campo",
+    label: "Campo",
     icon: Package,
-    description: "Cadastro de novos fardos",
-    color: "primary",
+    description: "Cadastro de fardos",
+    gradient: "from-emerald-500 to-green-500",
+    glowColor: "rgba(16, 185, 129, 0.4)",
   },
   {
     value: "transporte",
-    label: "Transportador",
+    label: "Transporte",
     icon: Truck,
-    description: "Movimentação para pátio",
-    color: "orange",
+    description: "Movimentação",
+    gradient: "from-orange-500 to-amber-500",
+    glowColor: "rgba(249, 115, 22, 0.4)",
   },
   {
     value: "algodoeira",
     label: "Algodoeira",
     icon: Factory,
-    description: "Beneficiamento de fardos",
-    color: "cyan",
+    description: "Beneficiamento",
+    gradient: "from-cyan-500 to-teal-500",
+    glowColor: "rgba(6, 182, 212, 0.4)",
   },
 ];
-
-const colorClasses = {
-  purple: {
-    bg: "bg-neon-purple/20",
-    text: "text-neon-purple",
-    border: "border-neon-purple/30",
-    glow: "shadow-[0_0_20px_rgba(167,139,250,0.3)]",
-  },
-  blue: {
-    bg: "bg-blue-500/20",
-    text: "text-blue-400",
-    border: "border-blue-500/30",
-    glow: "shadow-[0_0_20px_rgba(59,130,246,0.3)]",
-  },
-  primary: {
-    bg: "bg-primary/20",
-    text: "text-primary",
-    border: "border-primary/30",
-    glow: "shadow-glow-sm",
-  },
-  orange: {
-    bg: "bg-neon-orange/20",
-    text: "text-neon-orange",
-    border: "border-neon-orange/30",
-    glow: "shadow-glow-orange",
-  },
-  cyan: {
-    bg: "bg-neon-cyan/20",
-    text: "text-neon-cyan",
-    border: "border-neon-cyan/30",
-    glow: "shadow-glow-cyan",
-  },
-};
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -132,18 +97,8 @@ export default function Login() {
   const [pendingUser, setPendingUser] = useState<any>(null);
   const [availableRoles, setAvailableRoles] = useState<UserRole[]>([]);
   const [showPassword, setShowPassword] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [selectedRoleIndex, setSelectedRoleIndex] = useState(0);
   const { theme, toggleTheme } = useTheme();
-
-  // Detect mobile device
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Check and clear cache if app version changed
   useEffect(() => {
@@ -219,6 +174,7 @@ export default function Login() {
       if (userData.availableRoles && userData.availableRoles.length > 0) {
         setPendingUser(userData);
         setAvailableRoles(userData.availableRoles);
+        setSelectedRoleIndex(0);
         setShowRoleSelector(true);
         setIsLoading(false);
         return;
@@ -288,405 +244,304 @@ export default function Login() {
     }
   };
 
-  return (
-    <div className="min-h-dvh bg-black relative overflow-hidden">
-      {/* Background - Static image on mobile, Video on desktop */}
-      <div className="absolute inset-0 z-0">
-        {isMobile ? (
-          /* Static image background for mobile */
-          <img
-            src={fazendaBg}
-            alt="Fazenda Background"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          /* Video background for desktop */
-          <video
-            className="absolute inset-0 w-full h-full object-cover"
-            src="/colheita-video.mp4"
-            autoPlay
-            loop
-            muted
-            playsInline
-          />
-        )}
-        {/* Dark overlay for readability */}
-        <div className="absolute inset-0 bg-black/40" />
-        {/* Gradient overlay for depth */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/60" />
-      </div>
+  // Filtrar roles disponíveis
+  const filteredRoles = roles.filter(r => availableRoles.includes(r.value));
 
-      {/* Animated particles/dust effect */}
-      <div className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-primary/30 rounded-full animate-float"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${5 + Math.random() * 10}s`,
-            }}
-          />
-        ))}
-      </div>
+  // Role Selector Screen (Gamer Style)
+  if (showRoleSelector) {
+    const currentRole = filteredRoles[selectedRoleIndex];
 
-      {/* Cinematic light streaks */}
-      <div className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-primary/20 to-transparent animate-pulse" style={{ animationDuration: '3s' }} />
-        <div className="absolute top-0 right-1/3 w-px h-full bg-gradient-to-b from-transparent via-neon-cyan/10 to-transparent animate-pulse" style={{ animationDuration: '4s', animationDelay: '1s' }} />
-      </div>
-
-      {/* Theme Toggle Button - Top Right */}
-      <button
-        onClick={toggleTheme}
-        className="fixed top-4 right-4 z-50 p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white/70 hover:text-white hover:bg-white/20 transition-all duration-300 shadow-lg"
-        title={theme === "dark" ? "Modo Claro" : "Modo Escuro"}
-      >
-        {theme === "dark" ? (
-          <Sun className="h-5 w-5" />
-        ) : (
-          <Moon className="h-5 w-5" />
-        )}
-      </button>
-
-      {/* Content */}
-      <div className="relative z-10 min-h-dvh flex flex-col items-center justify-center p-4 sm:p-6">
-        {/* Animated Logo Section */}
-        <div className="text-center mb-8 animate-fade-in-down">
-          {/* Main Logo with elaborate animation */}
-          <div className="relative inline-block mb-6 group">
-            {/* Outer glow ring - pulsing */}
-            <div className="absolute inset-0 -m-8 rounded-full bg-gradient-to-r from-primary/20 via-neon-cyan/20 to-primary/20 blur-2xl animate-pulse opacity-60" />
-
-            {/* Rotating ring */}
-            <div
-              className="absolute inset-0 -m-4 rounded-full border border-primary/30"
-              style={{
-                animation: 'spin 20s linear infinite',
-              }}
-            />
-
-            {/* Second rotating ring (opposite direction) */}
-            <div
-              className="absolute inset-0 -m-6 rounded-full border border-neon-cyan/20"
-              style={{
-                animation: 'spin 30s linear infinite reverse',
-              }}
-            />
-
-            {/* Logo container with hover effects */}
-            <div className="relative p-4 rounded-2xl bg-black/50 backdrop-blur-sm border border-white/10 group-hover:border-primary/50 transition-all duration-500 group-hover:shadow-[0_0_60px_rgba(0,255,136,0.3)]">
-              {/* Inner glow on hover */}
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-              {/* Logo image with animations */}
-              <img
-                src={logoProgresso}
-                alt="Grupo Progresso"
-                className="h-20 sm:h-28 w-auto relative z-10 drop-shadow-[0_0_20px_rgba(0,255,136,0.5)] group-hover:drop-shadow-[0_0_40px_rgba(0,255,136,0.8)] transition-all duration-500 group-hover:scale-105"
-                style={{
-                  filter: 'brightness(1.1) contrast(1.1)',
-                }}
-              />
+    return (
+      <div className="min-h-dvh bg-background flex flex-col">
+        {/* Header */}
+        <header className="flex items-center justify-between p-4 sm:p-6">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center">
+              <img src={logoProgresso} alt="Cotton" className="h-6 w-6 object-contain" />
             </div>
-
-            {/* Scanning line effect */}
-            <div
-              className="absolute inset-0 -m-4 overflow-hidden rounded-full pointer-events-none"
-              style={{
-                maskImage: 'linear-gradient(to bottom, transparent, black, transparent)',
-              }}
-            >
-              <div
-                className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent"
-                style={{
-                  animation: 'scan 3s ease-in-out infinite',
-                }}
-              />
-            </div>
+            <span className="font-semibold text-[17px]">Cotton</span>
           </div>
-
-          {/* Brand text with cinematic reveal */}
-          <div className="overflow-hidden">
-            <h1
-              className="text-4xl sm:text-5xl font-display font-bold mb-2"
-              style={{
-                animation: 'slideUp 0.8s ease-out forwards',
-                animationDelay: '0.3s',
-                opacity: 0,
-                transform: 'translateY(20px)',
-              }}
-            >
-              <span className="bg-gradient-to-r from-white via-primary to-white bg-clip-text text-transparent bg-[length:200%_auto] animate-shimmer">
-                Cotton
-              </span>
-            </h1>
-          </div>
-          <p
-            className="text-muted-foreground tracking-wider uppercase text-sm"
-            style={{
-              animation: 'fadeIn 1s ease-out forwards',
-              animationDelay: '0.6s',
-              opacity: 0,
-            }}
+          <button
+            onClick={toggleTheme}
+            className="p-2.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-surface transition-all duration-200"
           >
-            Sistema de Gestão de Fardos
-          </p>
-        </div>
+            {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
+        </header>
 
-        {/* Login Card with cinematic glass effect */}
-        <div
-          className="w-full max-w-md"
-          style={{
-            animation: 'slideUp 0.8s ease-out forwards',
-            animationDelay: '0.5s',
-            opacity: 0,
-            transform: 'translateY(30px)',
-          }}
-        >
-          <div className="relative p-8 rounded-2xl overflow-hidden backdrop-blur-xl bg-black/40 border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-            {/* Animated border gradient */}
-            <div className="absolute inset-0 rounded-2xl p-px bg-gradient-to-br from-primary/50 via-transparent to-neon-cyan/50 opacity-50" />
-
-            {/* Inner gradient */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-neon-cyan/5" />
-
-            {/* Corner accents */}
-            <div className="absolute top-0 left-0 w-20 h-20 border-l-2 border-t-2 border-primary/30 rounded-tl-2xl" />
-            <div className="absolute bottom-0 right-0 w-20 h-20 border-r-2 border-b-2 border-neon-cyan/30 rounded-br-2xl" />
-
-            <div className="relative">
-              <div className="text-center mb-6">
-                <h2 className="text-xl font-semibold mb-1 text-white">Bem-vindo de volta</h2>
-                <p className="text-sm text-white/60">Entre com suas credenciais</p>
-              </div>
-
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-                  <FormField
-                    control={form.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-white/80">
-                          Usuário
-                        </FormLabel>
-                        <FormControl>
-                          <div className="relative group">
-                            <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40 group-focus-within:text-primary transition-colors" />
-                            <Input
-                              placeholder="Digite seu usuário"
-                              {...field}
-                              disabled={isLoading}
-                              data-testid="input-username"
-                              className="h-12 pl-11 bg-white/5 border-white/10 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-white/30 text-white"
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage className="text-xs" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-white/80">
-                          Senha
-                        </FormLabel>
-                        <FormControl>
-                          <div className="relative group">
-                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40 group-focus-within:text-primary transition-colors" />
-                            <Input
-                              type={showPassword ? "text" : "password"}
-                              placeholder="Digite sua senha"
-                              {...field}
-                              disabled={isLoading}
-                              data-testid="input-password"
-                              className="h-12 pl-11 pr-11 bg-white/5 border-white/10 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-white/30 text-white"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
-                            >
-                              {showPassword ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </button>
-                          </div>
-                        </FormControl>
-                        <FormMessage className="text-xs" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <Button
-                    type="submit"
-                    className="w-full h-12 text-base font-semibold rounded-xl bg-primary hover:bg-primary/90 text-black shadow-[0_0_30px_rgba(0,255,136,0.4)] hover:shadow-[0_0_50px_rgba(0,255,136,0.6)] transition-all duration-300"
-                    disabled={isLoading}
-                    data-testid="submit-login"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Entrando...
-                      </>
-                    ) : (
-                      "Entrar"
-                    )}
-                  </Button>
-                </form>
-              </Form>
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col items-center justify-center px-4 pb-8">
+          {/* Title */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-[13px] font-medium mb-4">
+              <Sparkles className="h-3.5 w-3.5" />
+              Selecione seu perfil
             </div>
+            <h1 className="text-[28px] sm:text-[34px] font-bold mb-2">
+              Olá, {pendingUser?.username}!
+            </h1>
+            <p className="text-muted-foreground text-[15px]">
+              Escolha como deseja acessar o sistema
+            </p>
           </div>
 
-          {/* Security badges */}
-          <div className="flex items-center justify-center gap-6 mt-6 text-xs text-white/50">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-primary" />
-              <span>Conexão segura</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Lock className="h-4 w-4 text-primary" />
-              <span>Dados protegidos</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div
-          className="mt-8 text-center text-xs text-white/30"
-          style={{
-            animation: 'fadeIn 1s ease-out forwards',
-            animationDelay: '1s',
-            opacity: 0,
-          }}
-        >
-          <p>© {new Date().getFullYear()} Grupo Progresso</p>
-          <p className="mt-1">Safra 24/25</p>
-        </div>
-      </div>
-
-      {/* Dialog de Seleção de Papel - Redesign Premium */}
-      <Dialog open={showRoleSelector} onOpenChange={setShowRoleSelector}>
-        <DialogContent
-          className="sm:max-w-lg bg-background/95 backdrop-blur-2xl border-primary/20 p-0 overflow-hidden rounded-3xl shadow-[0_0_60px_rgba(0,255,136,0.1)]"
-          aria-describedby={undefined}
-        >
-          {/* Header Hero */}
-          <div className="relative">
-            {/* Background Effects */}
-            <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent" />
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-primary/20 rounded-full blur-3xl" />
-
-            {/* Content */}
-            <div className="relative pt-8 pb-6 px-6 text-center">
-              {/* Logo */}
-              <div className="mx-auto mb-4 relative">
-                <div className="h-16 w-16 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-glow overflow-hidden">
-                  <img src={logoProgresso} alt="Cotton" className="h-10 w-10 object-contain" />
-                </div>
-                <div className="absolute -bottom-1 -right-1 left-1/2 ml-4 h-6 w-6 rounded-full bg-neon-cyan border-2 border-background flex items-center justify-center">
-                  <User className="h-3 w-3 text-black" />
-                </div>
-              </div>
-
-              {/* Title */}
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-display font-bold text-center">
-                  <span className="gradient-text">Bem-vindo de volta!</span>
-                </DialogTitle>
-                <DialogDescription className="text-muted-foreground mt-2 text-center text-sm">
-                  Selecione seu perfil de acesso para continuar
-                </DialogDescription>
-              </DialogHeader>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
-
-          {/* Roles Grid */}
-          <div className="p-5">
-            <div className="space-y-2">
-              {availableRoles.map((roleValue, index) => {
-                const roleInfo = roles.find((r) => r.value === roleValue);
-                if (!roleInfo) return null;
-
-                const Icon = roleInfo.icon;
-                const colors = colorClasses[roleInfo.color];
+          {/* Gamer-style Horizontal Role Selector */}
+          <div className="w-full max-w-4xl">
+            {/* Role Cards - Horizontal Scroll */}
+            <div className="flex gap-4 overflow-x-auto pb-4 px-2 snap-x snap-mandatory scrollbar-none">
+              {filteredRoles.map((role, index) => {
+                const Icon = role.icon;
+                const isSelected = index === selectedRoleIndex;
 
                 return (
                   <button
-                    key={roleValue}
+                    key={role.value}
+                    onClick={() => setSelectedRoleIndex(index)}
                     className={cn(
-                      "w-full p-4 flex items-center gap-4 rounded-2xl border-2 transition-all duration-300 group relative overflow-hidden",
-                      "bg-surface/30 border-transparent",
-                      "hover:border-primary/40 hover:bg-surface/60",
-                      colors.glow.replace("shadow-", "hover:shadow-")
+                      "flex-shrink-0 snap-center w-[160px] sm:w-[200px] p-5 rounded-2xl transition-all duration-300 relative overflow-hidden group",
+                      isSelected
+                        ? "scale-105 ring-2 ring-white/20"
+                        : "scale-95 opacity-60 hover:opacity-80"
                     )}
-                    onClick={() => handleRoleSelect(roleValue)}
-                    style={{ animationDelay: `${index * 50}ms` }}
+                    style={{
+                      background: isSelected
+                        ? `linear-gradient(135deg, ${role.gradient.includes('purple') ? '#a855f7' : role.gradient.includes('blue') ? '#3b82f6' : role.gradient.includes('emerald') ? '#10b981' : role.gradient.includes('orange') ? '#f97316' : '#06b6d4'}, ${role.gradient.includes('pink') ? '#ec4899' : role.gradient.includes('cyan') ? '#06b6d4' : role.gradient.includes('green') ? '#22c55e' : role.gradient.includes('amber') ? '#f59e0b' : '#14b8a6'})`
+                        : 'hsl(var(--surface))',
+                      boxShadow: isSelected ? `0 20px 40px ${role.glowColor}` : 'none',
+                    }}
                   >
-                    {/* Hover gradient */}
-                    <div className={cn(
-                      "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300",
-                      "bg-gradient-to-r from-transparent via-white/[0.02] to-transparent"
-                    )} />
+                    {/* Shine effect */}
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                    )}
 
                     {/* Icon */}
                     <div className={cn(
-                      "relative w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-105",
-                      colors.bg,
-                      "group-hover:" + colors.glow
+                      "w-14 h-14 rounded-xl flex items-center justify-center mb-4 mx-auto transition-all",
+                      isSelected
+                        ? "bg-white/20 text-white"
+                        : "bg-surface-elevated text-muted-foreground"
                     )}>
-                      <Icon className={cn("w-7 h-7 transition-transform group-hover:scale-110", colors.text)} />
+                      <Icon className="w-7 h-7" />
                     </div>
 
                     {/* Text */}
-                    <div className="flex-1 text-left min-w-0">
-                      <p className="font-bold text-base text-foreground group-hover:text-white transition-colors truncate">
-                        {roleInfo.label}
+                    <div className="text-center">
+                      <p className={cn(
+                        "font-bold text-[17px] mb-1 transition-colors",
+                        isSelected ? "text-white" : "text-foreground"
+                      )}>
+                        {role.label}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                        {roleInfo.description}
+                      <p className={cn(
+                        "text-[13px] transition-colors",
+                        isSelected ? "text-white/70" : "text-muted-foreground"
+                      )}>
+                        {role.description}
                       </p>
                     </div>
 
-                    {/* Arrow */}
-                    <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300",
-                      "bg-surface/50 group-hover:bg-primary/20",
-                      "group-hover:translate-x-1"
-                    )}>
-                      <ChevronRight className={cn(
-                        "w-5 h-5 transition-colors",
-                        "text-muted-foreground group-hover:text-primary"
-                      )} />
-                    </div>
+                    {/* Selected indicator */}
+                    {isSelected && (
+                      <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-white/30 flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full bg-white" />
+                      </div>
+                    )}
                   </button>
                 );
               })}
             </div>
-          </div>
 
-          {/* Footer */}
-          <div className="px-6 pb-5">
-            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/60">
-              <Lock className="w-3 h-3" />
-              <span>Acesso seguro e criptografado</span>
+            {/* Pagination dots */}
+            <div className="flex items-center justify-center gap-2 mt-4">
+              {filteredRoles.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setSelectedRoleIndex(index)}
+                  className={cn(
+                    "h-2 rounded-full transition-all duration-300",
+                    index === selectedRoleIndex
+                      ? "w-6 bg-primary"
+                      : "w-2 bg-muted-foreground/30"
+                  )}
+                />
+              ))}
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+
+          {/* Confirm Button */}
+          <Button
+            onClick={() => handleRoleSelect(filteredRoles[selectedRoleIndex].value)}
+            className="mt-8 h-14 px-12 text-[17px] font-semibold rounded-2xl"
+            style={{
+              background: `linear-gradient(135deg, ${currentRole?.gradient.includes('purple') ? '#a855f7' : currentRole?.gradient.includes('blue') ? '#3b82f6' : currentRole?.gradient.includes('emerald') ? '#10b981' : currentRole?.gradient.includes('orange') ? '#f97316' : '#06b6d4'}, ${currentRole?.gradient.includes('pink') ? '#ec4899' : currentRole?.gradient.includes('cyan') ? '#06b6d4' : currentRole?.gradient.includes('green') ? '#22c55e' : currentRole?.gradient.includes('amber') ? '#f59e0b' : '#14b8a6'})`,
+              boxShadow: `0 10px 30px ${currentRole?.glowColor}`,
+            }}
+          >
+            Entrar como {currentRole?.label}
+          </Button>
+
+          {/* Back button */}
+          <button
+            onClick={() => {
+              setShowRoleSelector(false);
+              setPendingUser(null);
+            }}
+            className="mt-4 text-[15px] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Voltar ao login
+          </button>
+        </div>
+
+        {/* Footer */}
+        <footer className="p-4 text-center">
+          <p className="text-[13px] text-muted-foreground/60">
+            © {new Date().getFullYear()} Grupo Progresso · Safra 24/25
+          </p>
+        </footer>
+      </div>
+    );
+  }
+
+  // Login Screen (iOS Style)
+  return (
+    <div className="min-h-dvh bg-background relative overflow-hidden">
+      {/* Background Image with subtle overlay */}
+      <div className="absolute inset-0 z-0">
+        <img
+          src={fazendaBg}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-background/85 backdrop-blur-sm" />
+      </div>
+
+      {/* Theme Toggle */}
+      <button
+        onClick={toggleTheme}
+        className="fixed top-4 right-4 z-50 p-3 rounded-full bg-card/80 backdrop-blur-sm text-muted-foreground hover:text-foreground transition-all duration-200 shadow-lg"
+      >
+        {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+      </button>
+
+      {/* Content */}
+      <div className="relative z-10 min-h-dvh flex flex-col items-center justify-center p-6">
+        {/* Logo Section */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center h-20 w-20 rounded-[28px] bg-primary mb-6 shadow-lg">
+            <img
+              src={logoProgresso}
+              alt="Grupo Progresso"
+              className="h-12 w-12 object-contain"
+            />
+          </div>
+          <h1 className="text-[34px] font-bold tracking-tight mb-1">Cotton</h1>
+          <p className="text-[15px] text-muted-foreground">
+            Sistema de Gestão de Fardos
+          </p>
+        </div>
+
+        {/* Login Card - iOS Style */}
+        <div className="w-full max-w-sm">
+          <div className="rounded-3xl bg-card p-6 shadow-xl">
+            <div className="text-center mb-6">
+              <h2 className="text-[20px] font-semibold mb-1">Bem-vindo</h2>
+              <p className="text-[13px] text-muted-foreground">
+                Entre com suas credenciais
+              </p>
+            </div>
+
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <div className="relative">
+                          <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                          <Input
+                            placeholder="Usuário"
+                            {...field}
+                            disabled={isLoading}
+                            className="h-12 pl-12 rounded-xl bg-surface border-0 text-[17px] placeholder:text-muted-foreground"
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-[13px] ml-1" />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <div className="relative">
+                          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Senha"
+                            {...field}
+                            disabled={isLoading}
+                            className="h-12 pl-12 pr-12 rounded-xl bg-surface border-0 text-[17px] placeholder:text-muted-foreground"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-5 w-5" />
+                            ) : (
+                              <Eye className="h-5 w-5" />
+                            )}
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-[13px] ml-1" />
+                    </FormItem>
+                  )}
+                />
+
+                <Button
+                  type="submit"
+                  className="w-full h-12 text-[17px] font-semibold rounded-xl mt-2"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Entrando...
+                    </>
+                  ) : (
+                    "Entrar"
+                  )}
+                </Button>
+              </form>
+            </Form>
+          </div>
+
+          {/* Security indicator */}
+          <div className="flex items-center justify-center gap-2 mt-6 text-[13px] text-muted-foreground">
+            <Lock className="h-3.5 w-3.5" />
+            <span>Conexão segura</span>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-auto pt-8 text-center">
+          <p className="text-[13px] text-muted-foreground/60">
+            © {new Date().getFullYear()} Grupo Progresso
+          </p>
+          <p className="text-[11px] text-muted-foreground/40 mt-1">
+            Safra 24/25
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

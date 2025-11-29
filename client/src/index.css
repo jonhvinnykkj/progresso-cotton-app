@@ -33,43 +33,43 @@
   --glow-orange: 249, 115, 22;
   --glow-red: 239, 68, 68;
 
-  /* === SEMANTIC COLORS (Dark Mode - Neutral with subtle green) === */
-  --background: 220 10% 6%;          /* Nearly black, slight blue */
-  --background-elevated: 220 8% 9%;
+  /* === SEMANTIC COLORS (Dark Mode - High Contrast) === */
+  --background: 220 10% 4%;          /* Deeper black */
+  --background-elevated: 220 8% 7%;
   --foreground: 0 0% 98%;            /* Pure white */
 
-  --surface: 220 8% 10%;             /* Card background */
-  --surface-elevated: 220 6% 13%;
-  --surface-hover: 220 6% 16%;
+  --surface: 220 8% 8%;              /* Card background - darker */
+  --surface-elevated: 220 6% 12%;
+  --surface-hover: 220 6% 15%;
 
-  --border: 220 8% 16%;              /* Subtle borders */
-  --border-subtle: 220 6% 12%;
-  --border-strong: 220 8% 22%;
+  --border: 220 8% 18%;              /* More visible borders */
+  --border-subtle: 220 6% 14%;
+  --border-strong: 220 8% 25%;
 
-  --card: 220 8% 10%;
+  --card: 220 8% 8%;
   --card-foreground: 0 0% 98%;
-  --card-border: 220 6% 14%;
+  --card-border: 220 6% 16%;
 
-  --popover: 220 10% 12%;
+  --popover: 220 10% 10%;
   --popover-foreground: 0 0% 98%;
-  --popover-border: 220 8% 18%;
+  --popover-border: 220 8% 20%;
 
-  /* Primary = John Deere Green */
-  --primary: 110 42% 45%;
+  /* Primary = John Deere Green - More vibrant */
+  --primary: 110 50% 45%;
   --primary-foreground: 0 0% 100%;
-  --primary-muted: 110 30% 18%;
+  --primary-muted: 110 35% 20%;
 
   /* Secondary */
-  --secondary: 220 8% 14%;
-  --secondary-foreground: 0 0% 90%;
+  --secondary: 220 8% 16%;
+  --secondary-foreground: 0 0% 95%;
 
-  /* Accent = John Deere Yellow */
-  --accent: 46 85% 52%;
-  --accent-foreground: 220 20% 10%;
+  /* Accent = John Deere Yellow - More vibrant */
+  --accent: 46 90% 50%;
+  --accent-foreground: 220 20% 8%;
 
-  /* Muted */
-  --muted: 220 8% 16%;
-  --muted-foreground: 220 8% 55%;
+  /* Muted - MUCH better contrast */
+  --muted: 220 8% 18%;
+  --muted-foreground: 220 8% 70%;
 
   /* Destructive */
   --destructive: 0 72% 55%;
@@ -79,27 +79,27 @@
   --input: 220 8% 14%;
   --ring: 110 42% 45%;
 
-  /* Sidebar - Clean dark */
-  --sidebar: 220 12% 7%;
-  --sidebar-foreground: 0 0% 95%;
-  --sidebar-border: 220 8% 14%;
-  --sidebar-primary: 110 42% 45%;    /* Green accent */
+  /* Sidebar - Clean dark with better contrast */
+  --sidebar: 220 12% 5%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-border: 220 8% 16%;
+  --sidebar-primary: 110 50% 48%;    /* Green accent - brighter */
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 220 8% 12%;
-  --sidebar-accent-foreground: 0 0% 95%;
-  --sidebar-ring: 110 42% 45%;
+  --sidebar-accent: 220 8% 14%;
+  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-ring: 110 50% 48%;
 
-  /* Charts - Green/Yellow palette */
-  --chart-1: 110 42% 45%;   /* JD Green */
-  --chart-2: 46 85% 52%;    /* JD Yellow */
-  --chart-3: 189 65% 42%;   /* Teal */
-  --chart-4: 30 85% 55%;    /* Orange */
-  --chart-5: 110 35% 55%;   /* Light green */
+  /* Charts - More vibrant palette */
+  --chart-1: 110 55% 48%;   /* JD Green - brighter */
+  --chart-2: 46 95% 55%;    /* JD Yellow - brighter */
+  --chart-3: 189 70% 48%;   /* Teal - brighter */
+  --chart-4: 30 90% 55%;    /* Orange */
+  --chart-5: 110 45% 58%;   /* Light green */
 
-  /* === BALE STATUS COLORS === */
-  --bale-campo: 110 42% 45%;        /* JD Green */
-  --bale-patio: 46 85% 52%;         /* JD Yellow */
-  --bale-beneficiado: 189 65% 42%;  /* Teal */
+  /* === BALE STATUS COLORS - More vibrant === */
+  --bale-campo: 110 55% 48%;        /* JD Green - brighter */
+  --bale-patio: 46 95% 55%;         /* JD Yellow - brighter */
+  --bale-beneficiado: 189 70% 48%;  /* Teal - brighter */
 
   /* Legacy compatibility aliases */
   --neon-green: 110 42% 45%;
@@ -154,49 +154,49 @@
   --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Light mode override - iOS Clean Style */
+/* Light mode override - iOS Clean Style with Better Contrast */
 .light {
-  /* Background: Pure iOS white */
-  --background: 0 0% 98%;                /* iOS system background */
+  /* Background: iOS system background */
+  --background: 0 0% 97%;
   --background-elevated: 0 0% 100%;
-  --foreground: 0 0% 10%;                /* Nearly black text */
+  --foreground: 0 0% 8%;                 /* Darker text for better readability */
 
-  /* Surfaces: Clean neutral */
-  --surface: 0 0% 96%;                   /* iOS grouped background */
+  /* Surfaces: Clean neutral with better separation */
+  --surface: 0 0% 94%;                   /* Slightly darker for contrast */
   --surface-elevated: 0 0% 100%;
-  --surface-hover: 0 0% 94%;
+  --surface-hover: 0 0% 90%;
 
-  /* Borders: iOS subtle gray */
-  --border: 0 0% 88%;
-  --border-subtle: 0 0% 92%;
-  --border-strong: 0 0% 80%;
+  /* Borders: More visible */
+  --border: 0 0% 82%;
+  --border-subtle: 0 0% 88%;
+  --border-strong: 0 0% 72%;
 
-  /* Cards: Pure white */
+  /* Cards: Pure white with better border */
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 10%;
-  --card-border: 0 0% 90%;
+  --card-foreground: 0 0% 8%;
+  --card-border: 0 0% 85%;
 
   /* Popover */
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 10%;
-  --popover-border: 0 0% 88%;
+  --popover-foreground: 0 0% 8%;
+  --popover-border: 0 0% 82%;
 
-  /* Primary: John Deere Green */
-  --primary: 110 45% 35%;                /* JD Green */
+  /* Primary: John Deere Green - Darker for better contrast on white */
+  --primary: 110 55% 32%;                /* Darker JD Green */
   --primary-foreground: 0 0% 100%;
-  --primary-muted: 110 25% 92%;
+  --primary-muted: 110 30% 90%;
 
   /* Secondary */
-  --secondary: 0 0% 94%;
-  --secondary-foreground: 0 0% 20%;
+  --secondary: 0 0% 92%;
+  --secondary-foreground: 0 0% 15%;
 
-  /* Accent: John Deere Yellow */
-  --accent: 46 80% 45%;                  /* Gold */
-  --accent-foreground: 0 0% 10%;
+  /* Accent: John Deere Yellow - Darker for readability */
+  --accent: 46 85% 42%;                  /* Darker Gold */
+  --accent-foreground: 0 0% 8%;
 
-  /* Muted */
-  --muted: 0 0% 94%;
-  --muted-foreground: 0 0% 45%;
+  /* Muted - MUCH better contrast */
+  --muted: 0 0% 92%;
+  --muted-foreground: 0 0% 35%;
 
   /* Destructive */
   --destructive: 0 72% 50%;
@@ -206,27 +206,27 @@
   --input: 0 0% 94%;
   --ring: 110 45% 35%;
 
-  /* Sidebar: Clean dark for contrast */
-  --sidebar: 220 12% 10%;
+  /* Sidebar: Dark for strong contrast */
+  --sidebar: 220 15% 8%;
   --sidebar-foreground: 0 0% 98%;
   --sidebar-border: 220 8% 18%;
-  --sidebar-primary: 110 42% 45%;
+  --sidebar-primary: 110 55% 42%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 220 8% 15%;
+  --sidebar-accent: 220 10% 14%;
   --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-ring: 110 42% 45%;
+  --sidebar-ring: 110 55% 42%;
 
-  /* Charts */
-  --chart-1: 110 45% 35%;
-  --chart-2: 46 80% 45%;
-  --chart-3: 189 60% 38%;
-  --chart-4: 30 80% 50%;
-  --chart-5: 110 30% 50%;
+  /* Charts - Darker, more saturated for light bg */
+  --chart-1: 110 60% 32%;
+  --chart-2: 46 90% 42%;
+  --chart-3: 189 70% 35%;
+  --chart-4: 30 85% 48%;
+  --chart-5: 110 45% 42%;
 
-  /* Bale status */
-  --bale-campo: 110 45% 35%;
-  --bale-patio: 46 80% 45%;
-  --bale-beneficiado: 189 60% 38%;
+  /* Bale status - Darker for light mode */
+  --bale-campo: 110 60% 32%;
+  --bale-patio: 46 90% 42%;
+  --bale-beneficiado: 189 70% 35%;
 
   /* Glass effect - iOS blur style */
   --glass-bg: rgba(255, 255, 255, 0.72);
@@ -641,7 +641,7 @@
   /* === iOS NAVIGATION === */
   .nav-item {
     @apply flex items-center gap-3 px-4 py-3 rounded-xl;
-    @apply text-sidebar-foreground/70;
+    @apply text-sidebar-foreground/90;
     transition: all 200ms cubic-bezier(0.32, 0.72, 0, 1);
   }
 
@@ -650,8 +650,8 @@
   }
 
   .nav-item.active {
-    background: hsl(var(--primary) / 0.12);
-    @apply text-primary;
+    background: hsl(var(--primary) / 0.18);
+    @apply text-primary font-medium;
   }
 
   .nav-item.active .nav-icon {

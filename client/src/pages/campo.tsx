@@ -435,6 +435,10 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreating, setIsCreating] = useState(false);
+
+  // Wizard state
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
   const [selectedTalhao, setSelectedTalhao] = useState<{ nome: string; hectares: string } | null>(null);
   const [formData, setFormData] = useState({ arrobasHa: "", motivo: "", observacao: "" });
 
@@ -474,16 +478,23 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
   // Total geral
   const totalPerdas = perdas.reduce((acc: number, perda: any) => acc + parseFloat(perda.arrobasHa || "0"), 0);
 
+  const motivos = [
+    { id: "clima", label: "Causa Natural", desc: "Chuva, granizo, seca, etc.", icon: "🌧️" },
+    { id: "praga", label: "Praga/Doença", desc: "Infestação ou doença", icon: "🐛" },
+    { id: "fogo", label: "Fogo", desc: "Incêndio ou queimada", icon: "🔥" },
+    { id: "mecanica", label: "Perda Mecânica", desc: "Colheitadeira, transporte", icon: "🚜" },
+    { id: "outro", label: "Outro", desc: "Outros motivos", icon: "📋" },
+  ];
+
+  const resetWizard = () => {
+    setWizardOpen(false);
+    setWizardStep(1);
+    setSelectedTalhao(null);
+    setFormData({ arrobasHa: "", motivo: "", observacao: "" });
+  };
+
   const handleCreatePerda = async () => {
     if (!defaultSafra || !selectedTalhao) return;
-    if (!formData.arrobasHa || !formData.motivo) {
-      toast({
-        variant: "destructive",
-        title: "Campos obrigatórios",
-        description: "Preencha a perda em @/ha e o motivo.",
-      });
-      return;
-    }
 
     setIsCreating(true);
     try {
@@ -508,12 +519,11 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
 
       toast({
         variant: "success",
-        title: "Perda registrada",
-        description: `${formData.arrobasHa} @/ha registrados no talhão ${selectedTalhao.nome}.`,
+        title: "Perda registrada!",
+        description: `${formData.arrobasHa} @/ha no talhão ${selectedTalhao.nome}`,
       });
 
-      setFormData({ arrobasHa: "", motivo: "", observacao: "" });
-      setSelectedTalhao(null);
+      resetWizard();
       queryClient.invalidateQueries({ queryKey: ["/api/perdas"] });
     } catch (error) {
       toast({
@@ -552,220 +562,251 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
     }
   };
 
-  const motivos = [
-    "Causa Natural (clima)",
-    "Praga/Doença",
-    "Fogo",
-    "Perda Mecânica",
-    "Outro",
-  ];
+  const canProceed = () => {
+    switch (wizardStep) {
+      case 1: return !!selectedTalhao;
+      case 2: return !!formData.arrobasHa && parseFloat(formData.arrobasHa) > 0;
+      case 3: return !!formData.motivo;
+      default: return true;
+    }
+  };
+
+  // Step content components
+  const renderStepContent = () => {
+    switch (wizardStep) {
+      case 1:
+        return (
+          <div className="space-y-4">
+            <div className="text-center mb-6">
+              <div className="inline-flex p-3 rounded-full bg-primary/10 mb-3">
+                <MapPin className="w-6 h-6 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold">Selecione o Talhão</h3>
+              <p className="text-sm text-muted-foreground">Qual talhão teve a perda?</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 max-h-[300px] overflow-y-auto p-1">
+              {talhoesSafra.map((talhao) => {
+                const perdasTalhao = perdasPorTalhao[talhao.nome];
+                const isSelected = selectedTalhao?.nome === talhao.nome;
+                return (
+                  <button
+                    key={talhao.id}
+                    onClick={() => setSelectedTalhao(talhao)}
+                    className={cn(
+                      "p-3 rounded-xl border-2 transition-all text-left",
+                      isSelected
+                        ? "bg-primary/10 border-primary scale-105"
+                        : "bg-card border-border/50 hover:border-primary/50 hover:scale-102"
+                    )}
+                  >
+                    <p className="font-bold text-foreground">{talhao.nome}</p>
+                    <p className="text-[10px] text-muted-foreground">{talhao.hectares} ha</p>
+                    {perdasTalhao && (
+                      <p className="text-[10px] text-red-500 mt-1">{perdasTalhao.total.toFixed(1)} @/ha</p>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <div className="inline-flex p-3 rounded-full bg-red-500/10 mb-3">
+                <TrendingDown className="w-6 h-6 text-red-500" />
+              </div>
+              <h3 className="text-lg font-bold">Quantidade Perdida</h3>
+              <p className="text-sm text-muted-foreground">
+                Quantas arrobas por hectare foram perdidas no <span className="font-bold text-primary">{selectedTalhao?.nome}</span>?
+              </p>
+            </div>
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative w-full max-w-[200px]">
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  placeholder="0.0"
+                  value={formData.arrobasHa}
+                  onChange={(e) => setFormData({ ...formData, arrobasHa: e.target.value })}
+                  className="h-16 text-3xl font-bold text-center rounded-2xl pr-16"
+                  autoFocus
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg text-muted-foreground font-medium">@/ha</span>
+              </div>
+              {formData.arrobasHa && selectedTalhao && (
+                <div className="text-center p-3 rounded-xl bg-muted/50">
+                  <p className="text-xs text-muted-foreground">Total estimado</p>
+                  <p className="text-lg font-bold text-red-500">
+                    {(parseFloat(formData.arrobasHa) * parseFloat(selectedTalhao.hectares.replace(",", "."))).toFixed(1)} @
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    em {selectedTalhao.hectares} hectares
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-4">
+            <div className="text-center mb-6">
+              <div className="inline-flex p-3 rounded-full bg-amber-500/10 mb-3">
+                <AlertTriangle className="w-6 h-6 text-amber-500" />
+              </div>
+              <h3 className="text-lg font-bold">Motivo da Perda</h3>
+              <p className="text-sm text-muted-foreground">O que causou essa perda?</p>
+            </div>
+            <div className="space-y-2">
+              {motivos.map((motivo) => (
+                <button
+                  key={motivo.id}
+                  onClick={() => setFormData({ ...formData, motivo: motivo.label })}
+                  className={cn(
+                    "w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 text-left",
+                    formData.motivo === motivo.label
+                      ? "bg-primary/10 border-primary"
+                      : "bg-card border-border/50 hover:border-primary/50"
+                  )}
+                >
+                  <span className="text-2xl">{motivo.icon}</span>
+                  <div>
+                    <p className="font-bold">{motivo.label}</p>
+                    <p className="text-xs text-muted-foreground">{motivo.desc}</p>
+                  </div>
+                  {formData.motivo === motivo.label && (
+                    <CheckCircle className="w-5 h-5 text-primary ml-auto" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <div className="inline-flex p-3 rounded-full bg-green-500/10 mb-3">
+                <CheckCircle className="w-6 h-6 text-green-500" />
+              </div>
+              <h3 className="text-lg font-bold">Confirmar Registro</h3>
+              <p className="text-sm text-muted-foreground">Revise os dados da perda</p>
+            </div>
+
+            <div className="space-y-3 p-4 rounded-xl bg-muted/30 border border-border/50">
+              <div className="flex justify-between items-center pb-3 border-b border-border/30">
+                <span className="text-sm text-muted-foreground">Talhão</span>
+                <span className="font-bold text-primary">{selectedTalhao?.nome}</span>
+              </div>
+              <div className="flex justify-between items-center pb-3 border-b border-border/30">
+                <span className="text-sm text-muted-foreground">Perda</span>
+                <span className="font-bold text-red-500">{formData.arrobasHa} @/ha</span>
+              </div>
+              <div className="flex justify-between items-center pb-3 border-b border-border/30">
+                <span className="text-sm text-muted-foreground">Total Estimado</span>
+                <span className="font-bold">
+                  {(parseFloat(formData.arrobasHa || "0") * parseFloat(selectedTalhao?.hectares.replace(",", ".") || "0")).toFixed(1)} @
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Motivo</span>
+                <span className="font-medium">{formData.motivo}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-2 block">Observação (opcional)</label>
+              <Input
+                placeholder="Detalhes adicionais..."
+                value={formData.observacao}
+                onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
+                className="h-11 rounded-xl"
+              />
+            </div>
+          </div>
+        );
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header com resumo */}
+      {/* Header com resumo e botão de adicionar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-red-500/20 text-red-500">
             <TrendingDown className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold text-lg">Perdas por Talhão</h3>
+            <h3 className="font-bold text-lg">Perdas da Safra</h3>
             <p className="text-xs text-muted-foreground">
-              Clique em um talhão para registrar perda
+              {perdas.length > 0 ? `${perdas.length} ocorrência(s) registrada(s)` : "Nenhuma perda registrada"}
             </p>
           </div>
         </div>
-        {totalPerdas > 0 && (
-          <div className="text-right">
-            <p className="text-2xl font-bold text-red-500">{totalPerdas.toFixed(1)} @/ha</p>
-            <p className="text-xs text-muted-foreground">{perdas.length} ocorrências</p>
-          </div>
-        )}
+        <Button
+          onClick={() => setWizardOpen(true)}
+          className="h-10 px-4 rounded-xl bg-red-500 hover:bg-red-600"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Registrar Perda
+        </Button>
       </div>
 
-      {/* Grid de Talhões */}
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-        {talhoesSafra.map((talhao) => {
-          const perdasTalhao = perdasPorTalhao[talhao.nome];
-          const temPerda = perdasTalhao && perdasTalhao.total > 0;
-
-          return (
-            <button
-              key={talhao.id}
-              onClick={() => setSelectedTalhao(talhao)}
-              className={cn(
-                "relative p-4 rounded-xl border-2 transition-all hover:scale-105 text-left",
-                temPerda
-                  ? "bg-red-500/10 border-red-500/30 hover:border-red-500/50"
-                  : "bg-card border-border/50 hover:border-primary/50"
-              )}
+      {/* Resumo por Talhão */}
+      {perdas.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {Object.entries(perdasPorTalhao).map(([talhao, data]) => (
+            <div
+              key={talhao}
+              className="p-4 rounded-xl bg-red-500/5 border border-red-500/20"
             >
-              <p className="text-lg font-bold text-foreground">{talhao.nome}</p>
-              <p className="text-xs text-muted-foreground">{talhao.hectares} ha</p>
-
-              {temPerda && (
-                <div className="mt-2 pt-2 border-t border-red-500/20">
-                  <p className="text-sm font-bold text-red-500">{perdasTalhao.total.toFixed(1)} @/ha</p>
-                  <p className="text-[10px] text-red-400">{perdasTalhao.count} registro(s)</p>
-                </div>
-              )}
-
-              {!temPerda && (
-                <div className="mt-2 pt-2 border-t border-border/30">
-                  <p className="text-xs text-muted-foreground/50">Sem perdas</p>
-                </div>
-              )}
-
-              {/* Indicador de adicionar */}
-              <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Plus className="w-3 h-3 text-primary" />
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-primary">{talhao}</span>
+                <span className="text-xs text-muted-foreground">{data.count}x</span>
               </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Modal de adicionar perda */}
-      {selectedTalhao && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl">
-            {/* Header */}
-            <div className="flex items-center justify-between p-5 border-b border-border/50">
-              <div>
-                <h3 className="font-bold text-lg">Talhão {selectedTalhao.nome}</h3>
-                <p className="text-xs text-muted-foreground">{selectedTalhao.hectares} hectares</p>
-              </div>
-              <button
-                onClick={() => setSelectedTalhao(null)}
-                className="p-2 rounded-lg hover:bg-muted transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <p className="text-xl font-bold text-red-500">{data.total.toFixed(1)} @/ha</p>
             </div>
-
-            {/* Perdas existentes do talhão */}
-            {perdasPorTalhao[selectedTalhao.nome]?.perdas.length > 0 && (
-              <div className="p-4 border-b border-border/50 bg-muted/30">
-                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Perdas Registradas</p>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {perdasPorTalhao[selectedTalhao.nome].perdas.map((p: any) => (
-                    <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-red-500/10 border border-red-500/20">
-                      <div>
-                        <span className="text-sm font-bold text-red-500">{parseFloat(p.arrobasHa).toFixed(1)} @/ha</span>
-                        <p className="text-xs text-muted-foreground">{p.motivo}</p>
-                      </div>
-                      <button
-                        onClick={() => handleDeletePerda(p.id)}
-                        className="p-1.5 rounded hover:bg-red-500/20 text-red-500"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Formulário */}
-            <div className="p-5 space-y-4">
-              <p className="text-sm font-semibold text-foreground">Nova Perda</p>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Perda em @/ha *</label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    placeholder="Ex: 8.5"
-                    value={formData.arrobasHa}
-                    onChange={(e) => setFormData({ ...formData, arrobasHa: e.target.value })}
-                    className="h-11 rounded-xl"
-                    disabled={isCreating}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Motivo *</label>
-                  <Select
-                    value={formData.motivo}
-                    onValueChange={(v) => setFormData({ ...formData, motivo: v })}
-                    disabled={isCreating}
-                  >
-                    <SelectTrigger className="h-11 rounded-xl">
-                      <SelectValue placeholder="Selecione o motivo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {motivos.map((m) => (
-                        <SelectItem key={m} value={m}>{m}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Observação</label>
-                  <Input
-                    placeholder="Detalhes opcionais..."
-                    value={formData.observacao}
-                    onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
-                    className="h-11 rounded-xl"
-                    disabled={isCreating}
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  className="flex-1 h-11 rounded-xl"
-                  onClick={() => setSelectedTalhao(null)}
-                  disabled={isCreating}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  className="flex-1 h-11 rounded-xl bg-red-500 hover:bg-red-600"
-                  onClick={handleCreatePerda}
-                  disabled={isCreating || !formData.arrobasHa || !formData.motivo}
-                >
-                  {isCreating ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Registrar
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
+          ))}
+          <div className="p-4 rounded-xl bg-red-500/10 border-2 border-red-500/30">
+            <p className="text-xs text-muted-foreground mb-2">Total Geral</p>
+            <p className="text-2xl font-bold text-red-500">{totalPerdas.toFixed(1)} @/ha</p>
           </div>
         </div>
       )}
 
-      {/* Lista geral de perdas (colapsável) */}
+      {/* Lista de perdas */}
       {perdas.length > 0 && (
         <div className="glass-card rounded-xl overflow-hidden">
-          <div className="p-4 border-b border-border/30 flex items-center justify-between">
-            <p className="text-sm font-semibold">Todas as Perdas ({perdas.length})</p>
-            <p className="text-sm font-bold text-red-500">{totalPerdas.toFixed(1)} @/ha total</p>
+          <div className="p-4 border-b border-border/30">
+            <p className="text-sm font-semibold">Histórico de Perdas</p>
           </div>
-          <div className="max-h-48 overflow-y-auto">
+          <div className="divide-y divide-border/20">
             {perdas.map((perda: any) => (
               <div
                 key={perda.id}
-                className="flex items-center justify-between p-3 border-b border-border/20 last:border-0 hover:bg-muted/30"
+                className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <span className="font-mono font-bold text-primary text-sm w-10">{perda.talhao}</span>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <span className="font-bold text-primary">{perda.talhao}</span>
+                  </div>
                   <div>
-                    <span className="text-sm font-semibold text-red-500">{parseFloat(perda.arrobasHa).toFixed(1)} @/ha</span>
+                    <p className="font-bold text-red-500">{parseFloat(perda.arrobasHa).toFixed(1)} @/ha</p>
                     <p className="text-xs text-muted-foreground">{perda.motivo}</p>
+                    {perda.observacao && (
+                      <p className="text-xs text-muted-foreground/70 mt-0.5">{perda.observacao}</p>
+                    )}
                   </div>
                 </div>
                 <button
                   onClick={() => handleDeletePerda(perda.id)}
-                  className="p-2 rounded-lg hover:bg-red-500/20 text-muted-foreground hover:text-red-500"
+                  className="p-2 rounded-lg hover:bg-red-500/20 text-muted-foreground hover:text-red-500 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -777,16 +818,106 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
 
       {/* Empty state */}
       {!perdasLoading && perdas.length === 0 && (
-        <div className="text-center p-8 rounded-xl border-2 border-dashed border-border/30 bg-surface/30">
-          <div className="inline-flex p-4 bg-surface rounded-xl mb-4">
-            <CheckCircle className="w-8 h-8 text-green-500/40" />
+        <div className="text-center p-12 rounded-2xl border-2 border-dashed border-border/30 bg-surface/30">
+          <div className="inline-flex p-4 bg-green-500/10 rounded-2xl mb-4">
+            <CheckCircle className="w-10 h-10 text-green-500/50" />
           </div>
-          <p className="text-sm font-bold text-foreground/80 mb-1">
+          <p className="text-lg font-bold text-foreground/80 mb-2">
             Nenhuma perda registrada
           </p>
-          <p className="text-xs text-muted-foreground/70">
-            Clique em um talhão acima para registrar perdas
+          <p className="text-sm text-muted-foreground/70 mb-6">
+            Clique no botão acima para registrar uma perda
           </p>
+          <Button
+            onClick={() => setWizardOpen(true)}
+            variant="outline"
+            className="rounded-xl"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Registrar Primeira Perda
+          </Button>
+        </div>
+      )}
+
+      {/* Wizard Modal */}
+      {wizardOpen && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            {/* Progress bar */}
+            <div className="h-1 bg-muted">
+              <div
+                className="h-full bg-primary transition-all duration-300"
+                style={{ width: `${(wizardStep / 4) * 100}%` }}
+              />
+            </div>
+
+            {/* Step indicators */}
+            <div className="flex justify-center gap-2 p-4 border-b border-border/30">
+              {[1, 2, 3, 4].map((step) => (
+                <div
+                  key={step}
+                  className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all",
+                    wizardStep === step
+                      ? "bg-primary text-primary-foreground scale-110"
+                      : wizardStep > step
+                      ? "bg-green-500 text-white"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {wizardStep > step ? <CheckCircle className="w-4 h-4" /> : step}
+                </div>
+              ))}
+            </div>
+
+            {/* Content */}
+            <div className="p-6 min-h-[350px]">
+              {renderStepContent()}
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-3 p-4 border-t border-border/30 bg-muted/20">
+              <Button
+                variant="outline"
+                className="flex-1 h-11 rounded-xl"
+                onClick={() => {
+                  if (wizardStep === 1) {
+                    resetWizard();
+                  } else {
+                    setWizardStep(wizardStep - 1);
+                  }
+                }}
+                disabled={isCreating}
+              >
+                {wizardStep === 1 ? "Cancelar" : "Voltar"}
+              </Button>
+              <Button
+                className={cn(
+                  "flex-1 h-11 rounded-xl",
+                  wizardStep === 4 ? "bg-green-500 hover:bg-green-600" : ""
+                )}
+                onClick={() => {
+                  if (wizardStep === 4) {
+                    handleCreatePerda();
+                  } else {
+                    setWizardStep(wizardStep + 1);
+                  }
+                }}
+                disabled={!canProceed() || isCreating}
+              >
+                {isCreating ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : wizardStep === 4 ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Confirmar
+                  </>
+                ) : (
+                  "Próximo"
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

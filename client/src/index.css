@@ -274,19 +274,19 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-white/8 rounded-full;
+    @apply bg-white/10 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-white/15;
+    @apply bg-white/20;
   }
 
   .light ::-webkit-scrollbar-thumb {
-    @apply bg-black/8;
+    @apply bg-black/10;
   }
 
   .light ::-webkit-scrollbar-thumb:hover {
-    @apply bg-black/15;
+    @apply bg-black/20;
   }
 }
 

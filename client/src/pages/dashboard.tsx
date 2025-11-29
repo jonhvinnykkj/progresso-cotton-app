@@ -272,8 +272,12 @@ export default function Dashboard() {
     staleTime: 60000, // 1 minuto
   });
 
-  const cotacaoPluma = cotacaoData?.pluma || 140;
-  const cotacaoCaroco = cotacaoData?.caroco || 38;
+  // Cotação da pluma em R$/@ (valor típico entre 130-160)
+  // Se a cotação vier muito alta (> 500), usar valor padrão
+  const cotacaoRawPluma = cotacaoData?.pluma || 140;
+  const cotacaoRawCaroco = cotacaoData?.caroco || 38;
+  const cotacaoPluma = cotacaoRawPluma > 500 ? 140 : cotacaoRawPluma;
+  const cotacaoCaroco = cotacaoRawCaroco > 200 ? 38 : cotacaoRawCaroco;
   const cotacaoFonte = cotacaoData?.fonte || 'manual';
   const cotacaoDataAtualizacao = cotacaoData?.dataAtualizacao;
 

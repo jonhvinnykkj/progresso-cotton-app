@@ -144,6 +144,45 @@ export default function Dashboard() {
 
   const totalPerdasArrobasHa = perdasData?.totalPerdas || 0;
 
+  // Query de perdas por talhão (para o modal detalhado)
+  const { data: perdasPorTalhao = [] } = useQuery<{ talhao: string; totalPerdas: number; quantidadeRegistros: number }[]>({
+    queryKey: ["/api/perdas-totais", selectedSafra],
+    queryFn: async () => {
+      const encodedSafra = encodeURIComponent(selectedSafra);
+      const url = API_URL
+        ? `${API_URL}/api/perdas-totais/${encodedSafra}`
+        : `/api/perdas-totais/${encodedSafra}`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!selectedSafra,
+  });
+
+  // Query para perdas detalhadas (com motivos)
+  const { data: perdasDetalhadas = [] } = useQuery<any[]>({
+    queryKey: ["/api/perdas", selectedSafra],
+    queryFn: async () => {
+      const encodedSafra = encodeURIComponent(selectedSafra);
+      const url = API_URL
+        ? `${API_URL}/api/perdas/${encodedSafra}`
+        : `/api/perdas/${encodedSafra}`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!selectedSafra,
+  });
+
+  // Estado para modal de perdas
+  const [perdasModalOpen, setPerdasModalOpen] = useState(false);
+
   // Cálculos principais - usando talhões dinâmicos da safra
   const totalHectares = useMemo(() =>
     talhoesSafra.reduce((acc, t) => acc + parseFloat(t.hectares.replace(",", ".")), 0)
@@ -427,6 +466,27 @@ export default function Dashboard() {
     };
   }, [totaisCarregamentos.totalPesoKg, cotacaoPluma, cotacaoCaroco, usdBrl, totalPerdasArrobasHa, totalHectares]);
 
+  // Perdas por talhão com valor em R$ (para modal)
+  const perdasPorTalhaoComValor = useMemo(() => {
+    const valorMedio = (cotacaoPluma * 0.40 + cotacaoCaroco * 0.57) / 0.97;
+    return perdasPorTalhao.map(p => {
+      const talhaoInfo = talhoesSafra.find(t => t.nome === p.talhao);
+      const hectares = talhaoInfo ? parseFloat(talhaoInfo.hectares.replace(",", ".")) : 0;
+      const arrobasTotais = p.totalPerdas * hectares;
+      const valorBRL = arrobasTotais * valorMedio;
+      const detalhes = perdasDetalhadas.filter(pd => pd.talhao === p.talhao);
+      return {
+        talhao: p.talhao,
+        arrobasHa: p.totalPerdas,
+        hectares,
+        arrobasTotais,
+        valorBRL,
+        quantidadeRegistros: p.quantidadeRegistros,
+        detalhes
+      };
+    }).sort((a, b) => b.valorBRL - a.valorBRL);
+  }, [perdasPorTalhao, talhoesSafra, cotacaoPluma, cotacaoCaroco, perdasDetalhadas]);
+
   return (
     <Page>
       <PageContent className="max-w-7xl">
@@ -603,7 +663,10 @@ export default function Dashboard() {
                     </div>
                     {/* Perdas de Campo (só aparece se houver perdas registradas) */}
                     {valorEstimado.perdasCampoArrobasHa > 0 && (
-                      <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-red-950/50 backdrop-blur border border-red-500/30">
+                      <button
+                        onClick={() => setPerdasModalOpen(true)}
+                        className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-red-950/50 backdrop-blur border border-red-500/30 hover:bg-red-950/70 hover:border-red-500/50 transition-colors text-left group w-full"
+                      >
                         <div className="flex items-center justify-between mb-0.5 sm:mb-1">
                           <span className="text-[10px] sm:text-xs text-red-400 font-medium flex items-center gap-1">
                             <AlertTriangle className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
@@ -617,7 +680,8 @@ export default function Dashboard() {
                           -{(valorEstimado.perdasCampoValorBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
                         </p>
                         <p className="text-[9px] sm:text-[10px] text-red-400/60">{valorEstimado.perdasCampoArrobasHa.toFixed(1)} @/ha</p>
-                      </div>
+                        <p className="text-[8px] text-red-500/50 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5">Ver detalhes</p>
+                      </button>
                     )}
                   </div>
                 </div>
@@ -1011,6 +1075,88 @@ export default function Dashboard() {
           </div>
         </div>
       </PageContent>
+
+      {/* Modal de Perdas Detalhadas */}
+      <Dialog open={perdasModalOpen} onOpenChange={setPerdasModalOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader className="pb-3 sm:pb-4 mb-2 border-b border-border/30">
+            <DialogTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-2xl font-bold">
+              <div className="p-2 rounded-xl bg-destructive/20">
+                <TrendingDown className="w-5 h-5 text-destructive" />
+              </div>
+              Perdas por Talhão
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Resumo Total */}
+          <div className="glass-card p-4 rounded-xl border border-destructive/30 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total de Perdas</p>
+                <p className="text-2xl font-bold text-destructive">
+                  R$ {valorEstimado.perdasCampoValorBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Média</p>
+                <p className="text-lg font-bold text-destructive">{valorEstimado.perdasCampoArrobasHa.toFixed(1)} @/ha</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Lista de Talhões */}
+          <div className="space-y-3 max-h-[50vh] overflow-y-auto">
+            {perdasPorTalhaoComValor.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <TrendingDown className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                <p>Nenhuma perda registrada</p>
+              </div>
+            ) : (
+              perdasPorTalhaoComValor.map((perda) => (
+                <div
+                  key={perda.talhao}
+                  className="p-4 rounded-xl border border-border/30 hover:border-destructive/30 transition-colors bg-card"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-primary" />
+                      <span className="font-bold">{perda.talhao}</span>
+                      <span className="text-xs text-muted-foreground">({perda.hectares.toFixed(1)} ha)</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-destructive">
+                        R$ {perda.valorBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{perda.arrobasHa.toFixed(1)} @/ha</p>
+                    </div>
+                  </div>
+
+                  {/* Detalhes dos Motivos */}
+                  {perda.detalhes.length > 0 && (
+                    <div className="space-y-2 mt-2 pt-2 border-t border-border/30">
+                      {perda.detalhes.map((detalhe: any, idx: number) => (
+                        <div key={idx} className="flex items-start gap-2 text-sm">
+                          <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <span className="font-medium text-foreground">{detalhe.motivo}</span>
+                            <span className="text-muted-foreground"> - {parseFloat(detalhe.arrobasHa).toFixed(1)} @/ha</span>
+                            {detalhe.observacao && (
+                              <p className="text-xs text-muted-foreground mt-0.5">{detalhe.observacao}</p>
+                            )}
+                            <p className="text-[10px] text-muted-foreground">
+                              {new Date(detalhe.dataPerda).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de Histórico */}
       <Dialog open={historicoModal.open} onOpenChange={(open) => setHistoricoModal(prev => ({ ...prev, open }))}>

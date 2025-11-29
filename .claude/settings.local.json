@@ -45,7 +45,8 @@
       "Bash(for file in accordion aspect-ratio avatar breadcrumb carousel chart context-menu drawer hover-card input-otp menubar navigation-menu pagination radio-group resizable skeleton slider table textarea toggle toggle-group)",
       "Bash(do echo -n \"$file: \")",
       "Bash(done)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(npx vite --host)"
     ],
     "deny": [],
     "ask": []

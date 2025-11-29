@@ -413,21 +413,21 @@ export default function Dashboard() {
           </div>
 
           {/* KPIs Principais */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
             {/* Total Fardos */}
-            <div className="glass-card p-5 rounded-xl relative overflow-hidden group hover:shadow-glow-sm transition-all">
+            <div className="glass-card p-3 sm:p-5 rounded-xl relative overflow-hidden group hover:shadow-glow-sm transition-all">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent" />
               <div className="relative">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="p-2 rounded-lg bg-primary/20">
-                    <Package className="w-4 h-4 text-primary" />
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-primary/20">
+                    <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                   </div>
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Fardos</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Fardos</span>
                 </div>
-                <p className="text-3xl font-display font-bold text-foreground">
+                <p className="text-xl sm:text-3xl font-display font-bold text-foreground">
                   <AnimatedCounter value={stats?.total || 0} />
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                   {(stats?.total || 0) > 0 && totalHectares > 0
                     ? `${((stats?.total || 0) / totalHectares).toFixed(2)} f/ha`
                     : 'total cadastrados'}
@@ -436,64 +436,64 @@ export default function Dashboard() {
             </div>
 
             {/* Peso Colhido */}
-            <div className="glass-card p-5 rounded-xl relative overflow-hidden group hover:shadow-glow-sm transition-all">
+            <div className="glass-card p-3 sm:p-5 rounded-xl relative overflow-hidden group hover:shadow-glow-sm transition-all">
               <div className="absolute inset-0 bg-gradient-to-br from-neon-orange/10 to-transparent" />
               <div className="relative">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="p-2 rounded-lg bg-neon-orange/20">
-                    <Scale className="w-4 h-4 text-neon-orange" />
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-neon-orange/20">
+                    <Scale className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neon-orange" />
                   </div>
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Peso Bruto</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Peso Bruto</span>
                 </div>
-                <p className="text-2xl font-display font-bold text-foreground">
+                <p className="text-lg sm:text-2xl font-display font-bold text-foreground">
                   {totaisCarregamentos.totalPesoToneladas > 0
                     ? `${totaisCarregamentos.totalPesoToneladas.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} t`
                     : '-'}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                   {totaisCarregamentos.totalCarregamentos > 0
-                    ? `${totaisCarregamentos.totalCarregamentos} carregamentos`
+                    ? `${totaisCarregamentos.totalCarregamentos} carreg.`
                     : 'toneladas pesadas'}
                 </p>
               </div>
             </div>
 
             {/* Produtividade Prevista */}
-            <div className="glass-card p-5 rounded-xl relative overflow-hidden group hover:shadow-glow-sm transition-all">
+            <div className="glass-card p-3 sm:p-5 rounded-xl relative overflow-hidden group hover:shadow-glow-sm transition-all">
               <div className="absolute inset-0 bg-gradient-to-br from-accent/10 to-transparent" />
               <div className="relative">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="p-2 rounded-lg bg-accent/20">
-                    <Target className="w-4 h-4 text-accent" />
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-accent/20">
+                    <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />
                   </div>
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Prod. Prevista</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Prevista</span>
                 </div>
-                <p className="text-3xl font-display font-bold text-foreground">
+                <p className="text-xl sm:text-3xl font-display font-bold text-foreground">
                   {produtividade.prevista > 0
                     ? <AnimatedCounter value={produtividade.prevista} decimals={1} />
                     : '-'}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">@/ha (bruto)</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">@/ha (bruto)</p>
               </div>
             </div>
 
             {/* Produtividade Real */}
-            <div className="glass-card p-5 rounded-xl relative overflow-hidden group hover:shadow-glow-sm transition-all">
+            <div className="glass-card p-3 sm:p-5 rounded-xl relative overflow-hidden group hover:shadow-glow-sm transition-all">
               <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/10 to-transparent" />
               <div className="relative">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="p-2 rounded-lg bg-neon-cyan/20">
-                    <TrendingUp className="w-4 h-4 text-neon-cyan" />
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-neon-cyan/20">
+                    <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neon-cyan" />
                   </div>
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">Prod. Real</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Real</span>
                 </div>
-                <p className="text-3xl font-display font-bold text-foreground">
+                <p className="text-xl sm:text-3xl font-display font-bold text-foreground">
                   {produtividade.temDadosReais
                     ? <AnimatedCounter value={produtividade.real} decimals={1} />
                     : '-'}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {produtividade.temDadosReais ? '@/ha (pesado)' : 'aguardando pesagem'}
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
+                  {produtividade.temDadosReais ? '@/ha' : 'aguardando'}
                 </p>
               </div>
             </div>
@@ -501,67 +501,67 @@ export default function Dashboard() {
 
           {/* Hero - Valor Total Estimado */}
           {totaisCarregamentos.totalPesoKg > 0 && (
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-950 via-green-950 to-teal-950 border border-emerald-500/20">
+            <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-950 via-green-950 to-teal-950 border border-emerald-500/20">
               {/* Background pattern */}
               <div className="absolute inset-0 opacity-30">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-green-500/20 rounded-full blur-3xl" />
+                <div className="absolute top-0 right-0 w-32 sm:w-64 h-32 sm:h-64 bg-emerald-500/20 rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-24 sm:w-48 h-24 sm:h-48 bg-green-500/20 rounded-full blur-3xl" />
               </div>
 
-              <div className="relative p-6">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div className="relative p-4 sm:p-6">
+                <div className="flex flex-col gap-3 sm:gap-4">
                   {/* Valor Principal */}
                   <div>
-                    <p className="text-sm text-emerald-300/80 mb-1 flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4" />
+                    <p className="text-xs sm:text-sm text-emerald-300/80 mb-1 flex items-center gap-1.5 sm:gap-2">
+                      <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       Valor Estimado da Produção
                     </p>
-                    <div className="flex items-baseline gap-3">
-                      <span className="text-4xl sm:text-5xl font-display font-bold text-white">
+                    <div className="flex items-baseline gap-2 sm:gap-3">
+                      <span className="text-2xl sm:text-4xl md:text-5xl font-display font-bold text-white">
                         R$ {valorEstimado.valorTotalBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                     {usdBrl > 0 && (
-                      <p className="text-xl text-emerald-300 mt-1">
+                      <p className="text-base sm:text-xl text-emerald-300 mt-0.5 sm:mt-1">
                         $ {valorEstimado.valorTotalUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     )}
-                    <p className="text-sm text-emerald-300/60 mt-2">
+                    <p className="text-xs sm:text-sm text-emerald-300/60 mt-1 sm:mt-2">
                       {valorEstimado.arrobasBruto.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @ bruto pesado
                     </p>
                   </div>
 
                   {/* Breakdown Pluma/Caroço/Perdas */}
-                  <div className="flex gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
-                    <div className="flex-1 min-w-[100px] sm:w-32 p-3 rounded-xl bg-white/5 backdrop-blur border border-white/10">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-purple-300 font-medium">Pluma</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-300">40%</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white/5 backdrop-blur border border-white/10">
+                      <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                        <span className="text-[10px] sm:text-xs text-purple-300 font-medium">Pluma</span>
+                        <span className="text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-300">40%</span>
                       </div>
-                      <p className="text-base sm:text-lg font-bold text-white tracking-tight">
-                        R$ {(valorEstimado.valorPlumaBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
+                      <p className="text-sm sm:text-lg font-bold text-white tracking-tight">
+                        {(valorEstimado.valorPlumaBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
                       </p>
-                      <p className="text-[10px] text-white/50">{valorEstimado.arrobasPluma.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @</p>
+                      <p className="text-[9px] sm:text-[10px] text-white/50">{valorEstimado.arrobasPluma.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @</p>
                     </div>
-                    <div className="flex-1 min-w-[100px] sm:w-32 p-3 rounded-xl bg-white/5 backdrop-blur border border-white/10">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-orange-300 font-medium">Caroço</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/30 text-orange-300">57%</span>
+                    <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white/5 backdrop-blur border border-white/10">
+                      <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                        <span className="text-[10px] sm:text-xs text-orange-300 font-medium">Caroço</span>
+                        <span className="text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded bg-orange-500/30 text-orange-300">57%</span>
                       </div>
-                      <p className="text-base sm:text-lg font-bold text-white tracking-tight">
-                        R$ {(valorEstimado.valorCarocoBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
+                      <p className="text-sm sm:text-lg font-bold text-white tracking-tight">
+                        {(valorEstimado.valorCarocoBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
                       </p>
-                      <p className="text-[10px] text-white/50">{valorEstimado.arrobasCaroco.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @</p>
+                      <p className="text-[9px] sm:text-[10px] text-white/50">{valorEstimado.arrobasCaroco.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @</p>
                     </div>
-                    <div className="flex-1 min-w-[100px] sm:w-32 p-3 rounded-xl bg-white/5 backdrop-blur border border-red-500/20">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-red-300 font-medium">Perdas</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/30 text-red-300">3%</span>
+                    <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white/5 backdrop-blur border border-red-500/20">
+                      <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                        <span className="text-[10px] sm:text-xs text-red-300 font-medium">Perdas</span>
+                        <span className="text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded bg-red-500/30 text-red-300">3%</span>
                       </div>
-                      <p className="text-base sm:text-lg font-bold text-red-200 tracking-tight">
-                        -R$ {(valorEstimado.valorPerdasBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
+                      <p className="text-sm sm:text-lg font-bold text-red-200 tracking-tight">
+                        -{(valorEstimado.valorPerdasBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
                       </p>
-                      <p className="text-[10px] text-white/50">{valorEstimado.arrobasPerdas.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @ impurezas</p>
+                      <p className="text-[9px] sm:text-[10px] text-white/50">{valorEstimado.arrobasPerdas.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @</p>
                     </div>
                   </div>
                 </div>
@@ -570,32 +570,32 @@ export default function Dashboard() {
           )}
 
           {/* Cotações - Cards modernos */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
             {/* Dólar */}
             <button
               onClick={() => abrirHistorico('dolar', 'Dólar (USD/BRL)')}
-              className="group relative overflow-hidden p-4 rounded-2xl bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent border border-green-500/20 hover:border-green-500/40 hover:shadow-lg hover:shadow-green-500/10 transition-all text-left"
+              className="group relative overflow-hidden p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent border border-green-500/20 hover:border-green-500/40 hover:shadow-lg hover:shadow-green-500/10 transition-all text-left"
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-green-500/20">
-                    <DollarSign className="w-4 h-4 text-green-400" />
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-green-500/20">
+                    <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400" />
                   </div>
-                  <span className="text-xs font-medium text-green-400/80">USD/BRL</span>
+                  <span className="text-[10px] sm:text-xs font-medium text-green-400/80">USD/BRL</span>
                 </div>
-                <BarChart3 className="w-4 h-4 text-green-500/30 group-hover:text-green-400 transition-colors" />
+                <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500/30 group-hover:text-green-400 transition-colors" />
               </div>
-              <p className="text-2xl font-bold text-foreground mb-1">
+              <p className="text-lg sm:text-2xl font-bold text-foreground mb-0.5 sm:mb-1">
                 R$ {cotacaoData?.usdBrl ? cotacaoData.usdBrl.toFixed(2) : '-'}
               </p>
               {cotacaoData?.variacaoDolar !== undefined && (
                 <div className={cn(
-                  "flex items-center gap-1 text-xs font-medium",
+                  "flex items-center gap-1 text-[10px] sm:text-xs font-medium",
                   cotacaoData.variacaoDolar >= 0 ? "text-green-400" : "text-red-400"
                 )}>
-                  <TrendingUp className={cn("w-3 h-3", cotacaoData.variacaoDolar < 0 && "rotate-180")} />
+                  <TrendingUp className={cn("w-2.5 h-2.5 sm:w-3 sm:h-3", cotacaoData.variacaoDolar < 0 && "rotate-180")} />
                   <span>{cotacaoData.variacaoDolar >= 0 ? '+' : ''}{cotacaoData.variacaoDolar.toFixed(2)}%</span>
-                  <span className="text-muted-foreground/60 font-normal">30 dias</span>
+                  <span className="text-muted-foreground/60 font-normal hidden sm:inline">30d</span>
                 </div>
               )}
             </button>
@@ -603,28 +603,27 @@ export default function Dashboard() {
             {/* Algodão ICE */}
             <button
               onClick={() => abrirHistorico('algodao', 'Algodão (ICE Futures)')}
-              className="group relative overflow-hidden p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/10 transition-all text-left"
+              className="group relative overflow-hidden p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/10 transition-all text-left"
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-amber-500/20">
-                    <Wheat className="w-4 h-4 text-amber-400" />
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-amber-500/20">
+                    <Wheat className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
                   </div>
-                  <span className="text-xs font-medium text-amber-400/80">ICE Futures</span>
+                  <span className="text-[10px] sm:text-xs font-medium text-amber-400/80">ICE</span>
                 </div>
-                <BarChart3 className="w-4 h-4 text-amber-500/30 group-hover:text-amber-400 transition-colors" />
+                <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500/30 group-hover:text-amber-400 transition-colors" />
               </div>
-              <p className="text-2xl font-bold text-foreground mb-1">
-                {cotacaoData?.cottonUSD ? cotacaoData.cottonUSD.toFixed(2) : '-'} <span className="text-sm font-normal text-muted-foreground">¢/lb</span>
+              <p className="text-lg sm:text-2xl font-bold text-foreground mb-0.5 sm:mb-1">
+                {cotacaoData?.cottonUSD ? cotacaoData.cottonUSD.toFixed(2) : '-'} <span className="text-[10px] sm:text-sm font-normal text-muted-foreground">¢/lb</span>
               </p>
               {cotacaoData?.variacaoAlgodao !== undefined && (
                 <div className={cn(
-                  "flex items-center gap-1 text-xs font-medium",
+                  "flex items-center gap-1 text-[10px] sm:text-xs font-medium",
                   cotacaoData.variacaoAlgodao >= 0 ? "text-green-400" : "text-red-400"
                 )}>
-                  <TrendingUp className={cn("w-3 h-3", cotacaoData.variacaoAlgodao < 0 && "rotate-180")} />
+                  <TrendingUp className={cn("w-2.5 h-2.5 sm:w-3 sm:h-3", cotacaoData.variacaoAlgodao < 0 && "rotate-180")} />
                   <span>{cotacaoData.variacaoAlgodao >= 0 ? '+' : ''}{cotacaoData.variacaoAlgodao.toFixed(2)}%</span>
-                  <span className="text-muted-foreground/60 font-normal">mês</span>
                 </div>
               )}
             </button>
@@ -632,28 +631,27 @@ export default function Dashboard() {
             {/* Pluma */}
             <button
               onClick={() => abrirHistorico('pluma', 'Pluma (R$/@)')}
-              className="group relative overflow-hidden p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent border border-purple-500/20 hover:border-purple-500/40 hover:shadow-lg hover:shadow-purple-500/10 transition-all text-left"
+              className="group relative overflow-hidden p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent border border-purple-500/20 hover:border-purple-500/40 hover:shadow-lg hover:shadow-purple-500/10 transition-all text-left"
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-purple-500/20">
-                    <Wheat className="w-4 h-4 text-purple-400" />
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-purple-500/20">
+                    <Wheat className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400" />
                   </div>
-                  <span className="text-xs font-medium text-purple-400/80">Pluma</span>
+                  <span className="text-[10px] sm:text-xs font-medium text-purple-400/80">Pluma</span>
                 </div>
-                <BarChart3 className="w-4 h-4 text-purple-500/30 group-hover:text-purple-400 transition-colors" />
+                <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-500/30 group-hover:text-purple-400 transition-colors" />
               </div>
-              <p className="text-2xl font-bold text-foreground mb-1">
-                R$ {cotacaoPluma.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">/@</span>
+              <p className="text-lg sm:text-2xl font-bold text-foreground mb-0.5 sm:mb-1">
+                {cotacaoPluma.toFixed(2)} <span className="text-[10px] sm:text-sm font-normal text-muted-foreground">/@</span>
               </p>
               {cotacaoData?.variacaoPluma !== undefined && (
                 <div className={cn(
-                  "flex items-center gap-1 text-xs font-medium",
+                  "flex items-center gap-1 text-[10px] sm:text-xs font-medium",
                   cotacaoData.variacaoPluma >= 0 ? "text-green-400" : "text-red-400"
                 )}>
-                  <TrendingUp className={cn("w-3 h-3", cotacaoData.variacaoPluma < 0 && "rotate-180")} />
+                  <TrendingUp className={cn("w-2.5 h-2.5 sm:w-3 sm:h-3", cotacaoData.variacaoPluma < 0 && "rotate-180")} />
                   <span>{cotacaoData.variacaoPluma >= 0 ? '+' : ''}{cotacaoData.variacaoPluma.toFixed(2)}%</span>
-                  <span className="text-muted-foreground/60 font-normal">mês</span>
                 </div>
               )}
             </button>
@@ -661,28 +659,27 @@ export default function Dashboard() {
             {/* Caroço */}
             <button
               onClick={() => abrirHistorico('caroco', 'Caroço (R$/@)')}
-              className="group relative overflow-hidden p-4 rounded-2xl bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-transparent border border-orange-500/20 hover:border-orange-500/40 hover:shadow-lg hover:shadow-orange-500/10 transition-all text-left"
+              className="group relative overflow-hidden p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-transparent border border-orange-500/20 hover:border-orange-500/40 hover:shadow-lg hover:shadow-orange-500/10 transition-all text-left"
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-orange-500/20">
-                    <Package className="w-4 h-4 text-orange-400" />
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-orange-500/20">
+                    <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-400" />
                   </div>
-                  <span className="text-xs font-medium text-orange-400/80">Caroço</span>
+                  <span className="text-[10px] sm:text-xs font-medium text-orange-400/80">Caroço</span>
                 </div>
-                <BarChart3 className="w-4 h-4 text-orange-500/30 group-hover:text-orange-400 transition-colors" />
+                <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500/30 group-hover:text-orange-400 transition-colors" />
               </div>
-              <p className="text-2xl font-bold text-foreground mb-1">
-                R$ {cotacaoCaroco.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">/@</span>
+              <p className="text-lg sm:text-2xl font-bold text-foreground mb-0.5 sm:mb-1">
+                {cotacaoCaroco.toFixed(2)} <span className="text-[10px] sm:text-sm font-normal text-muted-foreground">/@</span>
               </p>
               {cotacaoData?.variacaoCaroco !== undefined && (
                 <div className={cn(
-                  "flex items-center gap-1 text-xs font-medium",
+                  "flex items-center gap-1 text-[10px] sm:text-xs font-medium",
                   cotacaoData.variacaoCaroco >= 0 ? "text-green-400" : "text-red-400"
                 )}>
-                  <TrendingUp className={cn("w-3 h-3", cotacaoData.variacaoCaroco < 0 && "rotate-180")} />
+                  <TrendingUp className={cn("w-2.5 h-2.5 sm:w-3 sm:h-3", cotacaoData.variacaoCaroco < 0 && "rotate-180")} />
                   <span>{cotacaoData.variacaoCaroco >= 0 ? '+' : ''}{cotacaoData.variacaoCaroco.toFixed(2)}%</span>
-                  <span className="text-muted-foreground/60 font-normal">mês</span>
                 </div>
               )}
             </button>

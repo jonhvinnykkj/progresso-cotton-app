@@ -813,122 +813,96 @@ export default function TalhaoStats() {
             </div>
 
             {/* Grid de Cards Principais - 3 colunas */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
               {/* Card 1: Total de Fardos */}
               <div
-                className="glass-card p-5 rounded-xl relative overflow-hidden group hover:shadow-glow hover:scale-[1.02] transition-all duration-300 animate-fade-in-up"
-                style={{ animationDelay: '0ms' }}
+                className="glass-card p-2.5 sm:p-5 rounded-xl relative overflow-hidden group hover:shadow-glow transition-all duration-300"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-50 group-hover:opacity-70 transition-opacity" />
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-50" />
                 <div className="relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="p-2 rounded-lg bg-primary/20 group-hover:bg-primary/30 transition-colors">
-                      <Package className="w-4 h-4 text-primary" />
+                  <div className="flex items-center justify-between mb-2 sm:mb-3">
+                    <div className="p-1.5 sm:p-2 rounded-lg bg-primary/20">
+                      <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                     </div>
-                    <span className="text-xs text-primary font-semibold uppercase tracking-wider">Total</span>
+                    <span className="text-[9px] sm:text-xs text-primary font-semibold uppercase">Total</span>
                   </div>
-                  <p className="text-3xl sm:text-4xl font-display font-bold text-glow mb-1">
+                  <p className="text-xl sm:text-4xl font-display font-bold text-glow mb-0.5 sm:mb-1">
                     <AnimatedCounter value={globalStats?.total || 0} />
                   </p>
-                  <p className="text-xs text-muted-foreground">fardos cadastrados</p>
-                  <div className="mt-3 h-1.5 rounded-full bg-surface overflow-hidden">
+                  <p className="text-[9px] sm:text-xs text-muted-foreground">fardos</p>
+                  <div className="mt-2 sm:mt-3 h-1 sm:h-1.5 rounded-full bg-surface overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-primary to-neon-cyan rounded-full transition-all duration-700 animate-pulse-glow"
+                      className="h-full bg-gradient-to-r from-primary to-neon-cyan rounded-full"
                       style={{ width: `${taxaBeneficiamento}%` }}
                     />
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-1">{taxaBeneficiamento.toFixed(1)}% beneficiado</p>
+                  <p className="text-[8px] sm:text-[10px] text-muted-foreground mt-0.5 sm:mt-1">{taxaBeneficiamento.toFixed(0)}% benef.</p>
                 </div>
               </div>
 
-              {/* Card 2: Produtividade Rolos */}
+              {/* Card 2: Produtividade */}
               <div
-                className="glass-card p-5 rounded-xl relative overflow-hidden group hover:shadow-glow-cyan hover:scale-[1.02] transition-all duration-300 animate-fade-in-up"
-                style={{ animationDelay: '100ms' }}
+                className="glass-card p-2.5 sm:p-5 rounded-xl relative overflow-hidden group hover:shadow-glow-cyan transition-all duration-300"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/20 to-transparent opacity-50 group-hover:opacity-70 transition-opacity" />
-                <div className="absolute inset-0 bg-gradient-to-t from-neon-cyan/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/20 to-transparent opacity-50" />
                 <div className="relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="p-2 rounded-lg bg-neon-cyan/20 group-hover:bg-neon-cyan/30 transition-colors">
-                      <TrendingUp className="w-4 h-4 text-neon-cyan" />
+                  <div className="flex items-center justify-between mb-2 sm:mb-3">
+                    <div className="p-1.5 sm:p-2 rounded-lg bg-neon-cyan/20">
+                      <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neon-cyan" />
                     </div>
-                    <span className="text-xs text-neon-cyan font-semibold uppercase tracking-wider">@/ha</span>
+                    <span className="text-[9px] sm:text-xs text-neon-cyan font-semibold uppercase">@/ha</span>
                   </div>
-                  <div className="flex items-center gap-2 sm:gap-3 mb-1">
-                    <div className="flex-1">
-                      <p className="text-[10px] text-muted-foreground uppercase">Prevista</p>
-                      <p className="text-xl sm:text-2xl font-display font-bold text-foreground">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mb-0.5 sm:mb-1">
+                    <div className="flex items-center gap-2 sm:block">
+                      <p className="text-[8px] sm:text-[10px] text-muted-foreground uppercase">Prev</p>
+                      <p className="text-base sm:text-2xl font-display font-bold text-foreground">
                         {totaisProdutividade.produtividadePrevistaMedia > 0
-                          ? totaisProdutividade.produtividadePrevistaMedia.toFixed(1)
+                          ? totaisProdutividade.produtividadePrevistaMedia.toFixed(0)
                           : '-'}
                       </p>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-[10px] text-muted-foreground uppercase">Real</p>
-                      <p className="text-xl sm:text-2xl font-display font-bold text-foreground">
+                    <div className="flex items-center gap-2 sm:block">
+                      <p className="text-[8px] sm:text-[10px] text-muted-foreground uppercase">Real</p>
+                      <p className="text-base sm:text-2xl font-display font-bold text-foreground">
                         {totaisProdutividade.produtividadeRealMedia > 0
-                          ? totaisProdutividade.produtividadeRealMedia.toFixed(1)
+                          ? totaisProdutividade.produtividadeRealMedia.toFixed(0)
                           : '-'}
                       </p>
                     </div>
                   </div>
                   {totaisProdutividade.produtividadePrevistaMedia > 0 && totaisProdutividade.produtividadeRealMedia > 0 && (
                     <div className={cn(
-                      "flex items-center gap-1 text-xs font-semibold",
+                      "flex items-center gap-0.5 text-[10px] sm:text-xs font-semibold",
                       totaisProdutividade.produtividadeRealMedia >= totaisProdutividade.produtividadePrevistaMedia
                         ? "text-green-500"
                         : "text-red-500"
                     )}>
                       {totaisProdutividade.produtividadeRealMedia >= totaisProdutividade.produtividadePrevistaMedia
-                        ? <ArrowUpRight className="w-3 h-3" />
-                        : <ArrowDownRight className="w-3 h-3" />}
-                      {(((totaisProdutividade.produtividadeRealMedia - totaisProdutividade.produtividadePrevistaMedia) / totaisProdutividade.produtividadePrevistaMedia) * 100).toFixed(1)}%
+                        ? <ArrowUpRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                        : <ArrowDownRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                      {(((totaisProdutividade.produtividadeRealMedia - totaisProdutividade.produtividadePrevistaMedia) / totaisProdutividade.produtividadePrevistaMedia) * 100).toFixed(0)}%
                     </div>
                   )}
-                  <div className="flex items-center gap-2 sm:gap-3 mt-2 pt-2 border-t border-border/30">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] text-muted-foreground uppercase truncate">Peso Est.</p>
-                      <p className="text-xs sm:text-sm font-bold text-foreground">2.000 kg</p>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] text-muted-foreground uppercase truncate">Peso Real</p>
-                      <p className="text-xs sm:text-sm font-bold text-foreground">
-                        {totaisProdutividade.pesoMedioRealGlobal > 0
-                          ? `${Math.round(totaisProdutividade.pesoMedioRealGlobal).toLocaleString('pt-BR')} kg`
-                          : '-'}
-                      </p>
-                    </div>
-                  </div>
                 </div>
               </div>
 
               {/* Card 3: Volume Processado */}
               <div
-                className="glass-card p-5 rounded-xl relative overflow-hidden group hover:shadow-glow-orange hover:scale-[1.02] transition-all duration-300 animate-fade-in-up"
-                style={{ animationDelay: '200ms' }}
+                className="glass-card p-2.5 sm:p-5 rounded-xl relative overflow-hidden group hover:shadow-glow-orange transition-all duration-300"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-neon-orange/20 to-transparent opacity-50 group-hover:opacity-70 transition-opacity" />
-                <div className="absolute inset-0 bg-gradient-to-t from-neon-orange/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-gradient-to-br from-neon-orange/20 to-transparent opacity-50" />
                 <div className="relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="p-2 rounded-lg bg-neon-orange/20 group-hover:bg-neon-orange/30 transition-colors">
-                      <Scale className="w-4 h-4 text-neon-orange" />
+                  <div className="flex items-center justify-between mb-2 sm:mb-3">
+                    <div className="p-1.5 sm:p-2 rounded-lg bg-neon-orange/20">
+                      <Scale className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neon-orange" />
                     </div>
-                    <span className="text-xs text-neon-orange font-semibold uppercase tracking-wider">Peso Bruto</span>
+                    <span className="text-[9px] sm:text-xs text-neon-orange font-semibold uppercase">Peso</span>
                   </div>
-                  <p className="text-xl sm:text-2xl font-display font-bold mb-1">
-                    {totaisCarregamentos.totalPesoToneladas.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}
-                    <span className="text-sm sm:text-base text-neon-orange ml-1">t</span>
+                  <p className="text-lg sm:text-2xl font-display font-bold mb-0.5 sm:mb-1">
+                    {totaisCarregamentos.totalPesoToneladas.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                    <span className="text-xs sm:text-base text-neon-orange ml-0.5">t</span>
                   </p>
-                  <p className="text-xs text-muted-foreground">{totaisCarregamentos.totalCarregamentos} carregamentos</p>
-                  <div className="flex items-center gap-2 mt-3">
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Truck className="w-3 h-3" />
-                      <span className="truncate">Média: {Math.round(totaisCarregamentos.mediaPesoPorCarregamento).toLocaleString('pt-BR')} kg/carreg.</span>
-                    </div>
-                  </div>
+                  <p className="text-[9px] sm:text-xs text-muted-foreground">{totaisCarregamentos.totalCarregamentos} carreg.</p>
                 </div>
               </div>
             </div>
@@ -998,49 +972,49 @@ export default function TalhaoStats() {
           {/* ==================== TAB: VISÃO GERAL ==================== */}
           <TabsContent value="visao-geral" className="space-y-6 mt-4">
             {/* Resumo Rápido - Cards de Status */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
               {/* Status: Campo */}
-              <div className="glass-card p-4 rounded-xl border-l-4 border-l-primary">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-lg bg-primary/20">
-                    <Package className="w-5 h-5 text-primary" />
+              <div className="glass-card p-3 sm:p-4 rounded-xl border-l-4 border-l-primary">
+                <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-primary/20">
+                    <Package className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                   </div>
-                  <span className="text-xs text-muted-foreground uppercase tracking-wide">Campo</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">Campo</span>
                 </div>
-                <p className="text-3xl font-display font-bold text-foreground">{globalStats?.campo || 0}</p>
+                <p className="text-xl sm:text-3xl font-display font-bold text-foreground">{globalStats?.campo || 0}</p>
               </div>
 
               {/* Status: Pátio */}
-              <div className="glass-card p-4 rounded-xl border-l-4 border-l-neon-orange">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-lg bg-neon-orange/20">
-                    <Truck className="w-5 h-5 text-neon-orange" />
+              <div className="glass-card p-3 sm:p-4 rounded-xl border-l-4 border-l-neon-orange">
+                <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-neon-orange/20">
+                    <Truck className="w-4 h-4 sm:w-5 sm:h-5 text-neon-orange" />
                   </div>
-                  <span className="text-xs text-muted-foreground uppercase tracking-wide">Pátio</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">Pátio</span>
                 </div>
-                <p className="text-3xl font-display font-bold text-foreground">{globalStats?.patio || 0}</p>
+                <p className="text-xl sm:text-3xl font-display font-bold text-foreground">{globalStats?.patio || 0}</p>
               </div>
 
               {/* Status: Beneficiado */}
-              <div className="glass-card p-4 rounded-xl border-l-4 border-l-neon-cyan">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-lg bg-neon-cyan/20">
-                    <CheckCircle className="w-5 h-5 text-neon-cyan" />
+              <div className="glass-card p-3 sm:p-4 rounded-xl border-l-4 border-l-neon-cyan">
+                <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-neon-cyan/20">
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-neon-cyan" />
                   </div>
-                  <span className="text-xs text-muted-foreground uppercase tracking-wide">Beneficiado</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">Benef.</span>
                 </div>
-                <p className="text-3xl font-display font-bold text-foreground">{globalStats?.beneficiado || 0}</p>
+                <p className="text-xl sm:text-3xl font-display font-bold text-foreground">{globalStats?.beneficiado || 0}</p>
               </div>
 
               {/* Total */}
-              <div className="glass-card p-4 rounded-xl border-l-4 border-l-accent">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-lg bg-accent/20">
-                    <Layers className="w-5 h-5 text-accent" />
+              <div className="glass-card p-3 sm:p-4 rounded-xl border-l-4 border-l-accent">
+                <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
+                  <div className="p-1.5 sm:p-2 rounded-lg bg-accent/20">
+                    <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
                   </div>
-                  <span className="text-xs text-muted-foreground uppercase tracking-wide">Total</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">Total</span>
                 </div>
-                <p className="text-3xl font-bold">{globalStats?.total || 0}</p>
+                <p className="text-xl sm:text-3xl font-bold">{globalStats?.total || 0}</p>
               </div>
             </div>
 

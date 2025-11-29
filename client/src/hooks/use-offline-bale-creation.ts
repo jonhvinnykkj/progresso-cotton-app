@@ -15,6 +15,7 @@ interface CreateBatchData {
   safra: string;
   talhao: string;
   quantidade: number;
+  tipo?: "normal" | "bordadura" | "bituca";
 }
 
 export function useOfflineBaleCreation() {

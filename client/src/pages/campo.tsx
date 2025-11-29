@@ -58,14 +58,685 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Page, PageContent } from "@/components/layout/page";
 import { cn } from "@/lib/utils";
 
-// Componente para buscar etiquetas
+// Componente para criar fardos em lote - Wizard
+function LoteTab({
+  defaultSafra,
+  talhoesSafra,
+  onBalesCreated
+}: {
+  defaultSafra: string;
+  talhoesSafra: { id: string; nome: string; hectares: string }[];
+  onBalesCreated: (bales: Bale[]) => void;
+}) {
+  const { toast } = useToast();
+  const { createBatch } = useOfflineBaleCreation();
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Wizard state
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
+  const [selectedTalhao, setSelectedTalhao] = useState<{ nome: string; hectares: string } | null>(null);
+  const [quantidade, setQuantidade] = useState("");
+  const [tipo, setTipo] = useState<"normal" | "bordadura" | "bituca">("normal");
+
+  const wizardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (wizardOpen && wizardRef.current) {
+      setTimeout(() => {
+        wizardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    }
+  }, [wizardOpen]);
+
+  const resetWizard = () => {
+    setWizardOpen(false);
+    setWizardStep(1);
+    setSelectedTalhao(null);
+    setQuantidade("");
+    setTipo("normal");
+  };
+
+  const tipos = [
+    { id: "normal", label: "Normal", desc: "Fardo padrão de algodão", icon: "📦" },
+    { id: "bordadura", label: "Bordadura", desc: "Bordas do talhão", icon: "🔲" },
+    { id: "bituca", label: "Bituca", desc: "Algodão restante", icon: "🧹" },
+  ];
+
+  const handleCreateBatch = async () => {
+    if (!defaultSafra || !selectedTalhao || !quantidade) return;
+
+    setIsCreating(true);
+    try {
+      const result = await createBatch.mutateAsync({
+        safra: defaultSafra,
+        talhao: selectedTalhao.nome,
+        quantidade: parseInt(quantidade),
+        tipo: tipo,
+      });
+
+      if (result?.bales && Array.isArray(result.bales)) {
+        onBalesCreated(result.bales);
+        toast({
+          variant: "success",
+          title: "Fardos criados!",
+          description: `${result.bales.length} fardo(s) criados no talhão ${selectedTalhao.nome}`,
+        });
+      }
+
+      resetWizard();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível criar os fardos.",
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const canProceed = () => {
+    switch (wizardStep) {
+      case 1: return !!selectedTalhao;
+      case 2: return !!quantidade && parseInt(quantidade) > 0 && parseInt(quantidade) <= 1000;
+      case 3: return !!tipo;
+      default: return true;
+    }
+  };
+
+  const renderStepContent = () => {
+    switch (wizardStep) {
+      case 1:
+        return (
+          <div className="space-y-4">
+            <div className="text-center mb-6">
+              <div className="inline-flex p-3 rounded-full bg-primary/10 mb-3">
+                <MapPin className="w-6 h-6 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold">Selecione o Talhão</h3>
+              <p className="text-sm text-muted-foreground">Onde os fardos foram produzidos?</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 max-h-[300px] overflow-y-auto p-1">
+              {talhoesSafra.map((talhao) => {
+                const isSelected = selectedTalhao?.nome === talhao.nome;
+                return (
+                  <button
+                    key={talhao.id}
+                    onClick={() => setSelectedTalhao(talhao)}
+                    className={cn(
+                      "p-3 rounded-xl border-2 transition-all text-left",
+                      isSelected
+                        ? "bg-primary/10 border-primary scale-105"
+                        : "bg-card border-border/50 hover:border-primary/50"
+                    )}
+                  >
+                    <p className="font-bold text-foreground">{talhao.nome}</p>
+                    <p className="text-[10px] text-muted-foreground">{talhao.hectares} ha</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <div className="inline-flex p-3 rounded-full bg-neon-cyan/10 mb-3">
+                <Package className="w-6 h-6 text-neon-cyan" />
+              </div>
+              <h3 className="text-lg font-bold">Quantidade de Fardos</h3>
+              <p className="text-sm text-muted-foreground">
+                Quantos fardos do <span className="font-bold text-primary">{selectedTalhao?.nome}</span>?
+              </p>
+            </div>
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative w-full max-w-[200px]">
+                <Input
+                  type="number"
+                  min="1"
+                  max="1000"
+                  placeholder="0"
+                  value={quantidade}
+                  onChange={(e) => setQuantidade(e.target.value)}
+                  className="h-16 text-3xl font-bold text-center rounded-2xl"
+                  autoFocus
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Máximo: 1000 fardos por vez</p>
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-4">
+            <div className="text-center mb-6">
+              <div className="inline-flex p-3 rounded-full bg-neon-orange/10 mb-3">
+                <Layers className="w-6 h-6 text-neon-orange" />
+              </div>
+              <h3 className="text-lg font-bold">Tipo de Fardo</h3>
+              <p className="text-sm text-muted-foreground">Qual a classificação?</p>
+            </div>
+            <div className="space-y-2">
+              {tipos.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTipo(t.id as typeof tipo)}
+                  className={cn(
+                    "w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 text-left",
+                    tipo === t.id
+                      ? "bg-primary/10 border-primary"
+                      : "bg-card border-border/50 hover:border-primary/50"
+                  )}
+                >
+                  <span className="text-2xl">{t.icon}</span>
+                  <div>
+                    <p className="font-bold">{t.label}</p>
+                    <p className="text-xs text-muted-foreground">{t.desc}</p>
+                  </div>
+                  {tipo === t.id && (
+                    <CheckCircle className="w-5 h-5 text-primary ml-auto" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <div className="inline-flex p-3 rounded-full bg-green-500/10 mb-3">
+                <CheckCircle className="w-6 h-6 text-green-500" />
+              </div>
+              <h3 className="text-lg font-bold">Confirmar Criação</h3>
+              <p className="text-sm text-muted-foreground">Revise os dados</p>
+            </div>
+
+            <div className="space-y-3 p-4 rounded-xl bg-muted/30 border border-border/50">
+              <div className="flex justify-between items-center pb-3 border-b border-border/30">
+                <span className="text-sm text-muted-foreground">Talhão</span>
+                <span className="font-bold text-primary">{selectedTalhao?.nome}</span>
+              </div>
+              <div className="flex justify-between items-center pb-3 border-b border-border/30">
+                <span className="text-sm text-muted-foreground">Quantidade</span>
+                <span className="font-bold text-neon-cyan">{quantidade} fardo(s)</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Tipo</span>
+                <span className="font-medium capitalize">{tipo}</span>
+              </div>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header e botão de iniciar */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-primary/20 text-primary">
+            <Package className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-lg">Criar em Lote</h3>
+            <p className="text-xs text-muted-foreground">
+              Crie múltiplos fardos de uma vez
+            </p>
+          </div>
+        </div>
+        {!wizardOpen && (
+          <Button
+            onClick={() => setWizardOpen(true)}
+            className="h-10 px-4 rounded-xl btn-neon"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Lote
+          </Button>
+        )}
+      </div>
+
+      {/* Wizard Inline */}
+      {wizardOpen && (
+        <div ref={wizardRef} className="bg-card border-2 border-primary/30 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="h-1.5 bg-muted">
+            <div
+              className="h-full bg-primary transition-all duration-300"
+              style={{ width: `${(wizardStep / 4) * 100}%` }}
+            />
+          </div>
+
+          <div className="flex justify-center gap-3 p-4 border-b border-border/30 bg-muted/20">
+            {[
+              { num: 1, label: "Talhão" },
+              { num: 2, label: "Quantidade" },
+              { num: 3, label: "Tipo" },
+              { num: 4, label: "Confirmar" },
+            ].map((step) => (
+              <div key={step.num} className="flex flex-col items-center gap-1">
+                <div
+                  className={cn(
+                    "w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all",
+                    wizardStep === step.num
+                      ? "bg-primary text-primary-foreground scale-110 shadow-lg"
+                      : wizardStep > step.num
+                      ? "bg-green-500 text-white"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {wizardStep > step.num ? <CheckCircle className="w-4 h-4" /> : step.num}
+                </div>
+                <span className={cn(
+                  "text-[10px] font-medium",
+                  wizardStep === step.num ? "text-primary" : "text-muted-foreground"
+                )}>
+                  {step.label}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-6 min-h-[320px]">
+            {renderStepContent()}
+          </div>
+
+          <div className="flex gap-3 p-4 border-t border-border/30 bg-muted/10">
+            <Button
+              variant="outline"
+              className="flex-1 h-12 rounded-xl text-base"
+              onClick={() => {
+                if (wizardStep === 1) resetWizard();
+                else setWizardStep(wizardStep - 1);
+              }}
+              disabled={isCreating}
+            >
+              {wizardStep === 1 ? "Cancelar" : "Voltar"}
+            </Button>
+            <Button
+              className={cn(
+                "flex-1 h-12 rounded-xl text-base",
+                wizardStep === 4 ? "bg-green-500 hover:bg-green-600" : ""
+              )}
+              onClick={() => {
+                if (wizardStep === 4) handleCreateBatch();
+                else setWizardStep(wizardStep + 1);
+              }}
+              disabled={!canProceed() || isCreating}
+            >
+              {isCreating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : wizardStep === 4 ? (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Criar Fardos
+                </>
+              ) : (
+                "Próximo"
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Info card */}
+      {!wizardOpen && (
+        <div className="text-center p-8 rounded-2xl border-2 border-dashed border-border/30 bg-surface/30">
+          <div className="inline-flex p-4 bg-primary/10 rounded-2xl mb-4">
+            <Package className="w-10 h-10 text-primary/50" />
+          </div>
+          <p className="text-lg font-bold text-foreground/80 mb-2">
+            Criação em Lote
+          </p>
+          <p className="text-sm text-muted-foreground/70 mb-4">
+            Crie até 1000 fardos de uma só vez com numeração automática
+          </p>
+          <Button
+            onClick={() => setWizardOpen(true)}
+            variant="outline"
+            className="rounded-xl"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Começar
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Componente para criar fardo individual - Wizard
+function IndividualTab({
+  defaultSafra,
+  talhoesSafra,
+  onBaleCreated
+}: {
+  defaultSafra: string;
+  talhoesSafra: { id: string; nome: string; hectares: string }[];
+  onBaleCreated: (bale: Bale) => void;
+}) {
+  const { toast } = useToast();
+  const { createBale } = useOfflineBaleCreation();
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Wizard state
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
+  const [selectedTalhao, setSelectedTalhao] = useState<{ nome: string; hectares: string } | null>(null);
+  const [numero, setNumero] = useState("");
+
+  const wizardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (wizardOpen && wizardRef.current) {
+      setTimeout(() => {
+        wizardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    }
+  }, [wizardOpen]);
+
+  const resetWizard = () => {
+    setWizardOpen(false);
+    setWizardStep(1);
+    setSelectedTalhao(null);
+    setNumero("");
+  };
+
+  const handleCreateSingle = async () => {
+    if (!defaultSafra || !selectedTalhao || !numero) return;
+
+    setIsCreating(true);
+    try {
+      const baleId = `${defaultSafra}-${selectedTalhao.nome}-${numero.padStart(5, '0')}`;
+
+      await createBale.mutateAsync({
+        id: baleId,
+        safra: defaultSafra,
+        talhao: selectedTalhao.nome,
+        numero: parseInt(numero, 10),
+      });
+
+      toast({
+        variant: "success",
+        title: "Fardo criado!",
+        description: `Fardo ${numero} criado no talhão ${selectedTalhao.nome}`,
+      });
+
+      resetWizard();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível criar o fardo.",
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const canProceed = () => {
+    switch (wizardStep) {
+      case 1: return !!selectedTalhao;
+      case 2: return !!numero && /^\d{1,5}$/.test(numero);
+      default: return true;
+    }
+  };
+
+  const renderStepContent = () => {
+    switch (wizardStep) {
+      case 1:
+        return (
+          <div className="space-y-4">
+            <div className="text-center mb-6">
+              <div className="inline-flex p-3 rounded-full bg-primary/10 mb-3">
+                <MapPin className="w-6 h-6 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold">Selecione o Talhão</h3>
+              <p className="text-sm text-muted-foreground">Onde o fardo foi produzido?</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 max-h-[300px] overflow-y-auto p-1">
+              {talhoesSafra.map((talhao) => {
+                const isSelected = selectedTalhao?.nome === talhao.nome;
+                return (
+                  <button
+                    key={talhao.id}
+                    onClick={() => setSelectedTalhao(talhao)}
+                    className={cn(
+                      "p-3 rounded-xl border-2 transition-all text-left",
+                      isSelected
+                        ? "bg-primary/10 border-primary scale-105"
+                        : "bg-card border-border/50 hover:border-primary/50"
+                    )}
+                  >
+                    <p className="font-bold text-foreground">{talhao.nome}</p>
+                    <p className="text-[10px] text-muted-foreground">{talhao.hectares} ha</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <div className="inline-flex p-3 rounded-full bg-neon-cyan/10 mb-3">
+                <Hash className="w-6 h-6 text-neon-cyan" />
+              </div>
+              <h3 className="text-lg font-bold">Número do Fardo</h3>
+              <p className="text-sm text-muted-foreground">
+                Digite o número para o <span className="font-bold text-primary">{selectedTalhao?.nome}</span>
+              </p>
+            </div>
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative w-full max-w-[200px]">
+                <Input
+                  type="text"
+                  maxLength={5}
+                  placeholder="00001"
+                  value={numero}
+                  onChange={(e) => setNumero(e.target.value.replace(/\D/g, ''))}
+                  className="h-16 text-3xl font-bold text-center rounded-2xl font-mono"
+                  autoFocus
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Até 5 dígitos (Ex: 00001, 00042)</p>
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <div className="inline-flex p-3 rounded-full bg-green-500/10 mb-3">
+                <CheckCircle className="w-6 h-6 text-green-500" />
+              </div>
+              <h3 className="text-lg font-bold">Confirmar Criação</h3>
+              <p className="text-sm text-muted-foreground">Revise os dados do fardo</p>
+            </div>
+
+            <div className="space-y-3 p-4 rounded-xl bg-muted/30 border border-border/50">
+              <div className="flex justify-between items-center pb-3 border-b border-border/30">
+                <span className="text-sm text-muted-foreground">Talhão</span>
+                <span className="font-bold text-primary">{selectedTalhao?.nome}</span>
+              </div>
+              <div className="flex justify-between items-center pb-3 border-b border-border/30">
+                <span className="text-sm text-muted-foreground">Número</span>
+                <span className="font-bold font-mono text-neon-cyan">{numero.padStart(5, '0')}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">ID Final</span>
+                <span className="font-mono text-xs">{defaultSafra}-{selectedTalhao?.nome}-{numero.padStart(5, '0')}</span>
+              </div>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header e botão de iniciar */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-neon-cyan/20 text-neon-cyan">
+            <Plus className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-lg">Fardo Individual</h3>
+            <p className="text-xs text-muted-foreground">
+              Crie um fardo com número específico
+            </p>
+          </div>
+        </div>
+        {!wizardOpen && (
+          <Button
+            onClick={() => setWizardOpen(true)}
+            className="h-10 px-4 rounded-xl btn-neon"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Fardo
+          </Button>
+        )}
+      </div>
+
+      {/* Wizard Inline */}
+      {wizardOpen && (
+        <div ref={wizardRef} className="bg-card border-2 border-neon-cyan/30 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="h-1.5 bg-muted">
+            <div
+              className="h-full bg-neon-cyan transition-all duration-300"
+              style={{ width: `${(wizardStep / 3) * 100}%` }}
+            />
+          </div>
+
+          <div className="flex justify-center gap-3 p-4 border-b border-border/30 bg-muted/20">
+            {[
+              { num: 1, label: "Talhão" },
+              { num: 2, label: "Número" },
+              { num: 3, label: "Confirmar" },
+            ].map((step) => (
+              <div key={step.num} className="flex flex-col items-center gap-1">
+                <div
+                  className={cn(
+                    "w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all",
+                    wizardStep === step.num
+                      ? "bg-neon-cyan text-black scale-110 shadow-lg"
+                      : wizardStep > step.num
+                      ? "bg-green-500 text-white"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {wizardStep > step.num ? <CheckCircle className="w-4 h-4" /> : step.num}
+                </div>
+                <span className={cn(
+                  "text-[10px] font-medium",
+                  wizardStep === step.num ? "text-neon-cyan" : "text-muted-foreground"
+                )}>
+                  {step.label}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-6 min-h-[320px]">
+            {renderStepContent()}
+          </div>
+
+          <div className="flex gap-3 p-4 border-t border-border/30 bg-muted/10">
+            <Button
+              variant="outline"
+              className="flex-1 h-12 rounded-xl text-base"
+              onClick={() => {
+                if (wizardStep === 1) resetWizard();
+                else setWizardStep(wizardStep - 1);
+              }}
+              disabled={isCreating}
+            >
+              {wizardStep === 1 ? "Cancelar" : "Voltar"}
+            </Button>
+            <Button
+              className={cn(
+                "flex-1 h-12 rounded-xl text-base",
+                wizardStep === 3 ? "bg-green-500 hover:bg-green-600" : "bg-neon-cyan hover:bg-neon-cyan/90 text-black"
+              )}
+              onClick={() => {
+                if (wizardStep === 3) handleCreateSingle();
+                else setWizardStep(wizardStep + 1);
+              }}
+              disabled={!canProceed() || isCreating}
+            >
+              {isCreating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : wizardStep === 3 ? (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Criar Fardo
+                </>
+              ) : (
+                "Próximo"
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Info card */}
+      {!wizardOpen && (
+        <div className="text-center p-8 rounded-2xl border-2 border-dashed border-border/30 bg-surface/30">
+          <div className="inline-flex p-4 bg-neon-cyan/10 rounded-2xl mb-4">
+            <Tag className="w-10 h-10 text-neon-cyan/50" />
+          </div>
+          <p className="text-lg font-bold text-foreground/80 mb-2">
+            Fardo Individual
+          </p>
+          <p className="text-sm text-muted-foreground/70 mb-4">
+            Crie um fardo específico com número personalizado
+          </p>
+          <Button
+            onClick={() => setWizardOpen(true)}
+            variant="outline"
+            className="rounded-xl"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Começar
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Componente para buscar etiquetas - Wizard
 function EtiquetasTab({ defaultSafra }: { defaultSafra: string }) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  // Wizard state
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
+  const [searchMode, setSearchMode] = useState<"id" | "intervalo" | null>(null);
+  const [baleIdBusca, setBaleIdBusca] = useState("");
   const [talhaoFilter, setTalhaoFilter] = useState("");
   const [numeroInicio, setNumeroInicio] = useState("");
   const [numeroFim, setNumeroFim] = useState("");
-  const [baleIdBusca, setBaleIdBusca] = useState("");
+
+  const wizardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (wizardOpen && wizardRef.current) {
+      setTimeout(() => {
+        wizardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    }
+  }, [wizardOpen]);
 
   const { data: bales = [], isLoading } = useQuery<Bale[]>({
     queryKey: ["/api/bales"],
@@ -196,233 +867,347 @@ function EtiquetasTab({ defaultSafra }: { defaultSafra: string }) {
     {} as Record<string, Bale[]>
   ), [myBales]);
 
+  const resetWizard = () => {
+    setWizardOpen(false);
+    setWizardStep(1);
+    setSearchMode(null);
+    setBaleIdBusca("");
+    setTalhaoFilter("");
+    setNumeroInicio("");
+    setNumeroFim("");
+  };
+
+  const canProceed = () => {
+    switch (wizardStep) {
+      case 1: return !!searchMode;
+      case 2:
+        if (searchMode === "id") return !!baleIdBusca.trim();
+        if (searchMode === "intervalo") return !!talhaoFilter;
+        return false;
+      case 3:
+        if (searchMode === "intervalo") {
+          const inicio = parseInt(numeroInicio);
+          const fim = parseInt(numeroFim);
+          return !!numeroInicio && !!numeroFim && inicio <= fim && (fim - inicio) <= 100;
+        }
+        return true;
+      default: return true;
+    }
+  };
+
+  const handleFinalizar = () => {
+    if (searchMode === "id") {
+      handleBuscarPorId();
+    } else {
+      handleBuscarPorIntervalo();
+    }
+  };
+
+  const totalSteps = searchMode === "id" ? 2 : 3;
+
+  const renderStepContent = () => {
+    switch (wizardStep) {
+      case 1:
+        return (
+          <div className="space-y-4">
+            <div className="text-center mb-6">
+              <div className="inline-flex p-3 rounded-full bg-neon-orange/10 mb-3">
+                <Printer className="w-6 h-6 text-neon-orange" />
+              </div>
+              <h3 className="text-lg font-bold">Tipo de Busca</h3>
+              <p className="text-sm text-muted-foreground">Como deseja buscar as etiquetas?</p>
+            </div>
+            <div className="space-y-3">
+              <button
+                onClick={() => setSearchMode("id")}
+                className={cn(
+                  "w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 text-left",
+                  searchMode === "id"
+                    ? "bg-primary/10 border-primary"
+                    : "bg-card border-border/50 hover:border-primary/50"
+                )}
+              >
+                <span className="text-2xl">🔍</span>
+                <div>
+                  <p className="font-bold">Por ID Único</p>
+                  <p className="text-xs text-muted-foreground">Digite o código completo do fardo</p>
+                </div>
+                {searchMode === "id" && <CheckCircle className="w-5 h-5 text-primary ml-auto" />}
+              </button>
+              <button
+                onClick={() => setSearchMode("intervalo")}
+                className={cn(
+                  "w-full p-4 rounded-xl border-2 transition-all flex items-center gap-4 text-left",
+                  searchMode === "intervalo"
+                    ? "bg-primary/10 border-primary"
+                    : "bg-card border-border/50 hover:border-primary/50"
+                )}
+              >
+                <span className="text-2xl">📋</span>
+                <div>
+                  <p className="font-bold">Por Intervalo</p>
+                  <p className="text-xs text-muted-foreground">Selecione talhão e range de números</p>
+                </div>
+                {searchMode === "intervalo" && <CheckCircle className="w-5 h-5 text-primary ml-auto" />}
+              </button>
+            </div>
+          </div>
+        );
+
+      case 2:
+        if (searchMode === "id") {
+          return (
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <div className="inline-flex p-3 rounded-full bg-primary/10 mb-3">
+                  <Search className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-lg font-bold">ID do Fardo</h3>
+                <p className="text-sm text-muted-foreground">Digite ou cole o código completo</p>
+              </div>
+              <div className="flex flex-col items-center gap-4">
+                <Input
+                  placeholder="S25/26-T1B-00001"
+                  value={baleIdBusca}
+                  onChange={(e) => setBaleIdBusca(e.target.value.toUpperCase())}
+                  className="h-14 text-lg font-mono text-center rounded-2xl"
+                  autoFocus
+                />
+                <p className="text-xs text-muted-foreground">Formato: S25/26-T1B-00001</p>
+              </div>
+            </div>
+          );
+        } else {
+          return (
+            <div className="space-y-4">
+              <div className="text-center mb-6">
+                <div className="inline-flex p-3 rounded-full bg-primary/10 mb-3">
+                  <MapPin className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-lg font-bold">Selecione o Talhão</h3>
+                <p className="text-sm text-muted-foreground">Qual talhão deseja imprimir?</p>
+              </div>
+              <div className="grid grid-cols-3 gap-2 max-h-[300px] overflow-y-auto p-1">
+                {Object.entries(fardosPorTalhao)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([talhao, balesList]) => {
+                    const isSelected = talhaoFilter === talhao;
+                    return (
+                      <button
+                        key={talhao}
+                        onClick={() => setTalhaoFilter(talhao)}
+                        className={cn(
+                          "p-3 rounded-xl border-2 transition-all text-left",
+                          isSelected
+                            ? "bg-primary/10 border-primary scale-105"
+                            : "bg-card border-border/50 hover:border-primary/50"
+                        )}
+                      >
+                        <p className="font-bold text-foreground">{talhao}</p>
+                        <p className="text-[10px] text-muted-foreground">{balesList.length} fardos</p>
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+          );
+        }
+
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <div className="inline-flex p-3 rounded-full bg-neon-cyan/10 mb-3">
+                <Hash className="w-6 h-6 text-neon-cyan" />
+              </div>
+              <h3 className="text-lg font-bold">Intervalo de Números</h3>
+              <p className="text-sm text-muted-foreground">
+                Números do talhão <span className="font-bold text-primary">{talhaoFilter}</span>
+              </p>
+            </div>
+            <div className="flex items-center gap-4 justify-center">
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground mb-2">De</p>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="1"
+                  value={numeroInicio}
+                  onChange={(e) => setNumeroInicio(e.target.value)}
+                  className="h-14 w-24 text-xl font-bold text-center rounded-xl font-mono"
+                  autoFocus
+                />
+              </div>
+              <span className="text-2xl text-muted-foreground mt-6">→</span>
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground mb-2">Até</p>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="10"
+                  value={numeroFim}
+                  onChange={(e) => setNumeroFim(e.target.value)}
+                  className="h-14 w-24 text-xl font-bold text-center rounded-xl font-mono"
+                />
+              </div>
+            </div>
+            {numeroInicio && numeroFim && (
+              <div className="text-center p-3 rounded-xl bg-muted/50">
+                <p className="text-sm font-medium">
+                  {Math.min(parseInt(numeroFim) - parseInt(numeroInicio) + 1, 100)} etiqueta(s)
+                </p>
+                <p className="text-xs text-muted-foreground">Máximo: 100 por vez</p>
+              </div>
+            )}
+          </div>
+        );
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Busca por ID único */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-primary/20 text-primary">
-            <Search className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="font-bold text-base">Buscar por ID</h3>
-            <p className="text-xs text-muted-foreground">
-              Digite o código completo do fardo
-            </p>
-          </div>
-        </div>
-
-        <div className="glass-card p-5 rounded-xl space-y-4">
-          <div className="flex gap-3">
-            <Input
-              placeholder="Ex: S25/26-T1B-00001"
-              value={baleIdBusca}
-              onChange={(e) => setBaleIdBusca(e.target.value.toUpperCase())}
-              className="flex-1 font-mono h-12 rounded-xl bg-surface border-border/50 focus:border-primary"
-            />
-            <Button
-              onClick={handleBuscarPorId}
-              className="shrink-0 h-12 px-5 rounded-xl btn-neon"
-            >
-              <QrCode className="w-4 h-4 mr-2" />
-              Buscar
-            </Button>
-          </div>
-          <div className="flex items-start gap-2 text-xs text-muted-foreground bg-surface/50 px-3 py-2 rounded-lg">
-            <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
-            <p>
-              Cole ou digite o ID completo do fardo que deseja reimprimir a
-              etiqueta.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="relative py-2">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-dashed border-border/30" />
-        </div>
-        <div className="relative flex justify-center">
-          <span className="bg-background px-4 py-1 text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">
-            ou busque múltiplos
-          </span>
-        </div>
-      </div>
-
-      {/* Busca por intervalo */}
-      <div className="space-y-4">
+      {/* Header e botão de iniciar */}
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-neon-orange/20 text-neon-orange">
-            <Filter className="w-4 h-4" />
+            <Printer className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold text-base">Buscar por Intervalo</h3>
+            <h3 className="font-bold text-lg">Reimprimir Etiquetas</h3>
             <p className="text-xs text-muted-foreground">
-              Selecione talhão e intervalo
+              {myBales.length} fardos disponíveis
             </p>
           </div>
         </div>
-
-        <div className="glass-card p-5 rounded-xl space-y-5">
-          <div>
-            <label className="text-sm font-semibold mb-3 flex items-center gap-2 text-foreground/80">
-              <Wheat className="w-4 h-4 text-primary" />
-              Talhão de Produção
-            </label>
-            <Select value={talhaoFilter} onValueChange={setTalhaoFilter}>
-              <SelectTrigger className="h-12 rounded-xl bg-surface border-border/50">
-                <SelectValue placeholder="Selecione o talhão" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border-border/50 bg-popover">
-                {Object.keys(fardosPorTalhao)
-                  .sort()
-                  .map((talhao) => (
-                    <SelectItem
-                      key={talhao}
-                      value={talhao}
-                      className="rounded-lg my-0.5 data-[highlighted]:bg-primary/20 data-[state=checked]:bg-primary/30 focus:bg-primary/20"
-                    >
-                      <div className="flex items-center justify-between gap-4 w-full py-1">
-                        <span className="font-bold font-mono">{talhao}</span>
-                        <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full font-semibold">
-                          {fardosPorTalhao[talhao].length} fardos
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-semibold mb-2 flex items-center gap-2 text-foreground/80">
-                <Hash className="w-4 h-4 text-primary" />
-                Número Inicial
-              </label>
-              <Input
-                type="number"
-                placeholder="1"
-                value={numeroInicio}
-                onChange={(e) => setNumeroInicio(e.target.value)}
-                min="1"
-                max="99999"
-                className="h-12 rounded-xl font-mono text-base bg-surface border-border/50"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-semibold mb-2 flex items-center gap-2 text-foreground/80">
-                <Hash className="w-4 h-4 text-primary" />
-                Número Final
-              </label>
-              <Input
-                type="number"
-                placeholder="10"
-                value={numeroFim}
-                onChange={(e) => setNumeroFim(e.target.value)}
-                min="1"
-                max="99999"
-                className="h-12 rounded-xl font-mono text-base bg-surface border-border/50"
-              />
-            </div>
-          </div>
-
-          <div className="pt-1">
-            <Button
-              onClick={handleBuscarPorIntervalo}
-              className="w-full h-12 rounded-xl btn-neon"
-            >
-              <Printer className="w-5 h-5 mr-2" />
-              Gerar Etiquetas do Intervalo
-            </Button>
-          </div>
-
-          <div className="flex items-start gap-2 text-xs text-muted-foreground bg-surface/50 px-3 py-2 rounded-lg">
-            <Zap className="w-4 h-4 mt-0.5 shrink-0 text-neon-orange" />
-            <p>
-              Gere até 100 etiquetas por vez. Numeração contínua dentro do
-              talhão.
-            </p>
-          </div>
-        </div>
+        {!wizardOpen && (
+          <Button
+            onClick={() => setWizardOpen(true)}
+            className="h-10 px-4 rounded-xl bg-neon-orange hover:bg-neon-orange/90 text-black"
+          >
+            <Search className="w-4 h-4 mr-2" />
+            Buscar
+          </Button>
+        )}
       </div>
 
-      {/* Resumo dos fardos */}
-      {!isLoading && myBales.length > 0 && (
-        <div className="mt-8 glass-card p-6 rounded-xl space-y-5">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-neon-cyan/20 text-neon-cyan">
-              <Package className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-base">Seus Fardos Disponíveis</h3>
-              <p className="text-xs text-muted-foreground">
-                Fardos criados e prontos para reimprimir
-              </p>
-            </div>
+      {/* Wizard Inline */}
+      {wizardOpen && (
+        <div ref={wizardRef} className="bg-card border-2 border-neon-orange/30 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="h-1.5 bg-muted">
+            <div
+              className="h-full bg-neon-orange transition-all duration-300"
+              style={{ width: `${(wizardStep / totalSteps) * 100}%` }}
+            />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-xl p-5 bg-primary/10 border border-primary/20">
-              <div className="text-3xl font-display font-bold text-primary mb-2">
-                {myBales.length}
+          <div className="flex justify-center gap-3 p-4 border-b border-border/30 bg-muted/20">
+            {(searchMode === "id" ? [
+              { num: 1, label: "Tipo" },
+              { num: 2, label: "ID" },
+            ] : [
+              { num: 1, label: "Tipo" },
+              { num: 2, label: "Talhão" },
+              { num: 3, label: "Intervalo" },
+            ]).map((step) => (
+              <div key={step.num} className="flex flex-col items-center gap-1">
+                <div
+                  className={cn(
+                    "w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all",
+                    wizardStep === step.num
+                      ? "bg-neon-orange text-black scale-110 shadow-lg"
+                      : wizardStep > step.num
+                      ? "bg-green-500 text-white"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {wizardStep > step.num ? <CheckCircle className="w-4 h-4" /> : step.num}
+                </div>
+                <span className={cn(
+                  "text-[10px] font-medium",
+                  wizardStep === step.num ? "text-neon-orange" : "text-muted-foreground"
+                )}>
+                  {step.label}
+                </span>
               </div>
-              <div className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-                <CheckCircle className="w-4 h-4 text-primary" />
-                Total em Campo
-              </div>
-            </div>
-            <div className="rounded-xl p-5 bg-neon-cyan/10 border border-neon-cyan/20">
-              <div className="text-3xl font-display font-bold text-neon-cyan mb-2">
-                {Object.keys(fardosPorTalhao).length}
-              </div>
-              <div className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-neon-cyan" />
-                Talhões Ativos
-              </div>
-            </div>
+            ))}
           </div>
 
-          {/* Lista de talhões com contagem */}
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-border/30"></div>
-              <p className="text-xs font-bold text-muted-foreground/70 uppercase tracking-wider">
-                Distribuição por Talhão
-              </p>
-              <div className="h-px flex-1 bg-border/30"></div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {Object.entries(fardosPorTalhao)
-                .sort(([a], [b]) => a.localeCompare(b))
-                .map(([talhao, bales]) => (
-                  <div
-                    key={talhao}
-                    className="flex items-center justify-between rounded-lg p-3.5 border border-border/30 text-xs bg-surface/50"
-                  >
-                    <span className="font-mono font-bold text-primary text-sm">
-                      {talhao}
-                    </span>
-                    <span className="px-3 py-1.5 rounded-full text-primary font-bold bg-primary/10">
-                      {bales.length}
-                    </span>
-                  </div>
-                ))}
-            </div>
+          <div className="p-6 min-h-[320px]">
+            {renderStepContent()}
+          </div>
+
+          <div className="flex gap-3 p-4 border-t border-border/30 bg-muted/10">
+            <Button
+              variant="outline"
+              className="flex-1 h-12 rounded-xl text-base"
+              onClick={() => {
+                if (wizardStep === 1) resetWizard();
+                else setWizardStep(wizardStep - 1);
+              }}
+            >
+              {wizardStep === 1 ? "Cancelar" : "Voltar"}
+            </Button>
+            <Button
+              className={cn(
+                "flex-1 h-12 rounded-xl text-base",
+                wizardStep === totalSteps ? "bg-green-500 hover:bg-green-600" : "bg-neon-orange hover:bg-neon-orange/90 text-black"
+              )}
+              onClick={() => {
+                if (wizardStep === totalSteps) {
+                  handleFinalizar();
+                } else {
+                  setWizardStep(wizardStep + 1);
+                }
+              }}
+              disabled={!canProceed()}
+            >
+              {wizardStep === totalSteps ? (
+                <>
+                  <Printer className="w-4 h-4 mr-2" />
+                  Imprimir
+                </>
+              ) : (
+                "Próximo"
+              )}
+            </Button>
           </div>
         </div>
       )}
 
-      {!isLoading && myBales.length === 0 && (
-        <div className="text-center p-12 rounded-2xl border-2 border-dashed border-border/30 bg-surface/30">
-          <div className="inline-flex p-5 bg-surface rounded-2xl mb-5">
-            <Package className="w-12 h-12 text-muted-foreground/40" />
+      {/* Resumo dos fardos */}
+      {!wizardOpen && !isLoading && myBales.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {Object.entries(fardosPorTalhao)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([talhao, balesList]) => (
+              <div
+                key={talhao}
+                className="p-4 rounded-xl bg-neon-orange/5 border border-neon-orange/20"
+              >
+                <p className="font-bold text-primary">{talhao}</p>
+                <p className="text-xl font-bold text-neon-orange">{balesList.length}</p>
+                <p className="text-xs text-muted-foreground">fardos</p>
+              </div>
+            ))}
+          <div className="p-4 rounded-xl bg-neon-orange/10 border-2 border-neon-orange/30">
+            <p className="text-xs text-muted-foreground mb-1">Total</p>
+            <p className="text-2xl font-bold text-neon-orange">{myBales.length}</p>
+            <p className="text-xs text-muted-foreground">em campo</p>
           </div>
-          <p className="text-base font-bold text-foreground/80 mb-2">
-            Nenhum fardo em campo encontrado
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!wizardOpen && !isLoading && myBales.length === 0 && (
+        <div className="text-center p-12 rounded-2xl border-2 border-dashed border-border/30 bg-surface/30">
+          <div className="inline-flex p-4 bg-neon-orange/10 rounded-2xl mb-4">
+            <Package className="w-10 h-10 text-neon-orange/50" />
+          </div>
+          <p className="text-lg font-bold text-foreground/80 mb-2">
+            Nenhum fardo disponível
           </p>
           <p className="text-sm text-muted-foreground/70">
-            Crie fardos nas abas "Em Lote" ou "Individual" para começar
+            Crie fardos nas abas "Em Lote" ou "Individual" primeiro
           </p>
         </div>
       )}
@@ -985,106 +1770,12 @@ type SingleCreateForm = z.infer<typeof singleCreateSchema>;
 export default function Campo() {
   const [, setLocation] = useLocation();
   const { logout, user } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [isCreating, setIsCreating] = useState(false);
   const [createdBales, setCreatedBales] = useState<Bale[]>([]);
-  const { createBale, createBatch } = useOfflineBaleCreation();
 
   // Usar nova API de safras
   const { data: settingsData } = useSettings();
   const defaultSafra = settingsData?.defaultSafra || "";
   const talhoesSafra = settingsData?.talhoesSafra || [];
-
-  const form = useForm<BatchCreateForm>({
-    resolver: zodResolver(batchCreateSchema),
-    defaultValues: {
-      talhao: "",
-      quantidade: "",
-      tipo: "normal",
-    },
-  });
-
-  const singleForm = useForm<SingleCreateForm>({
-    resolver: zodResolver(singleCreateSchema),
-    defaultValues: {
-      talhao: "",
-      numero: "",
-    },
-  });
-
-  const handleCreateSingle = async (data: SingleCreateForm) => {
-    if (!defaultSafra) {
-      toast({
-        variant: "destructive",
-        title: "Safra não configurada",
-        description:
-          "O administrador precisa configurar a safra padrão nas configurações.",
-      });
-      return;
-    }
-
-    setIsCreating(true);
-    setCreatedBales([]);
-
-    try {
-      const baleId = `${defaultSafra}-${data.talhao}-${data.numero}`;
-
-      await createBale.mutateAsync({
-        id: baleId,
-        safra: defaultSafra,
-        talhao: data.talhao,
-        numero: parseInt(data.numero, 10),
-      });
-
-      singleForm.reset();
-    } catch (error) {
-      console.error("Erro ao criar fardo:", error);
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const handleCreateBatch = async (data: BatchCreateForm) => {
-    if (!defaultSafra) {
-      toast({
-        variant: "destructive",
-        title: "Safra não configurada",
-        description:
-          "O administrador precisa configurar a safra padrão nas configurações.",
-      });
-      return;
-    }
-
-    setIsCreating(true);
-    setCreatedBales([]);
-
-    try {
-      const quantidade =
-        data.quantidade === "" ||
-        data.quantidade === undefined ||
-        data.quantidade === null
-          ? 1
-          : Number(data.quantidade);
-
-      const result = await createBatch.mutateAsync({
-        safra: defaultSafra,
-        talhao: data.talhao,
-        quantidade: quantidade,
-        tipo: data.tipo || "normal",
-      });
-
-      if (result?.bales && Array.isArray(result.bales)) {
-        setCreatedBales(result.bales);
-      }
-
-      form.setValue("quantidade", "");
-    } catch (error) {
-      console.error("Erro ao criar fardos:", error);
-    } finally {
-      setIsCreating(false);
-    }
-  };
 
   const handlePrintLabels = () => {
     if (createdBales.length === 0) return;
@@ -1231,302 +1922,20 @@ export default function Campo() {
 
               {/* Tab: Criar em Lote */}
               <TabsContent value="lote">
-                <Form {...form}>
-                  <form
-                    onSubmit={form.handleSubmit(handleCreateBatch)}
-                    className="space-y-4"
-                  >
-                    <FormField
-                      control={form.control}
-                      name="talhao"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm font-semibold flex items-center gap-2">
-                            <Wheat className="w-4 h-4 text-primary" />
-                            Talhão de Produção
-                          </FormLabel>
-                          <Select
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            disabled={isCreating}
-                          >
-                            <FormControl>
-                              <SelectTrigger
-                                className="h-12 rounded-xl bg-surface border-border/50"
-                                data-testid="select-talhao"
-                              >
-                                <SelectValue placeholder="Selecione o talhão de algodão" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="rounded-xl border-border/50 bg-popover">
-                              {talhoesSafra.length === 0 ? (
-                                <div className="p-4 text-center text-sm text-muted-foreground">
-                                  Nenhum talhão configurado. Configure uma safra nas configurações.
-                                </div>
-                              ) : (
-                                talhoesSafra.map((talhao) => (
-                                  <SelectItem
-                                    key={talhao.id}
-                                    value={talhao.nome}
-                                    className="rounded-lg my-0.5 data-[highlighted]:bg-primary/20 data-[state=checked]:bg-primary/30 focus:bg-primary/20"
-                                  >
-                                    <div className="flex items-center justify-between gap-3 w-full py-1">
-                                      <div className="flex items-center gap-2">
-                                        <MapPin className="w-3.5 h-3.5 text-primary" />
-                                        <span className="font-semibold">
-                                          {talhao.nome}
-                                        </span>
-                                      </div>
-                                      <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full font-semibold">
-                                        {talhao.hectares} ha
-                                      </span>
-                                    </div>
-                                  </SelectItem>
-                                ))
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormDescription className="flex items-center gap-1.5 text-xs">
-                            <Lightbulb className="w-3.5 h-3.5 text-primary" />A
-                            numeração continuará de onde parou neste talhão
-                          </FormDescription>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="quantidade"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm font-semibold flex items-center gap-2">
-                            <Package className="w-4 h-4 text-primary" />
-                            Quantidade de Fardos
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="1"
-                              max="1000"
-                              placeholder="Digite a quantidade (Ex: 50)"
-                              {...field}
-                              value={
-                                field.value === "" ? "" : field.value || ""
-                              }
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                field.onChange(
-                                  value === "" ? "" : parseInt(value) || ""
-                                );
-                              }}
-                              disabled={isCreating}
-                              data-testid="input-quantidade"
-                              className="h-12 rounded-xl text-base bg-surface border-border/50"
-                            />
-                          </FormControl>
-                          <FormDescription className="flex items-center gap-1.5 text-xs">
-                            <Zap className="w-3.5 h-3.5 text-neon-orange" />
-                            Crie até 1000 fardos de uma só vez
-                          </FormDescription>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="tipo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm font-semibold flex items-center gap-2">
-                            <Layers className="w-4 h-4 text-primary" />
-                            Tipo de Fardo
-                          </FormLabel>
-                          <Select
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            disabled={isCreating}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="h-12 rounded-xl bg-surface border-border/50">
-                                <SelectValue placeholder="Selecione o tipo" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="rounded-xl border-border/50 bg-popover">
-                              <SelectItem
-                                value="normal"
-                                className="rounded-lg my-0.5 data-[highlighted]:bg-primary/20"
-                              >
-                                <div className="flex items-center gap-2 py-1">
-                                  <CircleDot className="w-3.5 h-3.5 text-primary" />
-                                  <span className="font-semibold">Normal</span>
-                                  <span className="text-xs text-muted-foreground">- Fardo padrão</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem
-                                value="bordadura"
-                                className="rounded-lg my-0.5 data-[highlighted]:bg-neon-orange/20"
-                              >
-                                <div className="flex items-center gap-2 py-1">
-                                  <CircleDot className="w-3.5 h-3.5 text-neon-orange" />
-                                  <span className="font-semibold">Bordadura</span>
-                                  <span className="text-xs text-muted-foreground">- Bordas do talhão</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem
-                                value="bituca"
-                                className="rounded-lg my-0.5 data-[highlighted]:bg-amber-500/20"
-                              >
-                                <div className="flex items-center gap-2 py-1">
-                                  <CircleDot className="w-3.5 h-3.5 text-amber-500" />
-                                  <span className="font-semibold">Bituca</span>
-                                  <span className="text-xs text-muted-foreground">- Algodão restante</span>
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormDescription className="flex items-center gap-1.5 text-xs">
-                            <Lightbulb className="w-3.5 h-3.5 text-primary" />
-                            Classifique o tipo de fardo para rastreamento
-                          </FormDescription>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <Button
-                      type="submit"
-                      className="w-full h-12 rounded-xl text-base font-semibold btn-neon"
-                      disabled={isCreating}
-                      data-testid="button-create-batch"
-                    >
-                      {isCreating ? (
-                        <>
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          Criando {form.watch("quantidade")} fardo(s)...
-                        </>
-                      ) : (
-                        <>
-                          <Package className="w-5 h-5 mr-2" />
-                          Criar Lote de Fardos
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </Form>
+                <LoteTab
+                  defaultSafra={defaultSafra}
+                  talhoesSafra={talhoesSafra}
+                  onBalesCreated={setCreatedBales}
+                />
               </TabsContent>
 
               {/* Tab: Criar Individual */}
               <TabsContent value="individual">
-                <Form {...singleForm}>
-                  <form
-                    onSubmit={singleForm.handleSubmit(handleCreateSingle)}
-                    className="space-y-5"
-                  >
-                    <FormField
-                      control={singleForm.control}
-                      name="talhao"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm font-semibold flex items-center gap-2">
-                            <Wheat className="w-4 h-4 text-primary" />
-                            Talhão de Produção
-                          </FormLabel>
-                          <Select
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            disabled={isCreating}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="h-12 rounded-xl bg-surface border-border/50">
-                                <SelectValue placeholder="Selecione o talhão de algodão" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="rounded-xl border-border/50 bg-popover">
-                              {talhoesSafra.length === 0 ? (
-                                <div className="p-4 text-center text-sm text-muted-foreground">
-                                  Nenhum talhão configurado. Configure uma safra nas configurações.
-                                </div>
-                              ) : (
-                                talhoesSafra.map((talhao) => (
-                                  <SelectItem
-                                    key={talhao.id}
-                                    value={talhao.nome}
-                                    className="rounded-lg my-0.5 data-[highlighted]:bg-primary/20 data-[state=checked]:bg-primary/30 focus:bg-primary/20"
-                                  >
-                                    <div className="flex items-center justify-between gap-3 w-full py-1">
-                                      <div className="flex items-center gap-2">
-                                        <MapPin className="w-3.5 h-3.5 text-primary" />
-                                        <span className="font-semibold">
-                                          {talhao.nome}
-                                        </span>
-                                      </div>
-                                      <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full font-semibold">
-                                        {talhao.hectares} ha
-                                      </span>
-                                    </div>
-                                  </SelectItem>
-                                ))
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormDescription className="flex items-center gap-1.5 text-xs">
-                            <Lightbulb className="w-3.5 h-3.5 text-primary" />A
-                            numeração continuará de onde parou neste talhão
-                          </FormDescription>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={singleForm.control}
-                      name="numero"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm font-semibold flex items-center gap-2">
-                            <Hash className="w-4 h-4 text-primary" />
-                            Número do Fardo
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="text"
-                              placeholder="Ex: 00001"
-                              maxLength={5}
-                              {...field}
-                              disabled={isCreating}
-                              className="h-12 rounded-xl text-base bg-surface border-border/50"
-                            />
-                          </FormControl>
-                          <FormDescription className="flex items-center gap-1.5 text-xs">
-                            <Tag className="w-3.5 h-3.5 text-neon-cyan" />
-                            Digite o número de 5 dígitos (Ex: 00001, 00042)
-                          </FormDescription>
-                          <FormMessage className="text-xs" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <Button
-                      type="submit"
-                      className="w-full h-12 rounded-xl text-base font-semibold btn-neon"
-                      disabled={isCreating}
-                    >
-                      {isCreating ? (
-                        <>
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          Criando fardo...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-5 h-5 mr-2" />
-                          Criar Fardo Individual
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </Form>
+                <IndividualTab
+                  defaultSafra={defaultSafra}
+                  talhoesSafra={talhoesSafra}
+                  onBaleCreated={(bale) => setCreatedBales([bale])}
+                />
               </TabsContent>
 
               {/* Tab: Buscar Etiquetas */}

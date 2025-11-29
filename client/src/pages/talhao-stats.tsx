@@ -358,10 +358,14 @@ export default function TalhaoStats() {
 
       const temDadosReais = pesoBrutoTotal > 0 && totalFardos > 0;
 
+      // Produtividade em fardos/ha
+      const fardosPorHa = hectares > 0 ? totalFardos / hectares : 0;
+
       return {
         talhao: talhaoInfo.nome,
         hectares,
         totalFardos,
+        fardosPorHa,
         pesoEstimado,
         pesoBrutoTotal,
         qtdCarregamentos,
@@ -390,12 +394,17 @@ export default function TalhaoStats() {
     const totalPesoEstimado = talhoesComFardos.reduce((acc, t) => acc + t.pesoEstimado, 0);
     const totalPesoBruto = talhoesComDados.reduce((acc, t) => acc + t.pesoBrutoTotal, 0);
     const totalFardosComDados = talhoesComDados.reduce((acc, t) => acc + t.totalFardos, 0);
+    const totalFardosGeral = talhoesComFardos.reduce((acc, t) => acc + t.totalFardos, 0);
 
     const pesoMedioRealGlobal = totalFardosComDados > 0 ? totalPesoBruto / totalFardosComDados : 0;
+
+    // Média de fardos por hectare
+    const fardosPorHaMedia = totalHectaresComFardos > 0 ? totalFardosGeral / totalHectaresComFardos : 0;
 
     return {
       produtividadePrevistaMedia: totalHectaresComFardos > 0 ? (totalPesoEstimado / totalHectaresComFardos) / 15 : 0,
       produtividadeRealMedia: totalHectaresComDados > 0 ? (totalPesoBruto / totalHectaresComDados) / 15 : 0,
+      fardosPorHaMedia,
       pesoMedioRealGlobal,
       talhoesComDados: talhoesComDados.length,
       talhoesComFardos: talhoesComFardos.length,
@@ -926,8 +935,8 @@ export default function TalhaoStats() {
             </div>
 
             {/* Métricas de Performance */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {/* Produtividade Média */}
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+              {/* Produtividade Média em @/ha */}
               <div className="glass-card p-4 rounded-xl">
                 <div className="flex items-center gap-2 mb-3">
                   <Target className="w-4 h-4 text-cyan-500" />
@@ -946,6 +955,23 @@ export default function TalhaoStats() {
                     Prevista: {totaisProdutividade.produtividadePrevistaMedia.toFixed(0)} @/ha
                   </p>
                 )}
+              </div>
+
+              {/* Produtividade em Fardos/ha */}
+              <div className="glass-card p-4 rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <Package className="w-4 h-4 text-green-500" />
+                  <span className="text-xs font-medium text-muted-foreground">Fardos/ha</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <p className="text-2xl font-bold">
+                    {totaisProdutividade.fardosPorHaMedia.toFixed(1)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">fardos</p>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  por hectare
+                </p>
               </div>
 
               {/* Rendimento */}
@@ -1155,7 +1181,7 @@ export default function TalhaoStats() {
                   </div>
 
                   {/* Produtividade */}
-                  <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div className="grid grid-cols-3 gap-2 mb-3">
                     <div className="p-2 rounded-lg bg-surface/50">
                       <p className="text-xs text-muted-foreground">Prevista</p>
                       <p className="text-lg font-bold">{t.produtividadePrevistoArrobas.toFixed(0)} @/ha</p>
@@ -1171,6 +1197,10 @@ export default function TalhaoStats() {
                       )}>
                         {t.temDadosReais ? `${t.produtividadeRealArrobas.toFixed(0)} @/ha` : '-'}
                       </p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-green-500/10">
+                      <p className="text-xs text-muted-foreground">Fardos/ha</p>
+                      <p className="text-lg font-bold text-green-500">{t.fardosPorHa.toFixed(1)}</p>
                     </div>
                   </div>
 
@@ -1918,7 +1948,7 @@ export default function TalhaoStats() {
             {selectedTalhaoData && (
               <div className="space-y-4">
                 {/* Info básica */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div className="p-3 rounded-lg bg-surface/50">
                     <p className="text-xs text-muted-foreground">Área</p>
                     <p className="text-lg font-bold">{selectedTalhaoData.hectares.toFixed(1)} ha</p>
@@ -1927,11 +1957,15 @@ export default function TalhaoStats() {
                     <p className="text-xs text-muted-foreground">Total Fardos</p>
                     <p className="text-lg font-bold">{selectedTalhaoData.totalFardos}</p>
                   </div>
+                  <div className="p-3 rounded-lg bg-green-500/10">
+                    <p className="text-xs text-muted-foreground">Fardos/ha</p>
+                    <p className="text-lg font-bold text-green-500">{selectedTalhaoData.fardosPorHa.toFixed(1)}</p>
+                  </div>
                 </div>
 
                 {/* Produtividade */}
-                <div className="p-4 rounded-xl bg-gradient-to-r from-primary/10 to-neon-cyan/10">
-                  <p className="text-sm font-medium mb-3">Produtividade</p>
+                <div className="p-4 rounded-xl bg-gradient-to-r from-primary/10 to-cyan-500/10">
+                  <p className="text-sm font-medium mb-3">Produtividade em @/ha</p>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground">Prevista</p>

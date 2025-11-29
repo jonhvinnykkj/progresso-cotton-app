@@ -32,7 +32,8 @@ import {
   EyeOff,
   Sun,
   Moon,
-  Sparkles,
+  Check,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoProgresso from "/favicon.png";
@@ -43,48 +44,42 @@ const roles: {
   label: string;
   icon: typeof User;
   description: string;
-  gradient: string;
-  glowColor: string;
+  color: string;
 }[] = [
   {
     value: "superadmin",
     label: "Super Admin",
     icon: ShieldCheck,
-    description: "Acesso total",
-    gradient: "from-purple-500 to-pink-500",
-    glowColor: "rgba(168, 85, 247, 0.4)",
+    description: "Acesso total ao sistema",
+    color: "#8B5CF6",
   },
   {
     value: "admin",
-    label: "Admin",
+    label: "Administrador",
     icon: ShieldCheck,
-    description: "Acesso completo",
-    gradient: "from-blue-500 to-cyan-500",
-    glowColor: "rgba(59, 130, 246, 0.4)",
+    description: "Gerenciamento completo",
+    color: "#3B82F6",
   },
   {
     value: "campo",
     label: "Campo",
     icon: Package,
-    description: "Cadastro de fardos",
-    gradient: "from-emerald-500 to-green-500",
-    glowColor: "rgba(16, 185, 129, 0.4)",
+    description: "Cadastro e gestão de fardos",
+    color: "#22C55E",
   },
   {
     value: "transporte",
     label: "Transporte",
     icon: Truck,
-    description: "Movimentação",
-    gradient: "from-orange-500 to-amber-500",
-    glowColor: "rgba(249, 115, 22, 0.4)",
+    description: "Movimentação de cargas",
+    color: "#F97316",
   },
   {
     value: "algodoeira",
     label: "Algodoeira",
     icon: Factory,
-    description: "Beneficiamento",
-    gradient: "from-cyan-500 to-teal-500",
-    glowColor: "rgba(6, 182, 212, 0.4)",
+    description: "Beneficiamento de algodão",
+    color: "#06B6D4",
   },
 ];
 
@@ -247,150 +242,115 @@ export default function Login() {
   // Filtrar roles disponíveis
   const filteredRoles = roles.filter(r => availableRoles.includes(r.value));
 
-  // Role Selector Screen (Gamer Style)
+  // Role Selector Screen (iOS Style)
   if (showRoleSelector) {
-    const currentRole = filteredRoles[selectedRoleIndex];
-
     return (
       <div className="min-h-dvh bg-background flex flex-col">
-        {/* Header */}
-        <header className="flex items-center justify-between p-4 sm:p-6">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center">
-              <img src={logoProgresso} alt="Cotton" className="h-6 w-6 object-contain" />
-            </div>
-            <span className="font-semibold text-[17px]">Cotton</span>
+        {/* iOS-style Header */}
+        <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border/50">
+          <div className="flex items-center justify-between px-4 h-14">
+            <button
+              onClick={() => {
+                setShowRoleSelector(false);
+                setPendingUser(null);
+              }}
+              className="text-primary text-[17px] font-normal"
+            >
+              Voltar
+            </button>
+            <span className="font-semibold text-[17px]">Selecionar Perfil</span>
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
           </div>
-          <button
-            onClick={toggleTheme}
-            className="p-2.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-surface transition-all duration-200"
-          >
-            {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </button>
         </header>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 pb-8">
-          {/* Title */}
+        <div className="flex-1 px-4 py-6">
+          {/* User greeting */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-[13px] font-medium mb-4">
-              <Sparkles className="h-3.5 w-3.5" />
-              Selecione seu perfil
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-4">
+              <span className="text-3xl font-bold text-primary">
+                {pendingUser?.username?.substring(0, 2).toUpperCase()}
+              </span>
             </div>
-            <h1 className="text-[28px] sm:text-[34px] font-bold mb-2">
+            <h1 className="text-[22px] font-bold mb-1">
               Olá, {pendingUser?.username}!
             </h1>
-            <p className="text-muted-foreground text-[15px]">
-              Escolha como deseja acessar o sistema
+            <p className="text-[15px] text-muted-foreground">
+              Escolha seu perfil de acesso
             </p>
           </div>
 
-          {/* Gamer-style Horizontal Role Selector */}
-          <div className="w-full max-w-4xl">
-            {/* Role Cards - Horizontal Scroll */}
-            <div className="flex gap-4 overflow-x-auto pb-4 px-2 snap-x snap-mandatory scrollbar-none">
+          {/* iOS-style Role List */}
+          <div className="max-w-md mx-auto">
+            <div className="rounded-2xl bg-card overflow-hidden shadow-sm">
               {filteredRoles.map((role, index) => {
                 const Icon = role.icon;
                 const isSelected = index === selectedRoleIndex;
+                const isLast = index === filteredRoles.length - 1;
 
                 return (
                   <button
                     key={role.value}
                     onClick={() => setSelectedRoleIndex(index)}
                     className={cn(
-                      "flex-shrink-0 snap-center w-[160px] sm:w-[200px] p-5 rounded-2xl transition-all duration-300 relative overflow-hidden group",
-                      isSelected
-                        ? "scale-105 ring-2 ring-white/20"
-                        : "scale-95 opacity-60 hover:opacity-80"
+                      "w-full flex items-center gap-4 px-4 py-4 text-left transition-colors",
+                      "active:bg-surface-hover",
+                      !isLast && "border-b border-border/50"
                     )}
-                    style={{
-                      background: isSelected
-                        ? `linear-gradient(135deg, ${role.gradient.includes('purple') ? '#a855f7' : role.gradient.includes('blue') ? '#3b82f6' : role.gradient.includes('emerald') ? '#10b981' : role.gradient.includes('orange') ? '#f97316' : '#06b6d4'}, ${role.gradient.includes('pink') ? '#ec4899' : role.gradient.includes('cyan') ? '#06b6d4' : role.gradient.includes('green') ? '#22c55e' : role.gradient.includes('amber') ? '#f59e0b' : '#14b8a6'})`
-                        : 'hsl(var(--surface))',
-                      boxShadow: isSelected ? `0 20px 40px ${role.glowColor}` : 'none',
-                    }}
                   >
-                    {/* Shine effect */}
-                    {isSelected && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                    )}
-
-                    {/* Icon */}
-                    <div className={cn(
-                      "w-14 h-14 rounded-xl flex items-center justify-center mb-4 mx-auto transition-all",
-                      isSelected
-                        ? "bg-white/20 text-white"
-                        : "bg-surface-elevated text-muted-foreground"
-                    )}>
-                      <Icon className="w-7 h-7" />
+                    {/* Icon with color */}
+                    <div
+                      className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: `${role.color}15` }}
+                    >
+                      <Icon className="w-6 h-6" style={{ color: role.color }} />
                     </div>
 
                     {/* Text */}
-                    <div className="text-center">
-                      <p className={cn(
-                        "font-bold text-[17px] mb-1 transition-colors",
-                        isSelected ? "text-white" : "text-foreground"
-                      )}>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[17px] font-medium text-foreground">
                         {role.label}
                       </p>
-                      <p className={cn(
-                        "text-[13px] transition-colors",
-                        isSelected ? "text-white/70" : "text-muted-foreground"
-                      )}>
+                      <p className="text-[14px] text-muted-foreground truncate">
                         {role.description}
                       </p>
                     </div>
 
-                    {/* Selected indicator */}
-                    {isSelected && (
-                      <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-white/30 flex items-center justify-center">
-                        <div className="w-2 h-2 rounded-full bg-white" />
-                      </div>
-                    )}
+                    {/* Selection indicator */}
+                    <div className="flex-shrink-0">
+                      {isSelected ? (
+                        <div
+                          className="w-6 h-6 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: role.color }}
+                        >
+                          <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                        </div>
+                      ) : (
+                        <div className="w-6 h-6 rounded-full border-2 border-border" />
+                      )}
+                    </div>
                   </button>
                 );
               })}
             </div>
 
-            {/* Pagination dots */}
-            <div className="flex items-center justify-center gap-2 mt-4">
-              {filteredRoles.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedRoleIndex(index)}
-                  className={cn(
-                    "h-2 rounded-full transition-all duration-300",
-                    index === selectedRoleIndex
-                      ? "w-6 bg-primary"
-                      : "w-2 bg-muted-foreground/30"
-                  )}
-                />
-              ))}
-            </div>
+            {/* Confirm Button */}
+            <Button
+              onClick={() => handleRoleSelect(filteredRoles[selectedRoleIndex].value)}
+              className="w-full mt-6 h-13 text-[17px] font-semibold rounded-xl"
+              style={{
+                backgroundColor: filteredRoles[selectedRoleIndex]?.color,
+              }}
+            >
+              Continuar
+              <ChevronRight className="w-5 h-5 ml-1" />
+            </Button>
           </div>
-
-          {/* Confirm Button */}
-          <Button
-            onClick={() => handleRoleSelect(filteredRoles[selectedRoleIndex].value)}
-            className="mt-8 h-14 px-12 text-[17px] font-semibold rounded-2xl"
-            style={{
-              background: `linear-gradient(135deg, ${currentRole?.gradient.includes('purple') ? '#a855f7' : currentRole?.gradient.includes('blue') ? '#3b82f6' : currentRole?.gradient.includes('emerald') ? '#10b981' : currentRole?.gradient.includes('orange') ? '#f97316' : '#06b6d4'}, ${currentRole?.gradient.includes('pink') ? '#ec4899' : currentRole?.gradient.includes('cyan') ? '#06b6d4' : currentRole?.gradient.includes('green') ? '#22c55e' : currentRole?.gradient.includes('amber') ? '#f59e0b' : '#14b8a6'})`,
-              boxShadow: `0 10px 30px ${currentRole?.glowColor}`,
-            }}
-          >
-            Entrar como {currentRole?.label}
-          </Button>
-
-          {/* Back button */}
-          <button
-            onClick={() => {
-              setShowRoleSelector(false);
-              setPendingUser(null);
-            }}
-            className="mt-4 text-[15px] text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Voltar ao login
-          </button>
         </div>
 
         {/* Footer */}

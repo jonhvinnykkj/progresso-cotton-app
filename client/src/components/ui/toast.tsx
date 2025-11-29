@@ -1,7 +1,7 @@
 import * as React from "react"
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import { cva, type VariantProps } from "class-variance-authority"
-import { X, CheckCircle2, AlertCircle, Info, AlertTriangle, Sparkles } from "lucide-react"
+import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -14,7 +14,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex max-h-screen w-full flex-col gap-3 p-4 sm:max-w-[420px]",
+      "fixed top-0 left-0 right-0 z-[100] flex flex-col gap-2 p-4 pt-safe sm:top-4 sm:left-1/2 sm:-translate-x-1/2 sm:max-w-[380px]",
       className
     )}
     {...props}
@@ -23,15 +23,15 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full items-start gap-4 overflow-hidden rounded-2xl border p-4 shadow-2xl backdrop-blur-xl transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full",
+  "group pointer-events-auto relative flex w-full items-center gap-3 overflow-hidden rounded-2xl p-4 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full",
   {
     variants: {
       variant: {
-        default: "border-primary/30 bg-background/95 text-foreground shadow-[0_0_30px_rgba(0,255,136,0.15)]",
-        destructive: "border-destructive/30 bg-background/95 text-foreground shadow-[0_0_30px_rgba(255,68,68,0.15)]",
-        success: "border-primary/30 bg-background/95 text-foreground shadow-[0_0_30px_rgba(0,255,136,0.15)]",
-        warning: "border-neon-orange/30 bg-background/95 text-foreground shadow-[0_0_30px_rgba(255,149,0,0.15)]",
-        info: "border-neon-cyan/30 bg-background/95 text-foreground shadow-[0_0_30px_rgba(0,212,255,0.15)]",
+        default: "bg-card border border-border/50 shadow-xl",
+        destructive: "bg-card border border-red-200 dark:border-red-900/50 shadow-xl",
+        success: "bg-card border border-green-200 dark:border-green-900/50 shadow-xl",
+        warning: "bg-card border border-amber-200 dark:border-amber-900/50 shadow-xl",
+        info: "bg-card border border-blue-200 dark:border-blue-900/50 shadow-xl",
       },
     },
     defaultVariants: {
@@ -62,7 +62,7 @@ const ToastAction = React.forwardRef<
   <ToastPrimitives.Action
     ref={ref}
     className={cn(
-      "inline-flex h-8 shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 px-4 text-xs font-semibold text-primary ring-offset-background transition-all hover:bg-primary/20 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+      "inline-flex h-8 shrink-0 items-center justify-center rounded-lg bg-primary px-3 text-[13px] font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:pointer-events-none disabled:opacity-50",
       className
     )}
     {...props}
@@ -77,7 +77,7 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      "absolute right-3 top-3 rounded-lg p-1 text-muted-foreground transition-all hover:text-foreground hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50",
+      "absolute right-2 top-2 rounded-full p-1.5 text-muted-foreground/60 transition-all hover:text-foreground hover:bg-surface focus:outline-none",
       className
     )}
     toast-close=""
@@ -94,7 +94,7 @@ const ToastTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Title
     ref={ref}
-    className={cn("text-sm font-bold leading-tight", className)}
+    className={cn("text-[15px] font-semibold text-foreground", className)}
     {...props}
   />
 ))
@@ -106,7 +106,7 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    className={cn("text-sm text-muted-foreground leading-relaxed", className)}
+    className={cn("text-[13px] text-muted-foreground leading-snug", className)}
     {...props}
   />
 ))
@@ -116,48 +116,52 @@ type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>
 
 type ToastActionElement = React.ReactElement<typeof ToastAction>
 
-// Componente de ícone estilizado para cada variante
+// iOS-style icon component
 const ToastIcon = ({ variant }: { variant?: string }) => {
-  const iconWrapperClass = cn(
-    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-    {
-      "bg-primary/20": variant === "success" || variant === "default",
-      "bg-destructive/20": variant === "destructive",
-      "bg-neon-orange/20": variant === "warning",
-      "bg-neon-cyan/20": variant === "info",
-    }
-  );
-
-  const iconClass = cn("h-5 w-5", {
-    "text-primary": variant === "success" || variant === "default",
-    "text-destructive": variant === "destructive",
-    "text-neon-orange": variant === "warning",
-    "text-neon-cyan": variant === "info",
-  });
-
-  const Icon = () => {
+  const getIconConfig = () => {
     switch (variant) {
       case "success":
-        return <CheckCircle2 className={iconClass} />;
+        return {
+          Icon: CheckCircle2,
+          bgColor: "bg-green-500",
+          iconColor: "text-white"
+        };
       case "destructive":
-        return <AlertCircle className={iconClass} />;
+        return {
+          Icon: AlertCircle,
+          bgColor: "bg-red-500",
+          iconColor: "text-white"
+        };
       case "warning":
-        return <AlertTriangle className={iconClass} />;
+        return {
+          Icon: AlertTriangle,
+          bgColor: "bg-amber-500",
+          iconColor: "text-white"
+        };
       case "info":
-        return <Info className={iconClass} />;
+        return {
+          Icon: Info,
+          bgColor: "bg-blue-500",
+          iconColor: "text-white"
+        };
       default:
-        return <CheckCircle2 className={iconClass} />;
+        return {
+          Icon: CheckCircle2,
+          bgColor: "bg-primary",
+          iconColor: "text-white"
+        };
     }
   };
 
+  const { Icon, bgColor, iconColor } = getIconConfig();
+
   return (
-    <div className={iconWrapperClass}>
-      <Icon />
+    <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", bgColor)}>
+      <Icon className={cn("h-5 w-5", iconColor)} />
     </div>
   );
 };
 
-// Helper para obter ícone baseado na variante (mantido para compatibilidade)
 const getToastIcon = (variant?: string) => {
   return <ToastIcon variant={variant} />;
 };

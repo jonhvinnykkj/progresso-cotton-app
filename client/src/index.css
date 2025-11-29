@@ -12,103 +12,104 @@
 
 :root {
   /* === CORE COLORS === */
-  --black: 222 47% 5%;
+  --black: 120 20% 4%;
   --black-pure: 0 0% 0%;
-  --white: 0 0% 98%;
+  --white: 45 30% 97%;
 
-  /* === NEW COLOR PALETTE (Refined & Sophisticated) === */
-  --emerald: 160 84% 39%;           /* #10B981 - Primary */
-  --emerald-dark: 161 94% 30%;      /* #059669 */
-  --amber: 38 92% 50%;              /* #F59E0B - Accent */
-  --amber-dark: 32 95% 44%;         /* #D97706 */
-  --cyan: 189 94% 43%;              /* #06B6D4 - Beneficiado */
-  --orange: 25 95% 53%;             /* #F97316 - Pátio */
-  --red: 0 84% 60%;                 /* #EF4444 - Destructive */
-  --purple: 271 91% 65%;            /* #A855F7 */
-  --slate: 222 47% 11%;             /* #0F172A - Background */
+  /* === JOHN DEERE COLOR PALETTE === */
+  --jd-green: 110 48% 33%;           /* #367C2B - JD Green */
+  --jd-green-light: 110 55% 45%;     /* Lighter for dark mode */
+  --jd-yellow: 46 95% 50%;           /* #FFDE00 - JD Yellow */
+  --jd-gold: 46 95% 42%;             /* #D4A800 - Dark Gold */
+  --cyan: 189 80% 40%;               /* Teal - Beneficiado */
+  --orange: 25 95% 53%;              /* Orange - Pátio */
+  --red: 0 84% 60%;                  /* Destructive */
+  --purple: 271 91% 65%;             /* Purple */
 
   /* === GLOW COLORS (RGB for shadows) === */
-  --glow-emerald: 16, 185, 129;
-  --glow-amber: 245, 158, 11;
+  --glow-emerald: 54, 124, 43;       /* JD Green RGB */
+  --glow-amber: 212, 168, 0;         /* Gold RGB */
   --glow-cyan: 6, 182, 212;
   --glow-orange: 249, 115, 22;
   --glow-red: 239, 68, 68;
 
-  /* === SEMANTIC COLORS (Dark Mode) === */
-  --background: 222 47% 5%;          /* #0B0F1A */
-  --background-elevated: 222 47% 8%; /* #111827 */
-  --foreground: 210 40% 98%;         /* #F8FAFC */
+  /* === SEMANTIC COLORS (Dark Mode - Green tinted) === */
+  --background: 120 25% 5%;          /* Dark with green tint */
+  --background-elevated: 120 20% 8%;
+  --foreground: 45 30% 95%;          /* Warm white */
 
-  --surface: 222 47% 9%;             /* #131A2B */
-  --surface-elevated: 222 47% 12%;   /* #1A2332 */
-  --surface-hover: 222 47% 15%;      /* #222D3D */
+  --surface: 120 20% 9%;
+  --surface-elevated: 120 18% 12%;
+  --surface-hover: 120 15% 16%;
 
-  --border: 222 20% 18%;             /* #252D3D */
-  --border-subtle: 222 20% 14%;      /* #1C2333 */
-  --border-strong: 222 20% 25%;      /* #333D4D */
+  --border: 120 15% 18%;
+  --border-subtle: 120 12% 14%;
+  --border-strong: 120 18% 25%;
 
-  --card: 222 47% 9%;
-  --card-foreground: 210 40% 98%;
-  --card-border: 222 20% 18%;
+  --card: 120 20% 9%;
+  --card-foreground: 45 30% 95%;
+  --card-border: 120 15% 18%;
 
-  --popover: 222 47% 11%;
-  --popover-foreground: 210 40% 98%;
-  --popover-border: 222 20% 22%;
+  --popover: 120 20% 10%;
+  --popover-foreground: 45 30% 95%;
+  --popover-border: 120 15% 22%;
 
-  /* Primary = Emerald */
-  --primary: 160 84% 39%;
+  /* Primary = John Deere Green (brighter for dark mode) */
+  --primary: 110 55% 45%;
   --primary-foreground: 0 0% 100%;
-  --primary-muted: 160 60% 20%;
+  --primary-muted: 110 40% 20%;
 
   /* Secondary */
-  --secondary: 222 47% 15%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 120 20% 15%;
+  --secondary-foreground: 45 30% 95%;
 
-  /* Accent = Amber */
-  --accent: 38 92% 50%;
-  --accent-foreground: 222 47% 5%;
+  /* Accent = John Deere Yellow */
+  --accent: 46 95% 50%;
+  --accent-foreground: 120 30% 10%;
 
   /* Muted */
-  --muted: 222 30% 18%;
-  --muted-foreground: 215 20% 55%;
+  --muted: 120 15% 18%;
+  --muted-foreground: 90 15% 55%;
 
   /* Destructive */
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
   /* Input & Ring */
-  --input: 222 30% 20%;
-  --ring: 160 84% 39%;
+  --input: 120 20% 18%;
+  --ring: 110 55% 45%;
 
-  /* Sidebar */
-  --sidebar: 222 47% 6%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-border: 222 30% 14%;
-  --sidebar-primary: 160 84% 39%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 222 30% 12%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-ring: 160 84% 39%;
+  /* Sidebar - Deep green */
+  --sidebar: 120 30% 6%;
+  --sidebar-foreground: 45 30% 95%;
+  --sidebar-border: 120 25% 14%;
+  --sidebar-primary: 46 95% 50%;     /* Yellow accent */
+  --sidebar-primary-foreground: 120 30% 10%;
+  --sidebar-accent: 120 25% 12%;
+  --sidebar-accent-foreground: 45 30% 95%;
+  --sidebar-ring: 46 95% 50%;
 
-  /* Charts */
-  --chart-1: 160 84% 39%;   /* Emerald */
-  --chart-2: 38 92% 50%;    /* Amber */
-  --chart-3: 189 94% 43%;   /* Cyan */
+  /* Charts - Green/Yellow palette */
+  --chart-1: 110 55% 45%;   /* JD Green */
+  --chart-2: 46 95% 50%;    /* JD Yellow */
+  --chart-3: 189 80% 40%;   /* Teal */
   --chart-4: 25 95% 53%;    /* Orange */
-  --chart-5: 271 91% 65%;   /* Purple */
+  --chart-5: 110 40% 60%;   /* Light green */
 
   /* === BALE STATUS COLORS === */
-  --bale-campo: 160 84% 39%;     /* Emerald */
-  --bale-patio: 25 95% 53%;      /* Orange */
-  --bale-beneficiado: 189 94% 43%; /* Cyan */
+  --bale-campo: 110 55% 45%;       /* JD Green */
+  --bale-patio: 46 95% 50%;        /* JD Yellow */
+  --bale-beneficiado: 189 80% 40%; /* Teal */
 
-  /* Neon compatibility aliases */
-  --neon-green: 160 84% 39%;
-  --neon-yellow: 38 92% 50%;
-  --neon-cyan: 189 94% 43%;
+  /* Legacy compatibility aliases */
+  --neon-green: 110 55% 45%;
+  --neon-yellow: 46 95% 50%;
+  --neon-cyan: 189 80% 40%;
   --neon-orange: 25 95% 53%;
   --neon-pink: 330 81% 60%;
   --neon-purple: 271 91% 65%;
+  --emerald: 110 55% 45%;
+  --amber: 46 95% 50%;
 
   /* === TYPOGRAPHY === */
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -138,10 +139,10 @@
   --glow-lg: 0 0 30px rgba(var(--glow-emerald), 0.25);
   --glow-xl: 0 0 50px rgba(var(--glow-emerald), 0.3);
 
-  /* === GLASS EFFECT === */
-  --glass-bg: rgba(255, 255, 255, 0.02);
-  --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-highlight: rgba(255, 255, 255, 0.08);
+  /* === GLASS EFFECT (Green tinted) === */
+  --glass-bg: rgba(54, 124, 43, 0.03);
+  --glass-border: rgba(54, 124, 43, 0.1);
+  --glass-highlight: rgba(255, 255, 255, 0.06);
 
   /* === TRANSITIONS === */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);

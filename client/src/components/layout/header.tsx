@@ -51,30 +51,30 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 w-full">
-      {/* Glass background */}
-      <div className="absolute inset-0 glass-strong" />
+      {/* iOS-style glass background */}
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-xl" />
 
       {/* Content */}
-      <div className="relative flex h-16 items-center justify-between px-4 sm:px-6">
+      <div className="relative flex h-14 items-center justify-between px-4 sm:px-6">
         {/* Left side */}
         <div className="flex items-center gap-3">
           {/* Logo/Brand - mobile */}
-          <div className="lg:hidden flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center overflow-hidden">
+          <div className="lg:hidden flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center overflow-hidden">
               <img src={logoFavicon} alt="Cotton" className="h-6 w-6 object-contain" />
             </div>
-            <span className="font-display font-bold text-lg gradient-text">
+            <span className="font-semibold text-[17px] text-foreground">
               Cotton
             </span>
           </div>
         </div>
 
         {/* Right side */}
-        <div className="flex items-center gap-2">
-          {/* Theme toggle */}
+        <div className="flex items-center gap-1">
+          {/* Theme toggle - iOS style */}
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface transition-colors"
+            className="p-2.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-surface/80 transition-all duration-200 active:scale-95"
             title={theme === "dark" ? "Modo Claro" : "Modo Escuro"}
           >
             {theme === "dark" ? (
@@ -84,77 +84,75 @@ export function Header() {
             )}
           </button>
 
-          {/* Notifications - placeholder */}
-          <button className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface transition-colors relative">
+          {/* Notifications - iOS style */}
+          <button className="p-2.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-surface/80 transition-all duration-200 active:scale-95 relative">
             <Bell className="h-5 w-5" />
             {/* Notification dot */}
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
+            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-destructive" />
           </button>
 
-          {/* User menu */}
+          {/* User menu - iOS style */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 p-1.5 pr-3 rounded-full glass hover:bg-surface-hover transition-all group">
+              <button className="flex items-center gap-2 p-1 pr-2.5 rounded-full hover:bg-surface/80 transition-all duration-200 active:scale-97 ml-1">
                 {/* Avatar */}
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-glow-sm">
-                  <span className="text-primary-foreground font-semibold text-sm">
+                <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+                  <span className="text-primary-foreground font-semibold text-[13px]">
                     {user?.username?.substring(0, 2).toUpperCase() || "U"}
                   </span>
                 </div>
 
                 {/* User info - hidden on mobile */}
                 <div className="hidden sm:flex flex-col items-start">
-                  <span className="text-sm font-medium text-foreground">
+                  <span className="text-[15px] font-medium text-foreground">
                     {user?.username || "Usuário"}
                   </span>
                   {selectedRole && (
-                    <span className="text-xs text-primary">
+                    <span className="text-[11px] text-primary font-medium">
                       {selectedRole}
                     </span>
                   )}
                 </div>
 
-                <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
 
             <DropdownMenuContent
               align="end"
-              className="w-56 glass-card border-border/50"
+              className="w-56 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] border-0 bg-card p-1.5"
             >
-              <DropdownMenuLabel className="font-normal">
+              <DropdownMenuLabel className="font-normal px-3 py-2">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">{user?.username}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedRole && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
-                        {selectedRole}
-                      </span>
-                    )}
-                  </p>
+                  <p className="text-[15px] font-semibold">{user?.username}</p>
+                  {selectedRole && (
+                    <span className="inline-flex items-center w-fit px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary">
+                      {selectedRole}
+                    </span>
+                  )}
                 </div>
               </DropdownMenuLabel>
 
-              <DropdownMenuSeparator className="bg-border/50" />
+              <DropdownMenuSeparator className="bg-border/50 my-1" />
 
               {isSuperAdmin && (
                 <>
                   <DropdownMenuItem
                     onClick={handleClearCache}
-                    className="cursor-pointer hover:bg-surface focus:bg-surface"
+                    className="cursor-pointer rounded-lg mx-1 px-3 py-2.5 text-[15px] focus:bg-surface"
                   >
-                    <RefreshCw className="mr-2 h-4 w-4" />
+                    <RefreshCw className="mr-2.5 h-4 w-4" />
                     <span>Limpar Cache</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-border/50" />
+                  <DropdownMenuSeparator className="bg-border/50 my-1" />
                 </>
               )}
 
               <DropdownMenuItem
                 onClick={handleLogout}
-                className="cursor-pointer text-destructive hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive"
+                className="cursor-pointer rounded-lg mx-1 px-3 py-2.5 text-[15px] text-destructive focus:bg-destructive/10 focus:text-destructive"
               >
-                <LogOut className="mr-2 h-4 w-4" />
+                <LogOut className="mr-2.5 h-4 w-4" />
                 <span>Sair</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -162,8 +160,8 @@ export function Header() {
         </div>
       </div>
 
-      {/* Bottom border glow */}
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+      {/* Subtle bottom border */}
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-border/40" />
     </header>
   );
 }

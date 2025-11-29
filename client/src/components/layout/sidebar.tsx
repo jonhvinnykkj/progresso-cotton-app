@@ -107,35 +107,35 @@ export function Sidebar() {
     }, 1000);
   }, [toast, clearCacheAndReload]);
 
-  // Conteúdo comum do sidebar
+  // Conteúdo comum do sidebar - iOS style
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <div className="flex h-full flex-col text-sidebar-foreground">
-      {/* Header com Logo */}
+      {/* Header com Logo - iOS style */}
       <div
         className={cn(
-          "flex items-center border-b border-border/50 h-16",
+          "flex items-center border-b border-border/30 h-14",
           sidebarCollapsed && !mobile ? "justify-center px-2" : "justify-between px-4"
         )}
       >
         {(!sidebarCollapsed || mobile) && (
           <div className="flex items-center gap-3">
             {/* Logo */}
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-glow-sm overflow-hidden">
-              <img src={logoFavicon} alt="Cotton" className="h-7 w-7 object-contain" />
+            <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center overflow-hidden">
+              <img src={logoFavicon} alt="Cotton" className="h-6 w-6 object-contain" />
             </div>
             <div className="flex flex-col">
-              <span className="font-display font-bold text-lg gradient-text">
+              <span className="font-semibold text-[17px] text-sidebar-foreground">
                 Cotton
               </span>
-              <span className="text-xs text-sidebar-foreground/70">
+              <span className="text-[11px] text-sidebar-foreground/60">
                 Grupo Progresso
               </span>
             </div>
           </div>
         )}
         {sidebarCollapsed && !mobile && (
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-glow-sm overflow-hidden">
-            <img src={logoFavicon} alt="Cotton" className="h-7 w-7 object-contain" />
+          <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center overflow-hidden">
+            <img src={logoFavicon} alt="Cotton" className="h-6 w-6 object-contain" />
           </div>
         )}
 
@@ -143,28 +143,28 @@ export function Sidebar() {
         {mobile && (
           <button
             onClick={() => setSidebarOpen(false)}
-            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface transition-colors"
+            className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-surface/80 transition-all duration-200 active:scale-95"
           >
             <X className="h-5 w-5" />
           </button>
         )}
       </div>
 
-      {/* User Info */}
+      {/* User Info - iOS style */}
       {(!sidebarCollapsed || mobile) && user && (
-        <div className="p-4 border-b border-border/50">
+        <div className="p-4 border-b border-border/30">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-glow-sm">
-              <span className="text-primary-foreground font-semibold text-sm">
+            <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-semibold text-[13px]">
                 {user.username.substring(0, 2).toUpperCase()}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold truncate text-sidebar-foreground">
+              <p className="text-[15px] font-semibold truncate text-sidebar-foreground">
                 {user.username}
               </p>
               {selectedRole && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary mt-1">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary/15 text-primary mt-1">
                   {selectedRole}
                 </span>
               )}

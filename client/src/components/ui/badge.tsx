@@ -4,19 +4,24 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  // Whitespace-nowrap: Badges should never wrap.
-  "whitespace-nowrap inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2" +
-  " hover-elevate " ,
+  // iOS-style pill badge
+  "whitespace-nowrap inline-flex items-center rounded-full px-3 py-1 text-[13px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring/40 focus:ring-offset-2",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground shadow-xs",
-        secondary: "border-transparent bg-secondary text-secondary-foreground",
+          "bg-primary/10 text-primary",
+        secondary:
+          "bg-secondary text-secondary-foreground",
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground shadow-xs",
-
-        outline: " border [border-color:var(--badge-outline)] shadow-xs",
+          "bg-destructive/10 text-destructive",
+        outline:
+          "border border-border bg-transparent text-foreground",
+        // Status variants
+        success:
+          "bg-primary/10 text-primary",
+        warning:
+          "bg-accent/10 text-accent-foreground",
       },
     },
     defaultVariants: {

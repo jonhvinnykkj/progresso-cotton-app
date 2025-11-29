@@ -87,16 +87,13 @@ export function BottomNav() {
 
   return (
     <>
-      {/* Bottom Navigation Bar */}
+      {/* iOS-style Tab Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden safe-bottom">
-        {/* Glass background */}
-        <div className="absolute inset-0 glass-strong border-t border-border/30" />
+        {/* iOS glass background */}
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-xl border-t border-border/30" />
 
-        {/* Top glow line */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-
-        {/* Navigation items */}
-        <div className="relative flex items-center justify-around h-16 px-2">
+        {/* Navigation items - iOS tab bar style */}
+        <div className="relative flex items-center justify-around h-[50px] px-4">
           {visibleItems.map((item) => {
             const Icon = item.icon;
             const isActive =
@@ -106,33 +103,20 @@ export function BottomNav() {
               <button
                 key={item.href}
                 onClick={() => setLocation(item.href)}
-                className={cn(
-                  "bottom-nav-item flex-1 max-w-[72px]",
-                  isActive && "active"
-                )}
+                className="flex-1 flex flex-col items-center justify-center gap-0.5 py-1 transition-all duration-200 active:scale-95"
                 aria-label={item.label}
                 aria-current={isActive ? "page" : undefined}
               >
-                <div
+                <Icon
                   className={cn(
-                    "relative p-2 rounded-xl transition-all duration-300",
-                    isActive && "bg-primary/20"
+                    "h-6 w-6 transition-colors duration-200",
+                    isActive ? "text-primary" : "text-muted-foreground"
                   )}
-                >
-                  {/* Glow effect for active */}
-                  {isActive && (
-                    <div className="absolute inset-0 rounded-xl bg-primary/20 blur-lg" />
-                  )}
-                  <Icon
-                    className={cn(
-                      "relative h-5 w-5 transition-all duration-300 bottom-nav-icon",
-                      isActive && "text-primary"
-                    )}
-                  />
-                </div>
+                  strokeWidth={isActive ? 2.5 : 2}
+                />
                 <span
                   className={cn(
-                    "text-[10px] font-medium transition-colors duration-300",
+                    "text-[10px] font-medium transition-colors duration-200",
                     isActive ? "text-primary" : "text-muted-foreground"
                   )}
                 >
@@ -142,16 +126,14 @@ export function BottomNav() {
             );
           })}
 
-          {/* "Mais" button se houver items secundários */}
+          {/* "Mais" button */}
           {hasSecondaryItems && (
             <button
               onClick={() => setMoreMenuOpen(true)}
-              className="bottom-nav-item flex-1 max-w-[72px]"
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 py-1 transition-all duration-200 active:scale-95"
               aria-label="Mais opções"
             >
-              <div className="p-2 rounded-xl transition-all duration-300">
-                <Menu className="h-5 w-5" />
-              </div>
+              <Menu className="h-6 w-6 text-muted-foreground" strokeWidth={2} />
               <span className="text-[10px] font-medium text-muted-foreground">
                 Mais
               </span>
@@ -160,19 +142,24 @@ export function BottomNav() {
         </div>
       </nav>
 
-      {/* Sheet com mais opções */}
+      {/* iOS-style Action Sheet */}
       <Sheet open={moreMenuOpen} onOpenChange={setMoreMenuOpen}>
         <SheetContent
           side="bottom"
-          className="glass-strong border-t border-border/30 rounded-t-3xl"
+          className="bg-card border-0 rounded-t-3xl p-0 max-h-[85vh]"
         >
-          <SheetHeader className="pb-4">
-            <SheetTitle className="text-left font-display">
+          {/* Handle bar */}
+          <div className="flex justify-center pt-3 pb-2">
+            <div className="w-9 h-1 rounded-full bg-muted-foreground/30" />
+          </div>
+
+          <SheetHeader className="px-5 pb-4">
+            <SheetTitle className="text-left text-[17px] font-semibold">
               Mais opções
             </SheetTitle>
           </SheetHeader>
 
-          <div className="grid grid-cols-3 gap-4 pb-4">
+          <div className="grid grid-cols-3 gap-3 px-5 pb-4">
             {/* Items que não estão visíveis na barra + secundários */}
             {[
               ...primaryItems.filter(
@@ -192,42 +179,47 @@ export function BottomNav() {
                     setMoreMenuOpen(false);
                   }}
                   className={cn(
-                    "flex flex-col items-center gap-2 p-4 rounded-2xl transition-all duration-300",
+                    "flex flex-col items-center gap-2.5 p-4 rounded-2xl transition-all duration-200 active:scale-95",
                     isActive
-                      ? "bg-primary/20 text-primary shadow-glow-sm"
-                      : "bg-surface hover:bg-surface-hover text-muted-foreground hover:text-foreground"
+                      ? "bg-primary/10"
+                      : "bg-surface hover:bg-surface-hover"
                   )}
                 >
                   <div
                     className={cn(
-                      "p-3 rounded-xl transition-all",
+                      "p-3 rounded-xl transition-colors",
                       isActive
-                        ? "bg-primary text-primary-foreground shadow-glow"
-                        : "bg-surface-elevated"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-surface-elevated text-muted-foreground"
                     )}
                   >
                     <Icon className="h-6 w-6" />
                   </div>
-                  <span className="text-xs font-medium">{item.label}</span>
+                  <span className={cn(
+                    "text-[13px] font-medium",
+                    isActive ? "text-primary" : "text-foreground"
+                  )}>
+                    {item.label}
+                  </span>
                 </button>
               );
             })}
           </div>
 
-          {/* Theme Toggle */}
-          <div className="border-t border-border/50 pt-4 pb-8">
+          {/* Theme Toggle - iOS Settings style */}
+          <div className="border-t border-border/50 mx-5 pt-4 pb-8">
             <button
               onClick={toggleTheme}
-              className="flex items-center gap-3 w-full p-4 rounded-2xl bg-surface hover:bg-surface-hover text-muted-foreground hover:text-foreground transition-all duration-300"
+              className="flex items-center gap-4 w-full p-4 rounded-2xl bg-surface hover:bg-surface-hover transition-all duration-200 active:scale-[0.98]"
             >
-              <div className="p-3 rounded-xl bg-surface-elevated">
+              <div className="p-2.5 rounded-xl bg-surface-elevated">
                 {theme === "dark" ? (
-                  <Sun className="h-6 w-6" />
+                  <Sun className="h-5 w-5 text-muted-foreground" />
                 ) : (
-                  <Moon className="h-6 w-6" />
+                  <Moon className="h-5 w-5 text-muted-foreground" />
                 )}
               </div>
-              <span className="text-sm font-medium">
+              <span className="text-[15px] font-medium text-foreground">
                 {theme === "dark" ? "Modo Claro" : "Modo Escuro"}
               </span>
             </button>

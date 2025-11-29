@@ -520,7 +520,7 @@ export default function TalhaoStats() {
 
         {/* ==================== TABS PRINCIPAIS ==================== */}
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 gap-1 rounded-xl glass-card p-1 h-auto">
+          <TabsList className="grid w-full grid-cols-5 gap-1 rounded-xl glass-card p-1 h-auto">
             <TabsTrigger
               value="dashboard"
               className="rounded-lg py-2.5 text-xs font-semibold data-[state=active]:bg-primary data-[state=active]:text-black"
@@ -548,6 +548,13 @@ export default function TalhaoStats() {
             >
               <LineChart className="w-4 h-4 mr-1.5" />
               <span className="hidden sm:inline">Analytics</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="mapa"
+              className="rounded-lg py-2.5 text-xs font-semibold data-[state=active]:bg-accent data-[state=active]:text-black"
+            >
+              <MapPin className="w-4 h-4 mr-1.5" />
+              <span className="hidden sm:inline">Mapa</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1050,6 +1057,180 @@ export default function TalhaoStats() {
                 </ResponsiveContainer>
               </div>
             </div>
+          </TabsContent>
+
+          {/* ==================== TAB: MAPA ==================== */}
+          <TabsContent value="mapa" className="space-y-4 mt-4">
+            {/* Hero do Mapa */}
+            <div className="glass-card rounded-xl p-4 bg-gradient-to-br from-accent/20 to-primary/10">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-accent" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Mapa de Talhões</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {talhoesSafra.length} talhões • {totalHectares.toFixed(0)} ha total
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Legenda */}
+            <div className="flex flex-wrap gap-3">
+              <div className="flex items-center gap-2 text-xs">
+                <div className="w-3 h-3 rounded-full bg-primary" />
+                <span>Campo</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <div className="w-3 h-3 rounded-full bg-neon-orange" />
+                <span>Pátio</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <div className="w-3 h-3 rounded-full bg-neon-cyan" />
+                <span>Beneficiado</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <div className="w-3 h-3 rounded-full bg-red-500" />
+                <span>Com Perdas</span>
+              </div>
+            </div>
+
+            {/* Grid Visual de Talhões (Mapa Simplificado) */}
+            <div className="glass-card rounded-xl p-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
+                {talhoesSafra.map((talhaoInfo) => {
+                  const stats = talhaoStats.find(s => s.talhao === talhaoInfo.nome);
+                  const hectares = parseFloat(talhaoInfo.hectares.replace(",", ".")) || 0;
+                  const perdaData = perdasTotais.find(p => p.talhao === talhaoInfo.nome);
+                  const temPerdas = perdaData && perdaData.totalPerdas > 0;
+                  const totalFardos = stats?.total || 0;
+                  const campo = stats?.campo || 0;
+                  const patio = stats?.patio || 0;
+                  const beneficiado = stats?.beneficiado || 0;
+
+                  // Determinar cor principal baseado no status dominante
+                  let bgColor = "bg-surface/50";
+                  let borderColor = "border-border/30";
+                  if (totalFardos > 0) {
+                    if (beneficiado > campo && beneficiado > patio) {
+                      bgColor = "bg-neon-cyan/20";
+                      borderColor = "border-neon-cyan/50";
+                    } else if (patio > campo) {
+                      bgColor = "bg-neon-orange/20";
+                      borderColor = "border-neon-orange/50";
+                    } else {
+                      bgColor = "bg-primary/20";
+                      borderColor = "border-primary/50";
+                    }
+                  }
+
+                  // Tamanho baseado na área (hectares)
+                  const sizeClass = hectares > 100 ? "min-h-[100px]" : hectares > 50 ? "min-h-[80px]" : "min-h-[60px]";
+
+                  return (
+                    <button
+                      key={talhaoInfo.nome}
+                      onClick={() => setSelectedTalhaoDetail(talhaoInfo.nome)}
+                      className={cn(
+                        "relative rounded-lg border p-2 transition-all hover:scale-105 hover:shadow-lg",
+                        bgColor,
+                        borderColor,
+                        sizeClass,
+                        "flex flex-col items-center justify-center"
+                      )}
+                    >
+                      {/* Indicador de perdas */}
+                      {temPerdas && (
+                        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                      )}
+
+                      <span className="font-bold text-sm">{talhaoInfo.nome}</span>
+                      <span className="text-[10px] text-muted-foreground">{hectares.toFixed(0)} ha</span>
+
+                      {totalFardos > 0 && (
+                        <div className="flex gap-0.5 mt-1">
+                          {campo > 0 && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                          {patio > 0 && <div className="w-1.5 h-1.5 rounded-full bg-neon-orange" />}
+                          {beneficiado > 0 && <div className="w-1.5 h-1.5 rounded-full bg-neon-cyan" />}
+                        </div>
+                      )}
+
+                      <span className="text-[10px] text-muted-foreground mt-0.5">
+                        {totalFardos} fardos
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {talhoesSafra.length === 0 && (
+                <div className="text-center py-12">
+                  <MapPin className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
+                  <p className="text-muted-foreground">Nenhum talhão cadastrado</p>
+                </div>
+              )}
+            </div>
+
+            {/* Resumo por Status */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="glass-card p-4 rounded-xl text-center">
+                <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center mx-auto mb-2">
+                  <Package className="w-4 h-4 text-primary" />
+                </div>
+                <p className="text-2xl font-bold text-primary">{globalStats?.campo || 0}</p>
+                <p className="text-xs text-muted-foreground">No Campo</p>
+              </div>
+              <div className="glass-card p-4 rounded-xl text-center">
+                <div className="w-8 h-8 rounded-lg bg-neon-orange/20 flex items-center justify-center mx-auto mb-2">
+                  <Truck className="w-4 h-4 text-neon-orange" />
+                </div>
+                <p className="text-2xl font-bold text-neon-orange">{globalStats?.patio || 0}</p>
+                <p className="text-xs text-muted-foreground">No Pátio</p>
+              </div>
+              <div className="glass-card p-4 rounded-xl text-center">
+                <div className="w-8 h-8 rounded-lg bg-neon-cyan/20 flex items-center justify-center mx-auto mb-2">
+                  <CheckCircle className="w-4 h-4 text-neon-cyan" />
+                </div>
+                <p className="text-2xl font-bold text-neon-cyan">{globalStats?.beneficiado || 0}</p>
+                <p className="text-xs text-muted-foreground">Beneficiado</p>
+              </div>
+            </div>
+
+            {/* Talhões com Perdas */}
+            {perdasTotais.length > 0 && (
+              <div className="glass-card rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-border/30 bg-red-500/10">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-500" />
+                    <span className="font-semibold text-sm">Talhões com Perdas Registradas</span>
+                  </div>
+                </div>
+                <div className="divide-y divide-border/20 max-h-60 overflow-y-auto">
+                  {perdasPorTalhaoComValor.slice(0, 5).map((p) => (
+                    <button
+                      key={p.talhao}
+                      onClick={() => setSelectedTalhaoDetail(p.talhao)}
+                      className="w-full flex items-center justify-between p-3 hover:bg-surface/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+                          <span className="font-bold text-red-500 text-xs">{p.talhao}</span>
+                        </div>
+                        <div className="text-left">
+                          <p className="font-medium">Talhão {p.talhao}</p>
+                          <p className="text-xs text-muted-foreground">{p.hectares.toFixed(1)} ha</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-red-500">{p.arrobasHa.toFixed(1)} @/ha</p>
+                        <p className="text-xs text-muted-foreground">R$ {(p.valorBRL / 1000).toFixed(1)}k</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 

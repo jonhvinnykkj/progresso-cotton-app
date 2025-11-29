@@ -93,7 +93,8 @@ self.addEventListener('fetch', (event) => {
 
       return fetch(request).then((response) => {
         // Cache successful responses (only GET requests)
-        if (response.ok && request.method === 'GET') {
+        // Skip partial responses (206) - they cannot be cached
+        if (response.ok && request.method === 'GET' && response.status !== 206) {
           const responseClone = response.clone();
           caches.open(RUNTIME_CACHE).then((cache) => {
             cache.put(request, responseClone);

@@ -117,7 +117,7 @@ export default function Algodoeira() {
       if (!response.ok) return [];
       return response.json();
     },
-    enabled: activeTab === "carregamentos" || activeTab === "pluma",
+    enabled: !!selectedSafra && (activeTab === "carregamentos" || activeTab === "pluma"),
   });
 
   // Query para buscar totais de peso bruto por talhão
@@ -135,7 +135,7 @@ export default function Algodoeira() {
       if (!response.ok) return [];
       return response.json();
     },
-    enabled: activeTab === "carregamentos" || activeTab === "pluma",
+    enabled: !!selectedSafra && (activeTab === "carregamentos" || activeTab === "pluma"),
   });
 
   // Query para buscar lotes (peso da pluma)
@@ -153,7 +153,7 @@ export default function Algodoeira() {
       if (!response.ok) return [];
       return response.json();
     },
-    enabled: activeTab === "pluma" || activeTab === "fardinhos",
+    enabled: !!selectedSafra && (activeTab === "pluma" || activeTab === "fardinhos"),
   });
 
   // Query para buscar fardinhos
@@ -171,7 +171,7 @@ export default function Algodoeira() {
       if (!response.ok) return [];
       return response.json();
     },
-    enabled: activeTab === "fardinhos",
+    enabled: !!selectedSafra && activeTab === "fardinhos",
   });
 
   // Query para buscar peso bruto total da safra
@@ -190,7 +190,7 @@ export default function Algodoeira() {
       const data = await response.json();
       return data.pesoBrutoTotal || 0;
     },
-    enabled: activeTab === "pluma" || activeTab === "fardinhos",
+    enabled: !!selectedSafra && (activeTab === "pluma" || activeTab === "fardinhos"),
   });
 
   // Mutation para criar carregamento

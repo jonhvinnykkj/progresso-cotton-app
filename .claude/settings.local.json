@@ -37,7 +37,8 @@
       "Bash(echo:*)",
       "Bash(/c/Windows/System32/taskkill.exe:*)",
       "Bash(cmd.exe /c \"taskkill /F /PID 22460\")",
-      "Bash(MSYS_NO_PATHCONV=1 /c/Windows/System32/taskkill.exe:*)"
+      "Bash(MSYS_NO_PATHCONV=1 /c/Windows/System32/taskkill.exe:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

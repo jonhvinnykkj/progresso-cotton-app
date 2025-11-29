@@ -202,6 +202,7 @@ export default function TalhaoStats() {
     },
     staleTime: 0, // Sempre refetch quando o componente montar
     refetchOnWindowFocus: true, // Refetch quando a janela ganhar foco
+    enabled: !!selectedSafra,
   });
 
   // Query para buscar rendimento de pluma por talhão
@@ -219,6 +220,7 @@ export default function TalhaoStats() {
       if (!response.ok) return [];
       return response.json();
     },
+    enabled: !!selectedSafra,
   });
 
   // Query para buscar lotes (peso da pluma)
@@ -236,6 +238,7 @@ export default function TalhaoStats() {
       if (!response.ok) return [];
       return response.json();
     },
+    enabled: !!selectedSafra,
   });
 
   // Query para buscar fardinhos
@@ -253,6 +256,7 @@ export default function TalhaoStats() {
       if (!response.ok) return [];
       return response.json();
     },
+    enabled: !!selectedSafra,
   });
 
   // Query para buscar perdas por talhão

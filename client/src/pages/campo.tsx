@@ -3,6 +3,8 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { API_URL } from "@/lib/api-config";
+import { getAuthHeaders } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -449,9 +451,13 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
     queryKey: ["/api/perdas", defaultSafra],
     queryFn: async () => {
       if (!defaultSafra) return [];
-      const token = localStorage.getItem("auth_token");
-      const res = await fetch(`/api/perdas/${encodeURIComponent(defaultSafra)}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const encodedSafra = encodeURIComponent(defaultSafra);
+      const url = API_URL
+        ? `${API_URL}/api/perdas/${encodedSafra}`
+        : `/api/perdas/${encodedSafra}`;
+      const res = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Erro ao buscar perdas");
       return res.json();
@@ -474,13 +480,14 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
 
     setIsCreating(true);
     try {
-      const token = localStorage.getItem("auth_token");
-      const res = await fetch("/api/perdas", {
+      const url = API_URL ? `${API_URL}/api/perdas` : "/api/perdas";
+      const res = await fetch(url, {
         method: "POST",
         headers: {
+          ...getAuthHeaders(),
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
+        credentials: "include",
         body: JSON.stringify({
           safra: defaultSafra,
           talhao: data.talhao,
@@ -513,10 +520,11 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
 
   const handleDeletePerda = async (id: string) => {
     try {
-      const token = localStorage.getItem("auth_token");
-      const res = await fetch(`/api/perdas/${id}`, {
+      const url = API_URL ? `${API_URL}/api/perdas/${id}` : `/api/perdas/${id}`;
+      const res = await fetch(url, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
+        credentials: "include",
       });
 
       if (!res.ok) throw new Error("Erro ao deletar perda");

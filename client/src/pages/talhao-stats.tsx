@@ -56,6 +56,23 @@ import {
   Cell,
   AreaChart,
   Area,
+  LineChart as RechartsLineChart,
+  Line,
+  ComposedChart,
+  Legend,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  ScatterChart,
+  Scatter,
+  RadialBarChart,
+  RadialBar,
+  Treemap,
+  FunnelChart,
+  Funnel,
+  LabelList,
 } from "recharts";
 import { Input } from "@/components/ui/input";
 import { useState, useMemo, useRef, useEffect } from "react";
@@ -490,6 +507,222 @@ export default function TalhaoStats() {
   const selectedTalhaoData = selectedTalhaoDetail
     ? produtividadeComparativa.find(t => t.talhao === selectedTalhaoDetail)
     : null;
+
+  // ==================== DADOS PARA ANALYTICS ====================
+
+  // 1. Distribuição de hectares por talhão (Treemap)
+  const hectaresDistribution = useMemo(() => {
+    return talhoesSafra.map(t => ({
+      name: t.nome,
+      size: parseFloat(t.hectares.replace(",", ".")) || 0,
+      fill: `hsl(${Math.random() * 120 + 100}, 70%, 50%)`,
+    })).sort((a, b) => b.size - a.size);
+  }, [talhoesSafra]);
+
+  // 2. Perdas por motivo (agregado)
+  const perdasPorMotivo = useMemo(() => {
+    const motivos: Record<string, number> = {};
+    perdasDetalhadas.forEach(p => {
+      const motivo = p.motivo || 'Não especificado';
+      motivos[motivo] = (motivos[motivo] || 0) + (p.quantidade || 0);
+    });
+    return Object.entries(motivos)
+      .map(([name, value]) => ({ name, value, fill: name === 'Colheita' ? '#FF6B6B' : name === 'Clima' ? '#4ECDC4' : name === 'Pragas' ? '#FFE66D' : '#95E1D3' }))
+      .sort((a, b) => b.value - a.value);
+  }, [perdasDetalhadas]);
+
+  // 3. Evolução acumulada de fardos
+  const evolucaoAcumulada = useMemo(() => {
+    let acumulado = 0;
+    return evolutionData.map(d => {
+      acumulado += d.total;
+      return { ...d, acumulado };
+    });
+  }, [evolutionData]);
+
+  // 4. Comparativo Campo vs Pátio vs Beneficiado por talhão
+  const statusPorTalhao = useMemo(() => {
+    return talhaoStats
+      .filter(s => s.total > 0)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 8)
+      .map(s => ({
+        talhao: s.talhao,
+        campo: s.campo,
+        patio: s.patio,
+        beneficiado: s.beneficiado,
+        total: s.total,
+      }));
+  }, [talhaoStats]);
+
+  // 5. Radar de performance dos top talhões
+  const radarData = useMemo(() => {
+    const top5 = produtividadeComparativa
+      .filter(t => t.totalFardos > 0)
+      .sort((a, b) => b.produtividadePrevistoArrobas - a.produtividadePrevistoArrobas)
+      .slice(0, 5);
+
+    const maxProdutividade = Math.max(...top5.map(t => t.produtividadePrevistoArrobas), 1);
+    const maxFardos = Math.max(...top5.map(t => t.totalFardos), 1);
+    const maxHectares = Math.max(...top5.map(t => t.hectares), 1);
+    const maxPeso = Math.max(...top5.map(t => t.pesoBrutoTotal), 1);
+
+    return top5.map(t => ({
+      talhao: t.talhao,
+      produtividade: (t.produtividadePrevistoArrobas / maxProdutividade) * 100,
+      fardos: (t.totalFardos / maxFardos) * 100,
+      area: (t.hectares / maxHectares) * 100,
+      peso: (t.pesoBrutoTotal / maxPeso) * 100,
+      eficiencia: t.temDadosReais ? Math.min(100, (t.produtividadeRealArrobas / t.produtividadePrevistoArrobas) * 100) : 0,
+    }));
+  }, [produtividadeComparativa]);
+
+  // 6. Funnel de processamento
+  const funnelData = useMemo(() => {
+    const totalFardos = globalStats?.total || 0;
+    const noCampo = globalStats?.campo || 0;
+    const noPatio = globalStats?.patio || 0;
+    const beneficiado = globalStats?.beneficiado || 0;
+
+    return [
+      { name: 'Total Produzido', value: totalFardos, fill: '#8884d8' },
+      { name: 'No Campo', value: noCampo, fill: '#00FF88' },
+      { name: 'No Pátio', value: noPatio, fill: '#FF9500' },
+      { name: 'Beneficiado', value: beneficiado, fill: '#00D4FF' },
+    ];
+  }, [globalStats]);
+
+  // 7. Scatter plot: Hectares vs Produtividade
+  const scatterData = useMemo(() => {
+    return produtividadeComparativa
+      .filter(t => t.totalFardos > 0)
+      .map(t => ({
+        x: t.hectares,
+        y: t.produtividadePrevistoArrobas,
+        z: t.totalFardos,
+        talhao: t.talhao,
+      }));
+  }, [produtividadeComparativa]);
+
+  // 8. Peso médio por fardo ao longo do tempo
+  const pesoMedioPorDia = useMemo(() => {
+    const dias: Record<string, { date: string; pesoTotal: number; count: number }> = {};
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+    for (let i = 13; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const key = date.toISOString().split('T')[0];
+      const label = `${date.getDate()}/${date.getMonth() + 1}`;
+      dias[key] = { date: label, pesoTotal: 0, count: 0 };
+    }
+
+    allBales
+      .filter(b => new Date(b.createdAt) >= fourteenDaysAgo)
+      .forEach(bale => {
+        const key = new Date(bale.createdAt).toISOString().split('T')[0];
+        if (dias[key]) {
+          dias[key].pesoTotal += 2000; // Peso estimado por fardo
+          dias[key].count++;
+        }
+      });
+
+    return Object.values(dias).map(d => ({
+      date: d.date,
+      pesoMedio: d.count > 0 ? Math.round(d.pesoTotal / d.count) : 0,
+      quantidade: d.count,
+    }));
+  }, [allBales]);
+
+  // 9. Rendimento por lote
+  const rendimentoPorLote = useMemo(() => {
+    return lotes
+      .slice(-10)
+      .map((lote, index) => ({
+        lote: `L${index + 1}`,
+        pesoPluma: parseFloat(lote.pesoPluma) || 0,
+        fardinhos: lote.qtdFardinhos || 0,
+      }));
+  }, [lotes]);
+
+  // 10. Distribuição de status (Radial)
+  const radialStatusData = useMemo(() => {
+    const total = globalStats?.total || 1;
+    return [
+      { name: 'Beneficiado', value: ((globalStats?.beneficiado || 0) / total) * 100, fill: '#00D4FF' },
+      { name: 'Pátio', value: ((globalStats?.patio || 0) / total) * 100, fill: '#FF9500' },
+      { name: 'Campo', value: ((globalStats?.campo || 0) / total) * 100, fill: '#00FF88' },
+    ];
+  }, [globalStats]);
+
+  // 11. Carregamentos por período
+  const carregamentosPorTalhao = useMemo(() => {
+    return pesoBrutoTotais
+      .sort((a, b) => b.pesoBrutoTotal - a.pesoBrutoTotal)
+      .slice(0, 10)
+      .map(p => ({
+        talhao: p.talhao,
+        peso: p.pesoBrutoTotal / 1000, // em toneladas
+        carregamentos: p.quantidadeCarregamentos,
+        mediaPorCarreg: p.quantidadeCarregamentos > 0 ? (p.pesoBrutoTotal / p.quantidadeCarregamentos) / 1000 : 0,
+      }));
+  }, [pesoBrutoTotais]);
+
+  // 12. Comparativo previsto vs real
+  const comparativoProdutividade = useMemo(() => {
+    return produtividadeComparativa
+      .filter(t => t.temDadosReais && t.produtividadePrevistoArrobas > 0)
+      .map(t => ({
+        talhao: t.talhao,
+        previsto: t.produtividadePrevistoArrobas,
+        real: t.produtividadeRealArrobas,
+        diferenca: t.diferencaPercentual,
+      }))
+      .sort((a, b) => b.diferenca - a.diferenca)
+      .slice(0, 8);
+  }, [produtividadeComparativa]);
+
+  // 13. Perdas acumuladas por talhão
+  const perdasAcumuladas = useMemo(() => {
+    let acumulado = 0;
+    return perdasPorTalhaoComValor
+      .slice(0, 10)
+      .map(p => {
+        acumulado += p.valorBRL;
+        return {
+          talhao: p.talhao,
+          valor: p.valorBRL / 1000,
+          acumulado: acumulado / 1000,
+          arrobas: p.arrobasHa,
+        };
+      });
+  }, [perdasPorTalhaoComValor]);
+
+  // 14. Eficiência de beneficiamento por dia da semana
+  const eficienciaPorDia = useMemo(() => {
+    const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const contagem: Record<number, { total: number; beneficiado: number }> = {};
+
+    diasSemana.forEach((_, i) => {
+      contagem[i] = { total: 0, beneficiado: 0 };
+    });
+
+    allBales.forEach(bale => {
+      const dia = new Date(bale.createdAt).getDay();
+      contagem[dia].total++;
+      if (bale.status === 'beneficiado') {
+        contagem[dia].beneficiado++;
+      }
+    });
+
+    return diasSemana.map((dia, i) => ({
+      dia,
+      total: contagem[i].total,
+      beneficiado: contagem[i].beneficiado,
+      taxa: contagem[i].total > 0 ? (contagem[i].beneficiado / contagem[i].total) * 100 : 0,
+    }));
+  }, [allBales]);
 
   return (
     <Page>
@@ -963,49 +1196,117 @@ export default function TalhaoStats() {
 
           {/* ==================== TAB: ANALYTICS ==================== */}
           <TabsContent value="analytics" className="space-y-4 mt-4">
-            {/* Gráfico de Distribuição */}
-            <div className="glass-card p-4 rounded-xl">
-              <h3 className="font-semibold mb-4">Distribuição por Status</h3>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsPieChart>
-                    <Pie
-                      data={pieChartData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {pieChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                    />
-                  </RechartsPieChart>
-                </ResponsiveContainer>
+            {/* Header Analytics */}
+            <div className="glass-card rounded-xl p-4 bg-gradient-to-br from-purple-500/20 to-primary/10">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                  <BarChart3 className="w-6 h-6 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Central de Analytics</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {talhaoStats.length} talhões analisados • {globalStats?.total || 0} fardos
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Evolução de Fardos */}
+            {/* ROW 1: Distribuição + Radial Status */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              {/* Distribuição por Status - Pie */}
+              <div className="glass-card p-4 rounded-xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <Percent className="w-4 h-4 text-primary" />
+                  <h3 className="font-semibold text-sm">Distribuição por Status</h3>
+                </div>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie
+                        data={pieChartData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={70}
+                        innerRadius={40}
+                        label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      >
+                        {pieChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Legend />
+                      <RechartsTooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                      />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Radial Progress Status */}
+              <div className="glass-card p-4 rounded-xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <Activity className="w-4 h-4 text-neon-cyan" />
+                  <h3 className="font-semibold text-sm">Taxa de Processamento</h3>
+                </div>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadialBarChart
+                      cx="50%"
+                      cy="50%"
+                      innerRadius="30%"
+                      outerRadius="90%"
+                      data={radialStatusData}
+                      startAngle={180}
+                      endAngle={0}
+                    >
+                      <RadialBar
+                        dataKey="value"
+                        cornerRadius={10}
+                        background
+                      />
+                      <Legend iconSize={10} layout="horizontal" verticalAlign="bottom" />
+                      <RechartsTooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                        formatter={(value: number) => `${value.toFixed(1)}%`}
+                      />
+                    </RadialBarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* ROW 2: Evolução Diária + Acumulado */}
             <div className="glass-card p-4 rounded-xl">
-              <h3 className="font-semibold mb-4">Fardos Criados (14 dias)</h3>
-              <div className="h-64">
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                <h3 className="font-semibold text-sm">Evolução de Fardos (14 dias)</h3>
+              </div>
+              <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={evolutionData}>
+                  <ComposedChart data={evolucaoAcumulada}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis
                       dataKey="date"
                       tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
                     />
                     <YAxis
+                      yAxisId="left"
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
                       tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
                     />
                     <RechartsTooltip
@@ -1015,25 +1316,172 @@ export default function TalhaoStats() {
                         borderRadius: '8px',
                       }}
                     />
-                    <Area
-                      type="monotone"
-                      dataKey="total"
-                      stroke="#00FF88"
-                      fill="#00FF88"
-                      fillOpacity={0.3}
-                    />
-                  </AreaChart>
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="total" fill="#00FF88" name="Diário" radius={[4, 4, 0, 0]} />
+                    <Line yAxisId="right" type="monotone" dataKey="acumulado" stroke="#00D4FF" strokeWidth={2} name="Acumulado" dot={false} />
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Comparativo de Produtividade */}
+            {/* ROW 3: Status por Talhão - Stacked Bar */}
             <div className="glass-card p-4 rounded-xl">
-              <h3 className="font-semibold mb-4">Produtividade por Talhão (@/ha)</h3>
+              <div className="flex items-center gap-2 mb-4">
+                <Layers className="w-4 h-4 text-neon-orange" />
+                <h3 className="font-semibold text-sm">Status por Talhão (Top 8)</h3>
+              </div>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={statusPorTalhao}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="talhao"
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                    />
+                    <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                    <RechartsTooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Legend />
+                    <Bar dataKey="campo" stackId="a" fill="#00FF88" name="Campo" />
+                    <Bar dataKey="patio" stackId="a" fill="#FF9500" name="Pátio" />
+                    <Bar dataKey="beneficiado" stackId="a" fill="#00D4FF" name="Beneficiado" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* ROW 4: Produtividade Comparativa */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              {/* Comparativo Previsto vs Real */}
+              <div className="glass-card p-4 rounded-xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <Target className="w-4 h-4 text-neon-cyan" />
+                  <h3 className="font-semibold text-sm">Previsto vs Real (@/ha)</h3>
+                </div>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={comparativoProdutividade}
+                      layout="vertical"
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                      <YAxis
+                        dataKey="talhao"
+                        type="category"
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                        width={40}
+                      />
+                      <RechartsTooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                      />
+                      <Legend />
+                      <Bar dataKey="previsto" fill="#00FF88" name="Prevista" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="real" fill="#00D4FF" name="Real" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Scatter: Hectares vs Produtividade */}
+              <div className="glass-card p-4 rounded-xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <Zap className="w-4 h-4 text-yellow-500" />
+                  <h3 className="font-semibold text-sm">Área vs Produtividade</h3>
+                </div>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis
+                        dataKey="x"
+                        name="Hectares"
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                        label={{ value: 'Hectares', position: 'bottom', fontSize: 10 }}
+                      />
+                      <YAxis
+                        dataKey="y"
+                        name="@/ha"
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                        label={{ value: '@/ha', angle: -90, position: 'left', fontSize: 10 }}
+                      />
+                      <RechartsTooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                        formatter={(value: number, name: string) => [value.toFixed(1), name]}
+                        labelFormatter={(_, payload) => payload[0]?.payload?.talhao || ''}
+                      />
+                      <Scatter data={scatterData} fill="#00FF88">
+                        {scatterData.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={`hsl(${120 + index * 20}, 70%, 50%)`} />
+                        ))}
+                      </Scatter>
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* ROW 5: Carregamentos + Peso por Talhão */}
+            <div className="glass-card p-4 rounded-xl">
+              <div className="flex items-center gap-2 mb-4">
+                <Truck className="w-4 h-4 text-neon-orange" />
+                <h3 className="font-semibold text-sm">Carregamentos por Talhão (toneladas)</h3>
+              </div>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={carregamentosPorTalhao}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="talhao"
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                    />
+                    <YAxis
+                      yAxisId="left"
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                    />
+                    <RechartsTooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="peso" fill="#FF9500" name="Peso (t)" radius={[4, 4, 0, 0]} />
+                    <Line yAxisId="right" type="monotone" dataKey="carregamentos" stroke="#00D4FF" strokeWidth={2} name="Carregamentos" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* ROW 6: Produtividade por Talhão (todos) */}
+            <div className="glass-card p-4 rounded-xl">
+              <div className="flex items-center gap-2 mb-4">
+                <Award className="w-4 h-4 text-yellow-500" />
+                <h3 className="font-semibold text-sm">Ranking de Produtividade (@/ha)</h3>
+              </div>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={produtividadeComparativa.slice(0, 10)}
+                    data={produtividadeComparativa.slice(0, 12)}
                     layout="vertical"
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -1042,7 +1490,7 @@ export default function TalhaoStats() {
                       dataKey="talhao"
                       type="category"
                       tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-                      width={50}
+                      width={40}
                     />
                     <RechartsTooltip
                       contentStyle={{
@@ -1051,10 +1499,253 @@ export default function TalhaoStats() {
                         borderRadius: '8px',
                       }}
                     />
-                    <Bar dataKey="produtividadePrevistoArrobas" fill="#00FF88" name="Prevista" radius={[0, 4, 4, 0]} />
-                    <Bar dataKey="produtividadeRealArrobas" fill="#00D4FF" name="Real" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="produtividadePrevistoArrobas" fill="#00FF88" name="@/ha" radius={[0, 4, 4, 0]}>
+                      <LabelList dataKey="produtividadePrevistoArrobas" position="right" formatter={(v: number) => `${v.toFixed(0)}`} fontSize={10} />
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* ROW 7: Perdas - Grid */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              {/* Perdas por Motivo */}
+              <div className="glass-card p-4 rounded-xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <AlertTriangle className="w-4 h-4 text-red-500" />
+                  <h3 className="font-semibold text-sm">Perdas por Motivo</h3>
+                </div>
+                <div className="h-56">
+                  {perdasPorMotivo.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsPieChart>
+                        <Pie
+                          data={perdasPorMotivo}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={70}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {perdasPorMotivo.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                          }}
+                        />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-muted-foreground">
+                      <div className="text-center">
+                        <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500/50" />
+                        <p className="text-sm">Sem perdas registradas</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Perdas Acumuladas por Talhão */}
+              <div className="glass-card p-4 rounded-xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingDown className="w-4 h-4 text-red-500" />
+                  <h3 className="font-semibold text-sm">Perdas Acumuladas (R$ mil)</h3>
+                </div>
+                <div className="h-56">
+                  {perdasAcumuladas.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={perdasAcumuladas}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis
+                          dataKey="talhao"
+                          tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                        />
+                        <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                        <RechartsTooltip
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                          }}
+                        />
+                        <Bar dataKey="valor" fill="#FF6B6B" name="Valor (R$ mil)" radius={[4, 4, 0, 0]} />
+                        <Line type="monotone" dataKey="acumulado" stroke="#FF9500" strokeWidth={2} name="Acumulado" />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-muted-foreground">
+                      <div className="text-center">
+                        <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500/50" />
+                        <p className="text-sm">Sem perdas registradas</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ROW 8: Eficiência por Dia da Semana */}
+            <div className="glass-card p-4 rounded-xl">
+              <div className="flex items-center gap-2 mb-4">
+                <Clock className="w-4 h-4 text-purple-400" />
+                <h3 className="font-semibold text-sm">Produção por Dia da Semana</h3>
+              </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={eficienciaPorDia}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="dia"
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                    />
+                    <YAxis
+                      yAxisId="left"
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                      domain={[0, 100]}
+                    />
+                    <RechartsTooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="total" fill="#00FF88" name="Total Fardos" radius={[4, 4, 0, 0]} />
+                    <Bar yAxisId="left" dataKey="beneficiado" fill="#00D4FF" name="Beneficiados" radius={[4, 4, 0, 0]} />
+                    <Line yAxisId="right" type="monotone" dataKey="taxa" stroke="#FF9500" strokeWidth={2} name="Taxa %" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* ROW 9: Beneficiamento - Rendimento por Lote */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              {/* Rendimento por Lote */}
+              <div className="glass-card p-4 rounded-xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <Factory className="w-4 h-4 text-purple-400" />
+                  <h3 className="font-semibold text-sm">Peso Pluma por Lote (kg)</h3>
+                </div>
+                <div className="h-56">
+                  {rendimentoPorLote.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={rendimentoPorLote}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis
+                          dataKey="lote"
+                          tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                        />
+                        <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                        <RechartsTooltip
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                          }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="pesoPluma"
+                          stroke="#9333EA"
+                          fill="#9333EA"
+                          fillOpacity={0.3}
+                          name="Peso Pluma"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-muted-foreground">
+                      <div className="text-center">
+                        <Box className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
+                        <p className="text-sm">Sem lotes processados</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Quantidade de Fardos por Dia */}
+              <div className="glass-card p-4 rounded-xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <Package className="w-4 h-4 text-primary" />
+                  <h3 className="font-semibold text-sm">Fardos/Dia (14 dias)</h3>
+                </div>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsLineChart data={pesoMedioPorDia}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                      />
+                      <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                      <RechartsTooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="quantidade"
+                        stroke="#00FF88"
+                        strokeWidth={2}
+                        dot={{ fill: '#00FF88', r: 4 }}
+                        name="Fardos"
+                      />
+                    </RechartsLineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* ROW 10: Resumo Numérico Final */}
+            <div className="glass-card p-4 rounded-xl bg-gradient-to-br from-surface to-surface-hover">
+              <div className="flex items-center gap-2 mb-4">
+                <Info className="w-4 h-4 text-muted-foreground" />
+                <h3 className="font-semibold text-sm">Resumo Estatístico</h3>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                <div className="p-3 rounded-lg bg-primary/10 text-center">
+                  <p className="text-xl font-bold text-primary">{globalStats?.total || 0}</p>
+                  <p className="text-xs text-muted-foreground">Total Fardos</p>
+                </div>
+                <div className="p-3 rounded-lg bg-neon-cyan/10 text-center">
+                  <p className="text-xl font-bold text-neon-cyan">{taxaBeneficiamento.toFixed(0)}%</p>
+                  <p className="text-xs text-muted-foreground">Beneficiado</p>
+                </div>
+                <div className="p-3 rounded-lg bg-neon-orange/10 text-center">
+                  <p className="text-xl font-bold text-neon-orange">{totaisCarregamentos.totalCarregamentos}</p>
+                  <p className="text-xs text-muted-foreground">Carregamentos</p>
+                </div>
+                <div className="p-3 rounded-lg bg-purple-500/10 text-center">
+                  <p className="text-xl font-bold text-purple-400">{totaisLotes.totalLotes}</p>
+                  <p className="text-xs text-muted-foreground">Lotes</p>
+                </div>
+                <div className="p-3 rounded-lg bg-yellow-500/10 text-center">
+                  <p className="text-xl font-bold text-yellow-500">
+                    {totaisProdutividade.produtividadePrevistaMedia.toFixed(0)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">@/ha Média</p>
+                </div>
+                <div className="p-3 rounded-lg bg-red-500/10 text-center">
+                  <p className="text-xl font-bold text-red-500">{totalPerdasArrobasHa.toFixed(1)}</p>
+                  <p className="text-xs text-muted-foreground">@/ha Perdas</p>
+                </div>
               </div>
             </div>
           </TabsContent>

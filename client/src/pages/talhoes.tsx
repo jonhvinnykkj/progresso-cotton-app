@@ -19,6 +19,8 @@ import {
   Wheat,
   ArrowUpRight,
   ArrowDownRight,
+  AlertTriangle,
+  TrendingDown,
 } from "lucide-react";
 import { Page, PageContent } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
@@ -99,12 +101,72 @@ export default function Talhoes() {
     staleTime: 60000,
   });
 
+  // Query de perdas por talhão
+  const { data: perdasPorTalhao = [] } = useQuery<{ talhao: string; totalPerdas: number; quantidadeRegistros: number }[]>({
+    queryKey: ["/api/perdas-totais", selectedSafra],
+    queryFn: async () => {
+      const encodedSafra = encodeURIComponent(selectedSafra);
+      const url = API_URL
+        ? `${API_URL}/api/perdas-totais/${encodedSafra}`
+        : `/api/perdas-totais/${encodedSafra}`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!selectedSafra,
+  });
+
+  // Query de perdas detalhadas (com motivos)
+  const { data: perdasDetalhadas = [] } = useQuery<any[]>({
+    queryKey: ["/api/perdas", selectedSafra],
+    queryFn: async () => {
+      const encodedSafra = encodeURIComponent(selectedSafra);
+      const url = API_URL
+        ? `${API_URL}/api/perdas/${encodedSafra}`
+        : `/api/perdas/${encodedSafra}`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!selectedSafra,
+  });
+
+  // Query de cotação do algodão
+  interface CotacaoData {
+    pluma: number;
+    caroco: number;
+  }
+  const { data: cotacaoData } = useQuery<CotacaoData>({
+    queryKey: ["/api/cotacao-algodao"],
+    queryFn: async () => {
+      const url = API_URL ? `${API_URL}/api/cotacao-algodao` : '/api/cotacao-algodao';
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return { pluma: 140, caroco: 38 };
+      return response.json();
+    },
+  });
+
+  const cotacaoPluma = cotacaoData?.pluma || 140;
+  const cotacaoCaroco = cotacaoData?.caroco || 38;
+  const valorMedioPorArroba = (cotacaoPluma * 0.40 + cotacaoCaroco * 0.57) / 0.97;
+
   // Calcular dados de cada talhão (agora usando talhões dinâmicos da safra)
   const talhoesData = useMemo(() => {
     return talhoesSafra.map(talhaoInfo => {
       const hectares = parseFloat(talhaoInfo.hectares.replace(",", ".")) || 0;
       const stats = talhaoStats.find(s => s.talhao === talhaoInfo.nome);
       const pesoBruto = pesoBrutoTotais.find(p => p.talhao === talhaoInfo.nome);
+      const perdaTalhao = perdasPorTalhao.find(p => p.talhao === talhaoInfo.nome);
+      const perdasDetalhe = perdasDetalhadas.filter(p => p.talhao === talhaoInfo.nome);
 
       const totalFardos = stats?.total || 0;
       const campo = stats?.campo || 0;
@@ -126,6 +188,11 @@ export default function Talhoes() {
         ? ((produtividadeReal - produtividadePrevista) / produtividadePrevista) * 100
         : 0;
 
+      // Perdas
+      const perdasArrobasHa = perdaTalhao?.totalPerdas || 0;
+      const perdasArrobasTotais = perdasArrobasHa * hectares;
+      const perdasValorBRL = perdasArrobasTotais * valorMedioPorArroba;
+
       return {
         id: talhaoInfo.nome, // usar nome como ID pois é único dentro da safra
         nome: talhaoInfo.nome,
@@ -139,9 +206,14 @@ export default function Talhoes() {
         temDadosReais,
         diferencaPercent,
         progressBeneficiado: totalFardos > 0 ? (beneficiado / totalFardos) * 100 : 0,
+        // Perdas
+        perdasArrobasHa,
+        perdasArrobasTotais,
+        perdasValorBRL,
+        perdasDetalhes: perdasDetalhe,
       };
     }).sort((a, b) => b.totalFardos - a.totalFardos);
-  }, [talhoesSafra, talhaoStats, pesoBrutoTotais]);
+  }, [talhoesSafra, talhaoStats, pesoBrutoTotais, perdasPorTalhao, perdasDetalhadas, valorMedioPorArroba]);
 
   // Totais
   const totais = useMemo(() => {
@@ -245,7 +317,7 @@ export default function Talhoes() {
                 </div>
 
                 {/* Stats */}
-                {talhao.totalFardos > 0 ? (
+                {talhao.totalFardos > 0 || talhao.perdasArrobasHa > 0 ? (
                   <>
                     {/* Fardos e Produtividade */}
                     <div className="grid grid-cols-2 gap-3 mb-4">
@@ -263,24 +335,56 @@ export default function Talhoes() {
                       </div>
                     </div>
 
+                    {/* Perdas - se houver */}
+                    {talhao.perdasArrobasHa > 0 && (
+                      <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-red-400 font-medium flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            Perdas Registradas
+                          </span>
+                          <span className="text-sm font-bold text-red-400">
+                            -R$ {talhao.perdasValorBRL.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          </span>
+                        </div>
+                        <p className="text-xs text-red-400/70 mb-2">{talhao.perdasArrobasHa.toFixed(1)} @/ha</p>
+                        {/* Motivos das perdas */}
+                        {talhao.perdasDetalhes.length > 0 && (
+                          <div className="space-y-1 pt-2 border-t border-red-500/20">
+                            {talhao.perdasDetalhes.slice(0, 2).map((detalhe: any, idx: number) => (
+                              <div key={idx} className="flex items-center justify-between text-[10px]">
+                                <span className="text-red-300 truncate max-w-[60%]">{detalhe.motivo}</span>
+                                <span className="text-red-400/70">{parseFloat(detalhe.arrobasHa).toFixed(1)} @/ha</span>
+                              </div>
+                            ))}
+                            {talhao.perdasDetalhes.length > 2 && (
+                              <p className="text-[10px] text-red-400/50">+{talhao.perdasDetalhes.length - 2} mais...</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Status bars mini */}
-                    <div className="flex gap-1 mb-3">
-                      <div
-                        className="h-2 bg-primary rounded-full transition-all"
-                        style={{ width: `${talhao.totalFardos > 0 ? (talhao.campo / talhao.totalFardos) * 100 : 0}%` }}
-                        title={`Campo: ${talhao.campo}`}
-                      />
-                      <div
-                        className="h-2 bg-neon-orange rounded-full transition-all"
-                        style={{ width: `${talhao.totalFardos > 0 ? (talhao.patio / talhao.totalFardos) * 100 : 0}%` }}
-                        title={`Pátio: ${talhao.patio}`}
-                      />
-                      <div
-                        className="h-2 bg-neon-cyan rounded-full transition-all"
-                        style={{ width: `${talhao.totalFardos > 0 ? (talhao.beneficiado / talhao.totalFardos) * 100 : 0}%` }}
-                        title={`Beneficiado: ${talhao.beneficiado}`}
-                      />
-                    </div>
+                    {talhao.totalFardos > 0 && (
+                      <div className="flex gap-1 mb-3">
+                        <div
+                          className="h-2 bg-primary rounded-full transition-all"
+                          style={{ width: `${talhao.totalFardos > 0 ? (talhao.campo / talhao.totalFardos) * 100 : 0}%` }}
+                          title={`Campo: ${talhao.campo}`}
+                        />
+                        <div
+                          className="h-2 bg-neon-orange rounded-full transition-all"
+                          style={{ width: `${talhao.totalFardos > 0 ? (talhao.patio / talhao.totalFardos) * 100 : 0}%` }}
+                          title={`Pátio: ${talhao.patio}`}
+                        />
+                        <div
+                          className="h-2 bg-neon-cyan rounded-full transition-all"
+                          style={{ width: `${talhao.totalFardos > 0 ? (talhao.beneficiado / talhao.totalFardos) * 100 : 0}%` }}
+                          title={`Beneficiado: ${talhao.beneficiado}`}
+                        />
+                      </div>
+                    )}
 
                     {/* Footer stats */}
                     <div className="flex items-center justify-between text-xs text-muted-foreground">

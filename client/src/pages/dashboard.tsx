@@ -608,7 +608,7 @@ export default function Dashboard() {
 
               <div className="relative p-4 sm:p-6">
                 <div className="flex flex-col gap-3 sm:gap-4">
-                  {/* Valor Principal */}
+                  {/* Valor Principal - Líquido (descontando perdas) */}
                   <div>
                     <p className="text-xs sm:text-sm text-emerald-300/80 mb-1 flex items-center gap-1.5 sm:gap-2">
                       <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -616,12 +616,17 @@ export default function Dashboard() {
                     </p>
                     <div className="flex items-baseline gap-2 sm:gap-3">
                       <span className="text-2xl sm:text-4xl md:text-5xl font-display font-bold text-white">
-                        R$ {valorEstimado.valorTotalBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        R$ {(valorEstimado.valorTotalBRL - valorEstimado.perdasCampoValorBRL).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
+                      {valorEstimado.perdasCampoValorBRL > 0 && (
+                        <span className="text-sm sm:text-lg text-emerald-300/60 line-through">
+                          R$ {valorEstimado.valorTotalBRL.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </span>
+                      )}
                     </div>
                     {usdBrl > 0 && (
                       <p className="text-base sm:text-xl text-emerald-300 mt-0.5 sm:mt-1">
-                        $ {valorEstimado.valorTotalUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        $ {((valorEstimado.valorTotalBRL - valorEstimado.perdasCampoValorBRL) / usdBrl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     )}
                     <p className="text-xs sm:text-sm text-emerald-300/60 mt-1 sm:mt-2">
@@ -629,60 +634,68 @@ export default function Dashboard() {
                     </p>
                   </div>
 
-                  {/* Breakdown Pluma/Caroço/Perdas */}
-                  <div className={cn("grid gap-2", valorEstimado.perdasCampoArrobasHa > 0 ? "grid-cols-4" : "grid-cols-3")}>
+                  {/* Breakdown Pluma/Caroço/Impurezas/Perdas Campo */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {/* Pluma */}
                     <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white/5 backdrop-blur border border-white/10">
                       <div className="flex items-center justify-between mb-0.5 sm:mb-1">
                         <span className="text-[10px] sm:text-xs text-purple-300 font-medium">Pluma</span>
                         <span className="text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-300">40%</span>
                       </div>
                       <p className="text-sm sm:text-lg font-bold text-white tracking-tight">
-                        {(valorEstimado.valorPlumaBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
+                        +{(valorEstimado.valorPlumaBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
                       </p>
                       <p className="text-[9px] sm:text-[10px] text-white/50">{valorEstimado.arrobasPluma.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @</p>
                     </div>
+
+                    {/* Caroço */}
                     <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white/5 backdrop-blur border border-white/10">
                       <div className="flex items-center justify-between mb-0.5 sm:mb-1">
                         <span className="text-[10px] sm:text-xs text-orange-300 font-medium">Caroço</span>
                         <span className="text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded bg-orange-500/30 text-orange-300">57%</span>
                       </div>
                       <p className="text-sm sm:text-lg font-bold text-white tracking-tight">
-                        {(valorEstimado.valorCarocoBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
+                        +{(valorEstimado.valorCarocoBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
                       </p>
                       <p className="text-[9px] sm:text-[10px] text-white/50">{valorEstimado.arrobasCaroco.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @</p>
                     </div>
-                    <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white/5 backdrop-blur border border-red-500/20">
+
+                    {/* Impurezas */}
+                    <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white/5 backdrop-blur border border-yellow-500/20">
                       <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-                        <span className="text-[10px] sm:text-xs text-red-300 font-medium">Impurezas</span>
-                        <span className="text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded bg-red-500/30 text-red-300">3%</span>
+                        <span className="text-[10px] sm:text-xs text-yellow-300 font-medium">Impurezas</span>
+                        <span className="text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded bg-yellow-500/30 text-yellow-300">3%</span>
                       </div>
-                      <p className="text-sm sm:text-lg font-bold text-red-200 tracking-tight">
+                      <p className="text-sm sm:text-lg font-bold text-yellow-200 tracking-tight">
                         -{(valorEstimado.valorPerdasBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
                       </p>
                       <p className="text-[9px] sm:text-[10px] text-white/50">{valorEstimado.arrobasPerdas.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @</p>
                     </div>
-                    {/* Perdas de Campo (só aparece se houver perdas registradas) */}
-                    {valorEstimado.perdasCampoArrobasHa > 0 && (
-                      <button
-                        onClick={() => setPerdasModalOpen(true)}
-                        className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-red-950/50 backdrop-blur border border-red-500/30 hover:bg-red-950/70 hover:border-red-500/50 transition-colors text-left group w-full"
-                      >
-                        <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-                          <span className="text-[10px] sm:text-xs text-red-400 font-medium flex items-center gap-1">
-                            <AlertTriangle className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                            Campo
-                          </span>
+
+                    {/* Perdas de Campo - Sempre visível, clicável */}
+                    <button
+                      onClick={() => setPerdasModalOpen(true)}
+                      className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-red-950/50 backdrop-blur border border-red-500/30 hover:bg-red-950/70 hover:border-red-500/50 transition-colors text-left group w-full"
+                    >
+                      <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                        <span className="text-[10px] sm:text-xs text-red-400 font-medium flex items-center gap-1">
+                          <AlertTriangle className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                          Perdas
+                        </span>
+                        {valorEstimado.percentualPerdasCampo > 0 && (
                           <span className="text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded bg-red-500/40 text-red-300">
                             {valorEstimado.percentualPerdasCampo.toFixed(1)}%
                           </span>
-                        </div>
-                        <p className="text-sm sm:text-lg font-bold text-red-300 tracking-tight">
-                          -{(valorEstimado.perdasCampoValorBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
-                        </p>
-                        <p className="text-[9px] sm:text-[10px] text-red-400/60">{valorEstimado.perdasCampoArrobasHa.toFixed(1)} @/ha</p>
-                        <p className="text-[8px] text-red-500/50 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5">Ver detalhes</p>
-                      </button>
-                    )}
+                        )}
+                      </div>
+                      <p className="text-sm sm:text-lg font-bold text-red-300 tracking-tight">
+                        {valorEstimado.perdasCampoValorBRL > 0 ? `-${(valorEstimado.perdasCampoValorBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k` : 'R$ 0'}
+                      </p>
+                      <p className="text-[9px] sm:text-[10px] text-red-400/60">
+                        {valorEstimado.perdasCampoArrobasHa > 0 ? `${valorEstimado.perdasCampoArrobasHa.toFixed(1)} @/ha` : 'Sem perdas'}
+                      </p>
+                      <p className="text-[8px] text-red-500/50 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5">Ver detalhes</p>
+                    </button>
                   </div>
                 </div>
               </div>

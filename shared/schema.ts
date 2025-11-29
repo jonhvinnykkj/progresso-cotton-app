@@ -123,7 +123,7 @@ export const perdas = pgTable("perdas", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   safra: text("safra").notNull(),
   talhao: text("talhao").notNull(),
-  pesoKg: text("peso_kg").notNull(), // Peso perdido em KG
+  arrobasHa: text("arrobas_ha").notNull(), // Perda em @/ha
   motivo: text("motivo").notNull(), // Motivo da perda (causa natural, praga, etc.)
   dataPerda: timestamp("data_perda").notNull().defaultNow(),
   observacao: text("observacao"), // Observação opcional
@@ -310,14 +310,14 @@ export type Fardinho = typeof fardinhos.$inferSelect;
 export const createPerdaSchema = z.object({
   safra: z.string().min(1, "Safra é obrigatória"),
   talhao: z.string().min(1, "Talhão é obrigatório"),
-  pesoKg: z.string().min(1, "Peso é obrigatório"),
+  arrobasHa: z.string().min(1, "Perda em @/ha é obrigatória"),
   motivo: z.string().min(1, "Motivo é obrigatório"),
   dataPerda: z.string().optional(),
   observacao: z.string().optional(),
 });
 
 export const updatePerdaSchema = z.object({
-  pesoKg: z.string().min(1, "Peso é obrigatório").optional(),
+  arrobasHa: z.string().min(1, "Perda em @/ha é obrigatória").optional(),
   motivo: z.string().min(1, "Motivo é obrigatório").optional(),
   observacao: z.string().optional(),
 });

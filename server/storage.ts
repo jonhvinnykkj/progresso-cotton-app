@@ -1504,7 +1504,7 @@ export class PostgresStorage implements IStorage {
         .values({
           safra: data.safra,
           talhao: data.talhao,
-          pesoKg: data.pesoKg,
+          arrobasHa: data.arrobasHa,
           motivo: data.motivo,
           dataPerda,
           observacao: data.observacao || null,
@@ -1524,7 +1524,7 @@ export class PostgresStorage implements IStorage {
   async updatePerda(id: string, data: UpdatePerda): Promise<Perda> {
     try {
       const updateData: Record<string, unknown> = {};
-      if (data.pesoKg !== undefined) updateData.pesoKg = data.pesoKg;
+      if (data.arrobasHa !== undefined) updateData.arrobasHa = data.arrobasHa;
       if (data.motivo !== undefined) updateData.motivo = data.motivo;
       if (data.observacao !== undefined) updateData.observacao = data.observacao;
 
@@ -1555,7 +1555,7 @@ export class PostgresStorage implements IStorage {
     try {
       const result = await db
         .select({
-          total: sql<number>`COALESCE(SUM(CAST(${perdasTable.pesoKg} AS DECIMAL)), 0)`,
+          total: sql<number>`COALESCE(SUM(CAST(${perdasTable.arrobasHa} AS DECIMAL)), 0)`,
         })
         .from(perdasTable)
         .where(eq(perdasTable.safra, safra));
@@ -1571,7 +1571,7 @@ export class PostgresStorage implements IStorage {
       const result = await db
         .select({
           talhao: perdasTable.talhao,
-          totalPerdas: sql<number>`COALESCE(SUM(CAST(${perdasTable.pesoKg} AS DECIMAL)), 0)`,
+          totalPerdas: sql<number>`COALESCE(SUM(CAST(${perdasTable.arrobasHa} AS DECIMAL)), 0)`,
           quantidadeRegistros: sql<number>`COUNT(*)`,
         })
         .from(perdasTable)

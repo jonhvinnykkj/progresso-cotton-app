@@ -438,7 +438,7 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
     resolver: zodResolver(perdaSchema),
     defaultValues: {
       talhao: "",
-      pesoKg: "",
+      arrobasHa: "",
       motivo: "",
       observacao: "",
     },
@@ -459,8 +459,8 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
     enabled: !!defaultSafra,
   });
 
-  // Calcular total de perdas
-  const totalPerdas = perdas.reduce((acc: number, perda: any) => acc + parseFloat(perda.pesoKg || "0"), 0);
+  // Calcular total de perdas em @/ha
+  const totalPerdas = perdas.reduce((acc: number, perda: any) => acc + parseFloat(perda.arrobasHa || "0"), 0);
 
   const handleCreatePerda = async (data: PerdaForm) => {
     if (!defaultSafra) {
@@ -484,7 +484,7 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
         body: JSON.stringify({
           safra: defaultSafra,
           talhao: data.talhao,
-          pesoKg: data.pesoKg,
+          arrobasHa: data.arrobasHa,
           motivo: data.motivo,
           observacao: data.observacao || undefined,
         }),
@@ -495,7 +495,7 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
       toast({
         variant: "success",
         title: "Perda registrada",
-        description: `${data.pesoKg} kg de perda registrados com sucesso.`,
+        description: `${data.arrobasHa} @/ha de perda registrados com sucesso.`,
       });
 
       perdaForm.reset();
@@ -597,17 +597,18 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={perdaForm.control}
-                name="pesoKg"
+                name="arrobasHa"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-semibold flex items-center gap-2">
                       <Package className="w-4 h-4 text-primary" />
-                      Peso (kg)
+                      Perda (@/ha)
                     </FormLabel>
                     <FormControl>
                       <Input
                         type="number"
-                        placeholder="Ex: 1500"
+                        step="0.1"
+                        placeholder="Ex: 15.5"
                         {...field}
                         disabled={isCreating}
                         className="h-12 rounded-xl bg-surface border-border/50"
@@ -707,11 +708,11 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
         <div className="grid grid-cols-2 gap-4">
           <div className="rounded-xl p-5 bg-destructive/10 border border-destructive/20">
             <div className="text-3xl font-display font-bold text-destructive mb-2">
-              {(totalPerdas / 1000).toFixed(1)}t
+              {totalPerdas.toFixed(1)}
             </div>
             <div className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
               <TrendingDown className="w-4 h-4 text-destructive" />
-              Total Perdido
+              Total @/ha Perdido
             </div>
           </div>
           <div className="rounded-xl p-5 bg-amber-500/10 border border-amber-500/20">
@@ -745,7 +746,7 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-bold text-primary text-sm">{perda.talhao}</span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/20 text-destructive font-semibold">
-                        {parseFloat(perda.pesoKg).toLocaleString()} kg
+                        {parseFloat(perda.arrobasHa).toLocaleString()} @/ha
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{perda.motivo}</p>
@@ -784,7 +785,7 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
 
 const perdaSchema = z.object({
   talhao: z.string().min(1, "Talhão é obrigatório"),
-  pesoKg: z.string().min(1, "Peso é obrigatório"),
+  arrobasHa: z.string().min(1, "Perda em @/ha é obrigatória"),
   motivo: z.string().min(1, "Motivo é obrigatório"),
   observacao: z.string().optional(),
 });

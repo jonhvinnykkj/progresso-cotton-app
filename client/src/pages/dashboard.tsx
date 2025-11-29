@@ -142,7 +142,7 @@ export default function Dashboard() {
     staleTime: 60000,
   });
 
-  const totalPerdasKg = perdasData?.totalPerdas || 0;
+  const totalPerdasArrobasHa = perdasData?.totalPerdas || 0;
 
   // Cálculos principais - usando talhões dinâmicos da safra
   const totalHectares = useMemo(() =>
@@ -396,13 +396,14 @@ export default function Dashboard() {
     const valorCarocoUSD = usdBrl > 0 ? valorCarocoBRL / usdBrl : 0;
     const valorTotalUSD = usdBrl > 0 ? valorTotalBRL / usdBrl : 0;
 
-    // Perdas registradas no campo (de causa natural, pragas, etc.)
-    const perdasCampoArrobas = totalPerdasKg / 15;
-    const perdasCampoValorBRL = perdasCampoArrobas * valorMedioPorArroba;
+    // Perdas registradas no campo em @/ha (de causa natural, pragas, etc.)
+    // Convertendo @/ha para arrobas totais: @/ha * hectares totais
+    const perdasCampoArrobasTotais = totalPerdasArrobasHa * totalHectares;
+    const perdasCampoValorBRL = perdasCampoArrobasTotais * valorMedioPorArroba;
 
-    // Percentual de perdas em relação à produção pesada
-    const percentualPerdasCampo = totaisCarregamentos.totalPesoKg > 0
-      ? (totalPerdasKg / totaisCarregamentos.totalPesoKg) * 100
+    // Percentual de perdas em relação à produção real
+    const percentualPerdasCampo = pesoArrobasBruto > 0
+      ? (perdasCampoArrobasTotais / pesoArrobasBruto) * 100
       : 0;
 
     return {
@@ -419,13 +420,12 @@ export default function Dashboard() {
       valorCarocoUSD,
       valorTotalUSD,
       // Perdas de campo
-      perdasCampoKg: totalPerdasKg,
-      perdasCampoTon: totalPerdasKg / 1000,
-      perdasCampoArrobas,
+      perdasCampoArrobasHa: totalPerdasArrobasHa,
+      perdasCampoArrobasTotais,
       perdasCampoValorBRL,
       percentualPerdasCampo
     };
-  }, [totaisCarregamentos.totalPesoKg, cotacaoPluma, cotacaoCaroco, usdBrl, totalPerdasKg]);
+  }, [totaisCarregamentos.totalPesoKg, cotacaoPluma, cotacaoCaroco, usdBrl, totalPerdasArrobasHa, totalHectares]);
 
   return (
     <Page>
@@ -570,7 +570,7 @@ export default function Dashboard() {
                   </div>
 
                   {/* Breakdown Pluma/Caroço/Perdas */}
-                  <div className={cn("grid gap-2", valorEstimado.perdasCampoKg > 0 ? "grid-cols-4" : "grid-cols-3")}>
+                  <div className={cn("grid gap-2", valorEstimado.perdasCampoArrobasHa > 0 ? "grid-cols-4" : "grid-cols-3")}>
                     <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-white/5 backdrop-blur border border-white/10">
                       <div className="flex items-center justify-between mb-0.5 sm:mb-1">
                         <span className="text-[10px] sm:text-xs text-purple-300 font-medium">Pluma</span>
@@ -602,7 +602,7 @@ export default function Dashboard() {
                       <p className="text-[9px] sm:text-[10px] text-white/50">{valorEstimado.arrobasPerdas.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} @</p>
                     </div>
                     {/* Perdas de Campo (só aparece se houver perdas registradas) */}
-                    {valorEstimado.perdasCampoKg > 0 && (
+                    {valorEstimado.perdasCampoArrobasHa > 0 && (
                       <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-red-950/50 backdrop-blur border border-red-500/30">
                         <div className="flex items-center justify-between mb-0.5 sm:mb-1">
                           <span className="text-[10px] sm:text-xs text-red-400 font-medium flex items-center gap-1">
@@ -616,7 +616,7 @@ export default function Dashboard() {
                         <p className="text-sm sm:text-lg font-bold text-red-300 tracking-tight">
                           -{(valorEstimado.perdasCampoValorBRL / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k
                         </p>
-                        <p className="text-[9px] sm:text-[10px] text-red-400/60">{valorEstimado.perdasCampoTon.toFixed(1)} t</p>
+                        <p className="text-[9px] sm:text-[10px] text-red-400/60">{valorEstimado.perdasCampoArrobasHa.toFixed(1)} @/ha</p>
                       </div>
                     )}
                   </div>

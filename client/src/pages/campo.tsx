@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -442,6 +442,18 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
   const [selectedTalhao, setSelectedTalhao] = useState<{ nome: string; hectares: string } | null>(null);
   const [formData, setFormData] = useState({ arrobasHa: "", motivo: "", observacao: "" });
 
+  // Ref para scroll automático ao wizard
+  const wizardRef = useRef<HTMLDivElement>(null);
+
+  // Scroll para o wizard quando abrir
+  useEffect(() => {
+    if (wizardOpen && wizardRef.current) {
+      setTimeout(() => {
+        wizardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    }
+  }, [wizardOpen]);
+
   // Query para buscar perdas
   const { data: perdas = [], isLoading: perdasLoading } = useQuery({
     queryKey: ["/api/perdas", defaultSafra],
@@ -839,84 +851,94 @@ function PerdasTab({ defaultSafra, talhoesSafra }: { defaultSafra: string; talho
         </div>
       )}
 
-      {/* Wizard Modal */}
+      {/* Wizard Inline */}
       {wizardOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            {/* Progress bar */}
-            <div className="h-1 bg-muted">
-              <div
-                className="h-full bg-primary transition-all duration-300"
-                style={{ width: `${(wizardStep / 4) * 100}%` }}
-              />
-            </div>
+        <div ref={wizardRef} className="bg-card border-2 border-primary/30 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+          {/* Progress bar */}
+          <div className="h-1.5 bg-muted">
+            <div
+              className="h-full bg-primary transition-all duration-300"
+              style={{ width: `${(wizardStep / 4) * 100}%` }}
+            />
+          </div>
 
-            {/* Step indicators */}
-            <div className="flex justify-center gap-2 p-4 border-b border-border/30">
-              {[1, 2, 3, 4].map((step) => (
+          {/* Step indicators */}
+          <div className="flex justify-center gap-3 p-4 border-b border-border/30 bg-muted/20">
+            {[
+              { num: 1, label: "Talhão" },
+              { num: 2, label: "Quantidade" },
+              { num: 3, label: "Motivo" },
+              { num: 4, label: "Confirmar" },
+            ].map((step) => (
+              <div key={step.num} className="flex flex-col items-center gap-1">
                 <div
-                  key={step}
                   className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all",
-                    wizardStep === step
-                      ? "bg-primary text-primary-foreground scale-110"
-                      : wizardStep > step
+                    "w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all",
+                    wizardStep === step.num
+                      ? "bg-primary text-primary-foreground scale-110 shadow-lg"
+                      : wizardStep > step.num
                       ? "bg-green-500 text-white"
                       : "bg-muted text-muted-foreground"
                   )}
                 >
-                  {wizardStep > step ? <CheckCircle className="w-4 h-4" /> : step}
+                  {wizardStep > step.num ? <CheckCircle className="w-4 h-4" /> : step.num}
                 </div>
-              ))}
-            </div>
+                <span className={cn(
+                  "text-[10px] font-medium",
+                  wizardStep === step.num ? "text-primary" : "text-muted-foreground"
+                )}>
+                  {step.label}
+                </span>
+              </div>
+            ))}
+          </div>
 
-            {/* Content */}
-            <div className="p-6 min-h-[350px]">
-              {renderStepContent()}
-            </div>
+          {/* Content */}
+          <div className="p-6 min-h-[320px]">
+            {renderStepContent()}
+          </div>
 
-            {/* Footer */}
-            <div className="flex gap-3 p-4 border-t border-border/30 bg-muted/20">
-              <Button
-                variant="outline"
-                className="flex-1 h-11 rounded-xl"
-                onClick={() => {
-                  if (wizardStep === 1) {
-                    resetWizard();
-                  } else {
-                    setWizardStep(wizardStep - 1);
-                  }
-                }}
-                disabled={isCreating}
-              >
-                {wizardStep === 1 ? "Cancelar" : "Voltar"}
-              </Button>
-              <Button
-                className={cn(
-                  "flex-1 h-11 rounded-xl",
-                  wizardStep === 4 ? "bg-green-500 hover:bg-green-600" : ""
-                )}
-                onClick={() => {
-                  if (wizardStep === 4) {
-                    handleCreatePerda();
-                  } else {
-                    setWizardStep(wizardStep + 1);
-                  }
-                }}
-                disabled={!canProceed() || isCreating}
-              >
-                {isCreating ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : wizardStep === 4 ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Confirmar
-                  </>
-                ) : (
-                  "Próximo"
-                )}
-              </Button>
-            </div>
+          {/* Footer */}
+          <div className="flex gap-3 p-4 border-t border-border/30 bg-muted/10">
+            <Button
+              variant="outline"
+              className="flex-1 h-12 rounded-xl text-base"
+              onClick={() => {
+                if (wizardStep === 1) {
+                  resetWizard();
+                } else {
+                  setWizardStep(wizardStep - 1);
+                }
+              }}
+              disabled={isCreating}
+            >
+              {wizardStep === 1 ? "Cancelar" : "Voltar"}
+            </Button>
+            <Button
+              className={cn(
+                "flex-1 h-12 rounded-xl text-base",
+                wizardStep === 4 ? "bg-green-500 hover:bg-green-600" : ""
+              )}
+              onClick={() => {
+                if (wizardStep === 4) {
+                  handleCreatePerda();
+                } else {
+                  setWizardStep(wizardStep + 1);
+                }
+              }}
+              disabled={!canProceed() || isCreating}
+            >
+              {isCreating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : wizardStep === 4 ? (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Confirmar
+                </>
+              ) : (
+                "Próximo"
+              )}
+            </Button>
           </div>
         </div>
       )}

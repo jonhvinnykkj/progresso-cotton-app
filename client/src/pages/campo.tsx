@@ -456,7 +456,7 @@ function IndividualTab({
     try {
       const baleId = `${defaultSafra}-${selectedTalhao.nome}-${numero.padStart(5, '0')}`;
 
-      await createBale.mutateAsync({
+      const result = await createBale.mutateAsync({
         id: baleId,
         safra: defaultSafra,
         talhao: selectedTalhao.nome,
@@ -470,6 +470,11 @@ function IndividualTab({
         title: "Fardo criado!",
         description: `Fardo ${numero}${tipoLabel} criado no talhão ${selectedTalhao.nome}`,
       });
+
+      // Chamar callback para mostrar a etiqueta para impressão
+      if (result) {
+        onBaleCreated(result);
+      }
 
       resetWizard();
     } catch (error) {

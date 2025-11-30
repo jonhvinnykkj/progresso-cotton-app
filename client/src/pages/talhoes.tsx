@@ -449,7 +449,7 @@ export default function Talhoes() {
       <PageContent className="max-w-7xl">
         <div className="space-y-6">
           {/* Header */}
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
             <div className="flex items-center gap-2 sm:gap-4 min-w-0">
               <Button
                 variant="outline"
@@ -475,7 +475,7 @@ export default function Talhoes() {
             {selectedTalhoes.length >= 2 && (
               <Button
                 onClick={() => setCompareModalOpen(true)}
-                className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 shrink-0"
+                className="w-full sm:w-auto justify-center sm:justify-normal gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 shrink-0"
                 size="sm"
               >
                 <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -499,26 +499,26 @@ export default function Talhoes() {
           ) : (
             <>
               {/* KPIs */}
-              <div className="grid grid-cols-4 gap-2 sm:gap-3">
-                <div className="p-2 sm:p-4 rounded-xl bg-card border border-border/50 text-center">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 sm:p-4 rounded-xl bg-card border border-border/50 text-center">
                   <p className="text-lg sm:text-3xl font-bold text-foreground">
                     <AnimatedCounter value={totais.totalFardos} />
                   </p>
                   <p className="text-[10px] sm:text-xs text-muted-foreground">Fardos</p>
                 </div>
-                <div className="p-2 sm:p-4 rounded-xl bg-card border border-border/50 text-center">
+                <div className="p-3 sm:p-4 rounded-xl bg-card border border-border/50 text-center">
                   <p className="text-lg sm:text-3xl font-bold text-foreground">
                     {totais.talhoesAtivos}
                   </p>
                   <p className="text-[10px] sm:text-xs text-muted-foreground">Ativos</p>
                 </div>
-                <div className="p-2 sm:p-4 rounded-xl bg-card border border-border/50 text-center">
+                <div className="p-3 sm:p-4 rounded-xl bg-card border border-border/50 text-center">
                   <p className="text-lg sm:text-3xl font-bold text-foreground">
                     {totais.totalHectares.toFixed(0)}
                   </p>
                   <p className="text-[10px] sm:text-xs text-muted-foreground">Hectares</p>
                 </div>
-                <div className="p-2 sm:p-4 rounded-xl bg-card border border-border/50 text-center">
+                <div className="p-3 sm:p-4 rounded-xl bg-card border border-border/50 text-center">
                   <p className="text-lg sm:text-3xl font-bold text-red-500">
                     {totais.totalPerdas > 0
                       ? `${(totais.totalPerdas / 1000).toFixed(0)}k`
@@ -531,7 +531,7 @@ export default function Talhoes() {
               {/* Search and Filters Bar */}
               <div className="space-y-2 sm:space-y-0 sm:flex sm:flex-row sm:gap-3">
                 {/* Row 1 on mobile: Search */}
-                <div className="relative flex-1">
+                <div className="relative flex-1 min-w-0">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input
                     type="text"
@@ -551,9 +551,9 @@ export default function Talhoes() {
                 </div>
 
                 {/* Row 2 on mobile: Controls */}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                   {/* View mode toggle */}
-                  <div className="flex items-center gap-0.5 p-0.5 sm:p-1 rounded-lg sm:rounded-xl bg-card border border-border/50">
+                  <div className="flex items-center gap-0.5 p-0.5 sm:p-1 rounded-lg sm:rounded-xl bg-card border border-border/50 flex-shrink-0">
                     <button
                       onClick={() => setViewMode("cards")}
                       className={cn(
@@ -593,7 +593,7 @@ export default function Talhoes() {
                   <button
                     onClick={() => setShowFilters(!showFilters)}
                     className={cn(
-                      "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border transition-all",
+                      "flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border transition-all flex-1 sm:flex-none",
                       showFilters || statusFilter !== "all"
                         ? "bg-primary/10 border-primary/30 text-primary"
                         : "bg-card border-border/50 text-muted-foreground hover:text-foreground"
@@ -609,7 +609,7 @@ export default function Talhoes() {
                   {/* Sort dropdown */}
                   <button
                     onClick={() => setSortAsc(!sortAsc)}
-                    className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-card border border-border/50 text-xs sm:text-sm text-muted-foreground hover:text-foreground"
+                    className="flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-card border border-border/50 text-xs sm:text-sm text-muted-foreground hover:text-foreground flex-1 sm:flex-none"
                   >
                     <ArrowUpDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     <span className="hidden sm:inline">
@@ -915,7 +915,7 @@ export default function Talhoes() {
               {viewMode === "table" && (
                 <div className="rounded-xl bg-card border border-border/50 overflow-hidden">
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full min-w-[720px]">
                       <thead>
                         <tr className="border-b border-border/50 bg-muted/30">
                           <th className="p-3 text-left text-xs font-medium text-muted-foreground w-10">
@@ -1118,7 +1118,7 @@ export default function Talhoes() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-5 sm:grid-cols-7 lg:grid-cols-10 gap-2">
+                  <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-2">
                     {filteredAndSortedTalhoes.map((t) => {
                       const getColor = () => {
                         if (t.totalFardos === 0) return "bg-muted/20";
@@ -1134,7 +1134,7 @@ export default function Talhoes() {
                           key={t.id}
                           onClick={() => setLocation(`/talhoes/${t.id}`)}
                           className={cn(
-                            "aspect-square rounded-lg flex flex-col items-center justify-center transition-all hover:scale-105 relative",
+                            "aspect-square rounded-lg flex flex-col items-center justify-center text-center transition-all hover:scale-105 relative w-full min-w-[72px]",
                             getColor(),
                             t.totalFardos > 0
                               ? "border border-white/10"
@@ -1149,7 +1149,7 @@ export default function Talhoes() {
                         >
                           <span
                             className={cn(
-                              "text-sm font-bold",
+                              "text-xs font-semibold truncate w-full px-1",
                               t.totalFardos > 0
                                 ? "text-white"
                                 : "text-muted-foreground"
@@ -1158,7 +1158,7 @@ export default function Talhoes() {
                             {t.nome}
                           </span>
                           {t.totalFardos > 0 && (
-                            <span className="text-[9px] text-white/80">
+                            <span className="text-[10px] text-white/80">
                               {(t.temDadosReais
                                 ? t.produtividadeReal
                                 : t.produtividadePrevista
@@ -1181,7 +1181,7 @@ export default function Talhoes() {
 
       {/* Comparison Modal */}
       <Dialog open={compareModalOpen} onOpenChange={setCompareModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl w-full max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-primary" />
@@ -1190,7 +1190,7 @@ export default function Talhoes() {
           </DialogHeader>
 
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[640px]">
               <thead>
                 <tr className="border-b border-border/50">
                   <th className="p-3 text-left text-sm font-medium text-muted-foreground">

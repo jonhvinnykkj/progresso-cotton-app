@@ -4,13 +4,12 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { Printer, QrCode, ArrowLeft, Loader2, Download, Lightbulb } from "lucide-react";
+import { QrCode, ArrowLeft, Loader2, Download, Lightbulb } from "lucide-react";
 import QRCode from "qrcode";
 import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import logoProgresso from "/favicon.png";
 import type { Bale } from "@shared/schema";
 import { Page, PageContent, PageHeader, Section } from "@/components/layout/page";
@@ -149,132 +148,163 @@ export default function Etiqueta() {
       return;
     }
 
-    // Detectar se está no Android
-    if (Capacitor.isNativePlatform()) {
-      toast({
-        title: "Gerando PDF...",
-        description: `Processando ${bales.length} etiqueta(s)...`,
+    // Gerar PDF tanto para mobile quanto para web
+    toast({
+      title: "Gerando PDF...",
+      description: `Processando ${bales.length} etiqueta(s)...`,
+    });
+
+    try {
+      console.log('[PDF] Iniciando geração de PDF...');
+
+      // Criar PDF - formato 4x6 polegadas (etiqueta padrão)
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [101.6, 152.4], // 4x6 inches em mm
+        compress: true
       });
 
-      try {
-        console.log('[PDF] Iniciando geração de PDF com múltiplas páginas...');
-        
-        // Criar PDF
-        const pdf = new jsPDF({
-          orientation: 'portrait',
-          unit: 'mm',
-          format: 'a4',
-          compress: true
-        });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
 
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
+      // Renderizar cada fardo em uma página separada
+      for (let i = 0; i < bales.length; i++) {
+        const bale = bales[i];
+        console.log(`[PDF] Processando etiqueta ${i + 1}/${bales.length} - Fardo #${bale.numero}`);
 
-        // Renderizar cada fardo em uma página separada
-        for (let i = 0; i < bales.length; i++) {
-          const bale = bales[i];
-          console.log(`[PDF] Processando etiqueta ${i + 1}/${bales.length} - Fardo #${bale.numero_fardo}`);
-
-          // Criar elemento temporário para renderizar uma etiqueta
-          const tempDiv = document.createElement('div');
-          tempDiv.style.position = 'absolute';
-          tempDiv.style.left = '-9999px';
-          tempDiv.style.width = '210mm'; // A4 width
-          tempDiv.style.padding = '20mm';
-          tempDiv.style.backgroundColor = '#ffffff';
-          
-          // Gerar QR Code se não existir
-          let qrUrl = qrDataUrls.get(bale.id);
-          if (!qrUrl) {
-            qrUrl = await QRCode.toDataURL(bale.id.toString(), {
-              width: 256,
-              margin: 2,
-              color: { dark: '#000000', light: '#FFFFFF' }
-            });
-          }
-
-          // HTML da etiqueta individual
-          tempDiv.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250mm; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px;">
-              <div style="text-align: center; margin-bottom: 24px;">
-                <p style="font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 12px 0; font-weight: 500;">ID DO FARDO</p>
-                <p style="font-size: 28px; font-weight: 700; color: #000; margin: 0; font-family: 'Courier New', monospace; letter-spacing: 0.02em;">${bale.id}</p>
-              </div>
-              
-              <div style="margin: 32px 0;">
-                <img src="${qrUrl}" alt="QR Code" style="width: 280px; height: 280px; display: block;" />
-              </div>
-              
-              <div style="text-align: center; margin-top: 24px;">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 24px; margin-bottom: 16px;">
-                  <div style="font-size: 18px; font-weight: 600;">
-                    <span style="color: #666;">Talhão:</span>
-                    <span style="color: #000; margin-left: 8px;">${bale.talhao}</span>
-                  </div>
-                  <span style="color: #ccc; font-size: 20px;">|</span>
-                  <div style="font-size: 18px; font-weight: 600;">
-                    <span style="color: #666;">Número:</span>
-                    <span style="color: #000; margin-left: 8px;">${bale.numero}</span>
-                  </div>
-                </div>
-                ${bale.safra ? `
-                  <div style="font-size: 18px; font-weight: 600; margin-top: 16px;">
-                    <span style="color: #666;">Safra:</span>
-                    <span style="color: #000; margin-left: 8px;">${bale.safra}</span>
-                  </div>
-                ` : ''}
-              </div>
-            </div>
-          `;
-
-          document.body.appendChild(tempDiv);
-
-          // Capturar etiqueta como imagem
-          const canvas = await html2canvas(tempDiv, {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: '#ffffff',
-            width: tempDiv.offsetWidth,
-            height: tempDiv.offsetHeight
-          });
-
-          document.body.removeChild(tempDiv);
-
-          // Adicionar página (exceto na primeira iteração)
-          if (i > 0) {
-            pdf.addPage();
-          }
-
-          // Converter canvas para imagem
-          const imgData = canvas.toDataURL('image/png');
-          
-          // Calcular dimensões para caber na página
-          const imgWidth = pageWidth;
-          const imgHeight = (canvas.height * pageWidth) / canvas.width;
-          
-          // Centralizar verticalmente se necessário
-          const yPosition = imgHeight < pageHeight ? (pageHeight - imgHeight) / 2 : 0;
-          
-          pdf.addImage(imgData, 'PNG', 0, yPosition, imgWidth, imgHeight);
+        // Adicionar página (exceto na primeira iteração)
+        if (i > 0) {
+          pdf.addPage();
         }
 
-        console.log('[PDF] Todas as páginas adicionadas, gerando blob...');
-        
-        // Gerar blob do PDF
+        // Gerar QR Code se não existir
+        let qrUrl = qrDataUrls.get(bale.id);
+        if (!qrUrl) {
+          qrUrl = await QRCode.toDataURL(bale.id, {
+            width: 400,
+            margin: 1,
+            errorCorrectionLevel: "H",
+            color: { dark: '#000000', light: '#FFFFFF' }
+          });
+        }
+
+        // Desenhar diretamente no PDF (mais rápido que html2canvas)
+        const centerX = pageWidth / 2;
+
+        // Título "ID DO FARDO"
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text('ID DO FARDO', centerX, 15, { align: 'center' });
+
+        // ID do fardo
+        pdf.setFontSize(14);
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('courier', 'bold');
+        pdf.text(bale.id, centerX, 23, { align: 'center' });
+
+        // QR Code - centralizado
+        const qrSize = 60; // mm
+        const qrX = (pageWidth - qrSize) / 2;
+        const qrY = 30;
+
+        try {
+          pdf.addImage(qrUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+        } catch (imgError) {
+          console.error('[PDF] Erro ao adicionar QR:', imgError);
+          // Desenhar placeholder
+          pdf.setDrawColor(200, 200, 200);
+          pdf.rect(qrX, qrY, qrSize, qrSize);
+          pdf.setFontSize(8);
+          pdf.text('QR Code', centerX, qrY + qrSize/2, { align: 'center' });
+        }
+
+        // Informações abaixo do QR
+        const infoY = qrY + qrSize + 12;
+
+        // Linha de Talhão e Número
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(12);
+        pdf.setTextColor(100, 100, 100);
+
+        const talhaoText = `Talhão: `;
+        const talhaoValue = bale.talhao;
+        const numeroText = `Número: `;
+        const numeroValue = String(bale.numero);
+
+        // Calcular posições para centralizar
+        const spacing = 8;
+        const talhaoWidth = pdf.getTextWidth(talhaoText + talhaoValue);
+        const numeroWidth = pdf.getTextWidth(numeroText + numeroValue);
+        const totalWidth = talhaoWidth + spacing + 5 + spacing + numeroWidth;
+        const startX = (pageWidth - totalWidth) / 2;
+
+        // Talhão
+        pdf.text(talhaoText, startX, infoY);
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(talhaoValue, startX + pdf.getTextWidth(talhaoText), infoY);
+
+        // Separador
+        pdf.setTextColor(200, 200, 200);
+        pdf.setFont('helvetica', 'normal');
+        const sepX = startX + talhaoWidth + spacing;
+        pdf.text('|', sepX, infoY);
+
+        // Número
+        pdf.setTextColor(100, 100, 100);
+        const numX = sepX + spacing;
+        pdf.text(numeroText, numX, infoY);
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(numeroValue, numX + pdf.getTextWidth(numeroText), infoY);
+
+        // Safra (se existir)
+        if (bale.safra) {
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(11);
+          pdf.setTextColor(100, 100, 100);
+          const safraText = `Safra: `;
+          pdf.text(safraText, centerX - pdf.getTextWidth(safraText + bale.safra) / 2, infoY + 8);
+          pdf.setTextColor(0, 0, 0);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(bale.safra, centerX - pdf.getTextWidth(safraText + bale.safra) / 2 + pdf.getTextWidth(safraText), infoY + 8);
+        }
+
+        // Tipo do fardo (se existir e não for "normal")
+        if (bale.tipo && bale.tipo !== 'normal') {
+          const tipoY = bale.safra ? infoY + 16 : infoY + 8;
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(10);
+
+          // Cor baseada no tipo
+          if (bale.tipo === 'bordadura') {
+            pdf.setTextColor(180, 130, 0); // Amarelo escuro
+          } else if (bale.tipo === 'bituca') {
+            pdf.setTextColor(200, 100, 0); // Laranja
+          }
+
+          const tipoLabel = bale.tipo.charAt(0).toUpperCase() + bale.tipo.slice(1);
+          pdf.text(`[${tipoLabel}]`, centerX, tipoY, { align: 'center' });
+        }
+      }
+
+      console.log('[PDF] Todas as páginas adicionadas, gerando arquivo...');
+
+      // Se está no mobile/nativo, salvar e compartilhar
+      if (Capacitor.isNativePlatform()) {
         const pdfBlob = pdf.output('blob');
-        console.log(`[PDF] PDF gerado: ${(pdfBlob.size / 1024 / 1024).toFixed(2)} MB`);
-        
+        console.log(`[PDF] PDF gerado: ${(pdfBlob.size / 1024).toFixed(2)} KB`);
+
         const reader = new FileReader();
-        
+
         reader.onloadend = async () => {
           const base64data = (reader.result as string).split(',')[1];
           const fileName = `etiquetas_${new Date().getTime()}.pdf`;
 
           try {
             console.log('[PDF] Salvando arquivo no dispositivo...');
-            
-            // Salvar arquivo
+
             const result = await Filesystem.writeFile({
               path: fileName,
               data: base64data,
@@ -283,19 +313,17 @@ export default function Etiqueta() {
 
             console.log('[PDF] Arquivo salvo:', result.uri);
 
-            // Compartilhar arquivo
             await Share.share({
               title: 'Etiquetas de Fardos',
               text: `${bales.length} etiqueta(s) gerada(s)`,
               url: result.uri,
-              dialogTitle: 'Compartilhar ou Salvar PDF'
+              dialogTitle: 'Compartilhar ou Imprimir PDF'
             });
 
-            console.log('[PDF] Compartilhamento concluído!');
-
             toast({
-              title: "PDF gerado com sucesso!",
-              description: `${bales.length} etiqueta(s) salva(s) em Documentos`,
+              variant: "success",
+              title: "PDF gerado!",
+              description: `${bales.length} etiqueta(s) pronta(s) para impressão`,
             });
           } catch (error) {
             console.error("[PDF] Erro ao salvar/compartilhar:", error);
@@ -316,20 +344,25 @@ export default function Etiqueta() {
           });
         };
 
-        console.log('[PDF] Lendo blob como base64...');
         reader.readAsDataURL(pdfBlob);
-      } catch (error) {
-        console.error("[PDF] Erro ao gerar PDF:", error);
-        const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      } else {
+        // Na web, abrir PDF em nova aba ou fazer download
+        const pdfUrl = pdf.output('bloburl');
+        window.open(pdfUrl as string, '_blank');
+
         toast({
-          variant: "destructive",
-          title: "Erro ao gerar PDF",
-          description: errorMessage,
+          variant: "success",
+          title: "PDF gerado!",
+          description: `${bales.length} etiqueta(s) aberta(s) em nova aba`,
         });
       }
-    } else {
-      // Na web, usar window.print() normal
-      window.print();
+    } catch (error) {
+      console.error("[PDF] Erro ao gerar PDF:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao gerar PDF",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+      });
     }
   };
 
@@ -439,17 +472,8 @@ export default function Etiqueta() {
                 disabled={qrDataUrls.size === 0}
                 className="h-12 rounded-xl btn-neon font-semibold"
               >
-                {Capacitor.isNativePlatform() ? (
-                  <>
-                    <Download className="w-5 h-5 mr-2" />
-                    Gerar PDF
-                  </>
-                ) : (
-                  <>
-                    <Printer className="w-5 h-5 mr-2" />
-                    Imprimir Todas
-                  </>
-                )}
+                <Download className="w-5 h-5 mr-2" />
+                Gerar PDF
               </Button>
             }
             className="animate-fade-in-up"

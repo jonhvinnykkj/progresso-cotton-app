@@ -449,21 +449,21 @@ export default function Talhoes() {
       <PageContent className="max-w-7xl">
         <div className="space-y-6">
           {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => setLocation("/dashboard")}
-                className="rounded-xl"
+                className="rounded-xl shrink-0 h-9 w-9 sm:h-10 sm:w-10"
               >
                 <ArrowLeft className="w-4 h-4" />
               </Button>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-3xl font-bold text-foreground truncate">
                   Talhões
                 </h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">
                   {safraAtiva
                     ? `Safra ${safraAtiva.nome}`
                     : "Nenhuma safra configurada"}
@@ -475,10 +475,11 @@ export default function Talhoes() {
             {selectedTalhoes.length >= 2 && (
               <Button
                 onClick={() => setCompareModalOpen(true)}
-                className="gap-2"
+                className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 shrink-0"
+                size="sm"
               >
-                <BarChart3 className="w-4 h-4" />
-                Comparar ({selectedTalhoes.length})
+                <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Comparar</span> ({selectedTalhoes.length})
               </Button>
             )}
           </div>
@@ -498,38 +499,38 @@ export default function Talhoes() {
           ) : (
             <>
               {/* KPIs */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="p-4 rounded-xl bg-card border border-border/50 text-center">
-                  <p className="text-3xl font-bold text-foreground">
+              <div className="grid grid-cols-4 gap-2 sm:gap-3">
+                <div className="p-2 sm:p-4 rounded-xl bg-card border border-border/50 text-center">
+                  <p className="text-lg sm:text-3xl font-bold text-foreground">
                     <AnimatedCounter value={totais.totalFardos} />
                   </p>
-                  <p className="text-xs text-muted-foreground">Fardos</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Fardos</p>
                 </div>
-                <div className="p-4 rounded-xl bg-card border border-border/50 text-center">
-                  <p className="text-3xl font-bold text-foreground">
+                <div className="p-2 sm:p-4 rounded-xl bg-card border border-border/50 text-center">
+                  <p className="text-lg sm:text-3xl font-bold text-foreground">
                     {totais.talhoesAtivos}
                   </p>
-                  <p className="text-xs text-muted-foreground">Ativos</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Ativos</p>
                 </div>
-                <div className="p-4 rounded-xl bg-card border border-border/50 text-center">
-                  <p className="text-3xl font-bold text-foreground">
+                <div className="p-2 sm:p-4 rounded-xl bg-card border border-border/50 text-center">
+                  <p className="text-lg sm:text-3xl font-bold text-foreground">
                     {totais.totalHectares.toFixed(0)}
                   </p>
-                  <p className="text-xs text-muted-foreground">Hectares</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Hectares</p>
                 </div>
-                <div className="p-4 rounded-xl bg-card border border-border/50 text-center">
-                  <p className="text-3xl font-bold text-red-500">
+                <div className="p-2 sm:p-4 rounded-xl bg-card border border-border/50 text-center">
+                  <p className="text-lg sm:text-3xl font-bold text-red-500">
                     {totais.totalPerdas > 0
-                      ? `R$ ${(totais.totalPerdas / 1000).toFixed(0)}k`
+                      ? `${(totais.totalPerdas / 1000).toFixed(0)}k`
                       : "-"}
                   </p>
-                  <p className="text-xs text-muted-foreground">Perdas</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Perdas</p>
                 </div>
               </div>
 
               {/* Search and Filters Bar */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                {/* Search */}
+              <div className="space-y-2 sm:space-y-0 sm:flex sm:flex-row sm:gap-3">
+                {/* Row 1 on mobile: Search */}
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input
@@ -537,7 +538,7 @@ export default function Talhoes() {
                     placeholder="Buscar talhão..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-card border border-border/50 text-sm focus:outline-none focus:border-primary/50"
+                    className="w-full pl-9 pr-4 py-2 sm:py-2.5 rounded-xl bg-card border border-border/50 text-sm focus:outline-none focus:border-primary/50"
                   />
                   {searchQuery && (
                     <button
@@ -549,67 +550,68 @@ export default function Talhoes() {
                   )}
                 </div>
 
-                {/* View mode toggle */}
-                <div className="flex items-center gap-1 p-1 rounded-xl bg-card border border-border/50">
-                  <button
-                    onClick={() => setViewMode("cards")}
-                    className={cn(
-                      "p-2 rounded-lg transition-all",
-                      viewMode === "cards"
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <LayoutGrid className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode("table")}
-                    className={cn(
-                      "p-2 rounded-lg transition-all",
-                      viewMode === "table"
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <List className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode("map")}
-                    className={cn(
-                      "p-2 rounded-lg transition-all",
-                      viewMode === "map"
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <Map className="w-4 h-4" />
-                  </button>
-                </div>
+                {/* Row 2 on mobile: Controls */}
+                <div className="flex items-center gap-2">
+                  {/* View mode toggle */}
+                  <div className="flex items-center gap-0.5 p-0.5 sm:p-1 rounded-lg sm:rounded-xl bg-card border border-border/50">
+                    <button
+                      onClick={() => setViewMode("cards")}
+                      className={cn(
+                        "p-1.5 sm:p-2 rounded-md sm:rounded-lg transition-all",
+                        viewMode === "cards"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode("table")}
+                      className={cn(
+                        "p-1.5 sm:p-2 rounded-md sm:rounded-lg transition-all",
+                        viewMode === "table"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <List className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode("map")}
+                      className={cn(
+                        "p-1.5 sm:p-2 rounded-md sm:rounded-lg transition-all",
+                        viewMode === "map"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Map className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </button>
+                  </div>
 
-                {/* Filters button */}
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all",
-                    showFilters || statusFilter !== "all"
-                      ? "bg-primary/10 border-primary/30 text-primary"
-                      : "bg-card border-border/50 text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <Filter className="w-4 h-4" />
-                  <span className="text-sm">Filtros</span>
-                  {statusFilter !== "all" && (
-                    <span className="w-2 h-2 rounded-full bg-primary" />
-                  )}
-                </button>
+                  {/* Filters button */}
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className={cn(
+                      "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border transition-all",
+                      showFilters || statusFilter !== "all"
+                        ? "bg-primary/10 border-primary/30 text-primary"
+                        : "bg-card border-border/50 text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="text-xs sm:text-sm hidden xs:inline">Filtros</span>
+                    {statusFilter !== "all" && (
+                      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-primary" />
+                    )}
+                  </button>
 
-                {/* Sort dropdown */}
-                <div className="relative">
+                  {/* Sort dropdown */}
                   <button
                     onClick={() => setSortAsc(!sortAsc)}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-card border border-border/50 text-sm text-muted-foreground hover:text-foreground"
+                    className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-card border border-border/50 text-xs sm:text-sm text-muted-foreground hover:text-foreground"
                   >
-                    <ArrowUpDown className="w-4 h-4" />
+                    <ArrowUpDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     <span className="hidden sm:inline">
                       {sortOptions.find((o) => o.value === sortBy)?.label}
                     </span>
@@ -707,12 +709,12 @@ export default function Talhoes() {
 
               {/* Cards View */}
               {viewMode === "cards" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {filteredAndSortedTalhoes.map((talhao) => (
                     <div
                       key={talhao.id}
                       className={cn(
-                        "relative p-5 rounded-xl bg-card border transition-all",
+                        "relative p-3 sm:p-5 rounded-xl bg-card border transition-all",
                         selectedTalhoes.includes(talhao.id)
                           ? "border-primary shadow-lg"
                           : talhao.totalFardos > 0
@@ -741,38 +743,39 @@ export default function Talhoes() {
                         className="w-full text-left"
                       >
                         {/* Header with circular progress */}
-                        <div className="flex items-start gap-4 mb-4">
+                        <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
                           <CircularProgress
                             value={talhao.performanceScore}
                             status={talhao.status}
+                            size={40}
                           />
-                          <div className="flex-1">
-                            <p className="font-semibold text-lg">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-base sm:text-lg truncate">
                               Talhão {talhao.nome}
                             </p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-xs sm:text-sm text-muted-foreground">
                               {talhao.hectares.toFixed(1)} ha
                             </p>
                           </div>
-                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground shrink-0" />
                         </div>
 
                         {/* Stats */}
                         {talhao.totalFardos > 0 || talhao.perdasArrobasHa > 0 ? (
                           <>
                             {/* Grid stats */}
-                            <div className="grid grid-cols-2 gap-3 mb-4">
-                              <div className="p-3 rounded-lg bg-muted/30">
-                                <p className="text-2xl font-bold">
+                            <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-4">
+                              <div className="p-2 sm:p-3 rounded-lg bg-muted/30">
+                                <p className="text-xl sm:text-2xl font-bold">
                                   {talhao.totalFardos}
                                 </p>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-[10px] sm:text-xs text-muted-foreground">
                                   Fardos
                                 </p>
                               </div>
-                              <div className="p-3 rounded-lg bg-muted/30">
+                              <div className="p-2 sm:p-3 rounded-lg bg-muted/30">
                                 <div className="flex items-baseline gap-1">
-                                  <p className="text-2xl font-bold">
+                                  <p className="text-xl sm:text-2xl font-bold">
                                     {talhao.temDadosReais
                                       ? talhao.produtividadeReal.toFixed(1)
                                       : talhao.produtividadePrevista > 0
@@ -782,22 +785,22 @@ export default function Talhoes() {
                                   {talhao.temDadosReais && (
                                     <span
                                       className={cn(
-                                        "text-xs font-medium flex items-center",
+                                        "text-[10px] sm:text-xs font-medium flex items-center",
                                         talhao.diferencaPercent >= 0
                                           ? "text-green-500"
                                           : "text-red-500"
                                       )}
                                     >
                                       {talhao.diferencaPercent >= 0 ? (
-                                        <ArrowUpRight className="w-3 h-3" />
+                                        <ArrowUpRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                                       ) : (
-                                        <ArrowDownRight className="w-3 h-3" />
+                                        <ArrowDownRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                                       )}
                                       {Math.abs(talhao.diferencaPercent).toFixed(0)}%
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-[10px] sm:text-xs text-muted-foreground">
                                   @/ha
                                 </p>
                               </div>
@@ -805,13 +808,13 @@ export default function Talhoes() {
 
                             {/* Losses badge */}
                             {talhao.perdasArrobasHa > 0 && (
-                              <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                              <div className="mb-3 sm:mb-4 p-2 sm:p-3 rounded-lg bg-red-500/10 border border-red-500/20">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-xs text-red-400 font-medium flex items-center gap-1.5">
-                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                  <span className="text-[10px] sm:text-xs text-red-400 font-medium flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                     Perdas
                                   </span>
-                                  <span className="text-sm font-bold text-red-400">
+                                  <span className="text-xs sm:text-sm font-bold text-red-400">
                                     -R${" "}
                                     {talhao.perdasValorBRL.toLocaleString(
                                       "pt-BR",

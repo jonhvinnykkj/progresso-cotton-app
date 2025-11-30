@@ -883,26 +883,26 @@ export default function Dashboard() {
                   {/* Connection Lines */}
                   <div className="absolute top-1/2 left-0 right-0 h-1 bg-gradient-to-r from-primary via-orange-500 to-cyan-500 opacity-20 -translate-y-1/2 hidden sm:block" />
 
-                  <div className="grid grid-cols-3 gap-2 sm:gap-4 relative">
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-4 relative">
                     {/* Campo */}
                     <div className="relative group">
                       <div
                         className={cn(
-                          "text-center p-4 sm:p-5 rounded-xl transition-all",
+                          "text-center p-2.5 sm:p-5 rounded-xl transition-all",
                           "bg-primary/5 border-2 border-primary/20",
                           "hover:border-primary/40 hover:shadow-lg"
                         )}
                       >
-                        <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-primary/20 flex items-center justify-center">
-                          <Package className="w-6 h-6 text-primary" />
+                        <div className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 rounded-lg sm:rounded-xl bg-primary/20 flex items-center justify-center">
+                          <Package className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
                         </div>
-                        <p className="text-3xl font-bold text-foreground">
+                        <p className="text-xl sm:text-3xl font-bold text-foreground">
                           {stats?.campo || 0}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                           Campo
                         </p>
-                        <div className="mt-2 h-1.5 rounded-full bg-muted/30 overflow-hidden">
+                        <div className="mt-1.5 sm:mt-2 h-1 sm:h-1.5 rounded-full bg-muted/30 overflow-hidden">
                           <div
                             className="h-full bg-primary transition-all duration-1000"
                             style={{
@@ -925,21 +925,21 @@ export default function Dashboard() {
                     <div className="relative group">
                       <div
                         className={cn(
-                          "text-center p-4 sm:p-5 rounded-xl transition-all",
+                          "text-center p-2.5 sm:p-5 rounded-xl transition-all",
                           "bg-orange-500/5 border-2 border-orange-500/20",
                           "hover:border-orange-500/40 hover:shadow-lg"
                         )}
                       >
-                        <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-orange-500/20 flex items-center justify-center">
-                          <Truck className="w-6 h-6 text-orange-500" />
+                        <div className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 rounded-lg sm:rounded-xl bg-orange-500/20 flex items-center justify-center">
+                          <Truck className="w-4 h-4 sm:w-6 sm:h-6 text-orange-500" />
                         </div>
-                        <p className="text-3xl font-bold text-foreground">
+                        <p className="text-xl sm:text-3xl font-bold text-foreground">
                           {stats?.patio || 0}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                           Pátio
                         </p>
-                        <div className="mt-2 h-1.5 rounded-full bg-muted/30 overflow-hidden">
+                        <div className="mt-1.5 sm:mt-2 h-1 sm:h-1.5 rounded-full bg-muted/30 overflow-hidden">
                           <div
                             className="h-full bg-orange-500 transition-all duration-1000"
                             style={{
@@ -962,21 +962,21 @@ export default function Dashboard() {
                     <div className="relative group">
                       <div
                         className={cn(
-                          "text-center p-4 sm:p-5 rounded-xl transition-all",
+                          "text-center p-2.5 sm:p-5 rounded-xl transition-all",
                           "bg-cyan-500/5 border-2 border-cyan-500/20",
                           "hover:border-cyan-500/40 hover:shadow-lg"
                         )}
                       >
-                        <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-                          <CheckCircle className="w-6 h-6 text-cyan-500" />
+                        <div className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 rounded-lg sm:rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                          <CheckCircle className="w-4 h-4 sm:w-6 sm:h-6 text-cyan-500" />
                         </div>
-                        <p className="text-3xl font-bold text-foreground">
+                        <p className="text-xl sm:text-3xl font-bold text-foreground">
                           {stats?.beneficiado || 0}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                           Beneficiado
                         </p>
-                        <div className="mt-2 h-1.5 rounded-full bg-muted/30 overflow-hidden">
+                        <div className="mt-1.5 sm:mt-2 h-1 sm:h-1.5 rounded-full bg-muted/30 overflow-hidden">
                           <div
                             className="h-full bg-cyan-500 transition-all duration-1000"
                             style={{
@@ -1126,30 +1126,30 @@ export default function Dashboard() {
               </section>
 
               {/* Heat Map - Talhões */}
-              <section className="p-5 rounded-xl glass-card">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-semibold flex items-center gap-2">
+              <section className="p-3 sm:p-5 rounded-xl glass-card">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                  <h2 className="font-semibold flex items-center gap-2 text-sm sm:text-base">
                     <Zap className="w-4 h-4 text-primary" />
                     Mapa de Produtividade
                   </h2>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded bg-red-500/50" />
+                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-red-500/50" />
                       <span>Baixa</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded bg-yellow-500/50" />
+                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-yellow-500/50" />
                       <span>Média</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded bg-green-500/50" />
+                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-green-500/50" />
                       <span>Alta</span>
                     </div>
                   </div>
                 </div>
 
                 {talhoesSafra.length > 0 ? (
-                  <div className="grid grid-cols-5 sm:grid-cols-7 lg:grid-cols-10 gap-2">
+                  <div className="grid grid-cols-4 sm:grid-cols-7 lg:grid-cols-10 gap-1.5 sm:gap-2">
                     {heatMapData.map((t) => {
                       // Determinar cor baseada na intensidade
                       const getColor = () => {
@@ -1175,14 +1175,14 @@ export default function Dashboard() {
                         >
                           <span
                             className={cn(
-                              "text-sm font-bold",
+                              "text-[10px] sm:text-sm font-bold",
                               t.hasData ? "text-white" : "text-muted-foreground"
                             )}
                           >
                             {t.nome}
                           </span>
                           {t.hasData && (
-                            <span className="text-[9px] text-white/90">
+                            <span className="text-[8px] sm:text-[9px] text-white/90">
                               {t.produtividade.toFixed(0)}
                             </span>
                           )}
@@ -1481,10 +1481,10 @@ export default function Dashboard() {
                   </h2>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Valor Atual</p>
-                    <p className="text-3xl font-bold text-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-1">Valor Atual</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-foreground">
                       R${" "}
                       {projections.currentValue.toLocaleString("pt-BR", {
                         maximumFractionDigits: 0,
@@ -1492,10 +1492,10 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-1">
                       Projeção Final
                     </p>
-                    <p className="text-3xl font-bold text-cyan-400">
+                    <p className="text-2xl sm:text-3xl font-bold text-cyan-400">
                       R${" "}
                       {projections.projectedValue.toLocaleString("pt-BR", {
                         maximumFractionDigits: 0,

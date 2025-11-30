@@ -691,14 +691,14 @@ export default function Dashboard() {
                       )}
                     </div>
                     <div className="flex flex-wrap items-baseline gap-3 mb-4">
-                      <span className="text-4xl sm:text-5xl font-bold text-white">
+                      <span className="text-4xl sm:text-5xl font-bold text-foreground">
                         R${" "}
                         {valorEstimado.valorLiquidoBRL.toLocaleString("pt-BR", {
                           maximumFractionDigits: 0,
                         })}
                       </span>
                       {usdBrl > 0 && (
-                        <span className="text-lg text-primary/50">
+                        <span className="text-lg text-muted-foreground">
                           US${" "}
                           {(valorEstimado.valorLiquidoBRL / usdBrl).toLocaleString(
                             "en-US",
@@ -711,16 +711,16 @@ export default function Dashboard() {
                     {/* Breakdown inline */}
                     <div className="flex flex-wrap gap-4 text-sm">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-purple-400" />
-                        <span className="text-white/70">Pluma</span>
-                        <span className="text-white font-medium">
+                        <div className="w-2 h-2 rounded-full bg-purple-500" />
+                        <span className="text-muted-foreground">Pluma</span>
+                        <span className="text-foreground font-medium">
                           R$ {(valorEstimado.valorPlumaBRL / 1000).toFixed(0)}k
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-orange-400" />
-                        <span className="text-white/70">Caroço</span>
-                        <span className="text-white font-medium">
+                        <div className="w-2 h-2 rounded-full bg-orange-500" />
+                        <span className="text-muted-foreground">Caroço</span>
+                        <span className="text-foreground font-medium">
                           R$ {(valorEstimado.valorCarocoBRL / 1000).toFixed(0)}k
                         </span>
                       </div>
@@ -729,9 +729,9 @@ export default function Dashboard() {
                           onClick={() => setPerdasModalOpen(true)}
                           className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                         >
-                          <div className="w-2 h-2 rounded-full bg-red-400" />
-                          <span className="text-white/70">Perdas</span>
-                          <span className="text-red-300 font-medium">
+                          <div className="w-2 h-2 rounded-full bg-red-500" />
+                          <span className="text-muted-foreground">Perdas</span>
+                          <span className="text-red-500 font-medium">
                             -R${" "}
                             {(valorEstimado.perdasCampoValorBRL / 1000).toFixed(0)}k
                           </span>
@@ -1154,10 +1154,10 @@ export default function Dashboard() {
                       // Determinar cor baseada na intensidade
                       const getColor = () => {
                         if (!t.hasData) return "bg-muted/20";
-                        if (t.intensity < 33) return "bg-red-500/40 hover:bg-red-500/60";
+                        if (t.intensity < 33) return "bg-red-500 dark:bg-red-500/40 hover:bg-red-600 dark:hover:bg-red-500/60";
                         if (t.intensity < 66)
-                          return "bg-yellow-500/40 hover:bg-yellow-500/60";
-                        return "bg-green-500/40 hover:bg-green-500/60";
+                          return "bg-yellow-500 dark:bg-yellow-500/40 hover:bg-yellow-600 dark:hover:bg-yellow-500/60";
+                        return "bg-green-500 dark:bg-green-500/40 hover:bg-green-600 dark:hover:bg-green-500/60";
                       };
 
                       return (
@@ -1168,7 +1168,7 @@ export default function Dashboard() {
                             "aspect-square rounded-lg flex flex-col items-center justify-center transition-all hover:scale-105 relative group",
                             getColor(),
                             t.hasData
-                              ? "border border-white/10"
+                              ? "border border-white/20"
                               : "border border-transparent"
                           )}
                           title={`${t.nome}: ${t.produtividade.toFixed(1)} @/ha`}
@@ -1182,7 +1182,7 @@ export default function Dashboard() {
                             {t.nome}
                           </span>
                           {t.hasData && (
-                            <span className="text-[9px] text-white/80">
+                            <span className="text-[9px] text-white/90">
                               {t.produtividade.toFixed(0)}
                             </span>
                           )}

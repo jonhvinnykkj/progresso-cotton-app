@@ -5,7 +5,7 @@ import { AnimatedCounter } from "@/components/animated-counter";
 import { useAuth } from "@/lib/auth-context";
 import { API_URL } from "@/lib/api-config";
 import { getAuthHeaders } from "@/lib/api-client";
-import type { Bale } from "@shared/schema";
+import type { Bale, RendimentoTalhao } from "@shared/schema";
 import { useSettings } from "@/hooks/use-settings";
 import {
   Package,
@@ -113,6 +113,23 @@ export default function Talhoes() {
     staleTime: 30000,
   });
 
+  const { data: rendimentos = [] } = useQuery<RendimentoTalhao[]>({
+    queryKey: ["/api/rendimento", selectedSafra],
+    queryFn: async () => {
+      const encodedSafra = encodeURIComponent(selectedSafra);
+      const url = API_URL
+        ? `${API_URL}/api/rendimento/${encodedSafra}`
+        : `/api/rendimento/${encodedSafra}`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!selectedSafra,
+  });
+
   const { data: pesoBrutoTotais = [] } = useQuery<
     { talhao: string; pesoBrutoTotal: number; quantidadeCarregamentos: number }[]
   >({
@@ -194,12 +211,12 @@ export default function Talhoes() {
 
   const cotacaoPluma = cotacaoData?.pluma || 140;
   const cotacaoCaroco = cotacaoData?.caroco || 38;
-  const valorMedioPorArroba =
-    (cotacaoPluma * 0.4 + cotacaoCaroco * 0.57) / 0.97;
 
   // Calcular dados de cada talhão
   const talhoesData = useMemo(() => {
     const maxProdutividade = 350; // meta
+    const impurezaPercent = 0.03;
+    const defaultPlumaPercent = 0.4;
 
     return talhoesSafra.map((talhaoInfo) => {
       const hectares = parseFloat(talhaoInfo.hectares.replace(",", ".")) || 0;
@@ -212,6 +229,9 @@ export default function Talhoes() {
       );
       const perdasDetalhe = perdasDetalhadas.filter(
         (p) => p.talhao === talhaoInfo.nome
+      );
+      const rendimentoTalhao = rendimentos.find(
+        (r) => r.talhao === talhaoInfo.nome
       );
 
       const totalFardos = stats?.total || 0;
@@ -242,7 +262,17 @@ export default function Talhoes() {
       // Perdas
       const perdasArrobasHa = perdaTalhao?.totalPerdas || 0;
       const perdasArrobasTotais = perdasArrobasHa * hectares;
-      const perdasValorBRL = perdasArrobasTotais * valorMedioPorArroba;
+      const rendimentoPlumaPercent = rendimentoTalhao?.rendimentoPluma
+        ? parseFloat(rendimentoTalhao.rendimentoPluma.replace(",", ".")) / 100
+        : defaultPlumaPercent;
+      const plumaPercent = Math.min(
+        0.97,
+        Math.max(0, rendimentoPlumaPercent || defaultPlumaPercent)
+      );
+      const carocoPercent = Math.max(0, 1 - impurezaPercent - plumaPercent);
+      const perdasValorBRL =
+        perdasArrobasTotais *
+        (plumaPercent * cotacaoPluma + carocoPercent * cotacaoCaroco);
 
       // Performance score (0-100)
       const prodAtual = temDadosReais ? produtividadeReal : produtividadePrevista;
@@ -287,7 +317,9 @@ export default function Talhoes() {
     pesoBrutoTotais,
     perdasPorTalhao,
     perdasDetalhadas,
-    valorMedioPorArroba,
+    rendimentos,
+    cotacaoPluma,
+    cotacaoCaroco,
   ]);
 
   // Filter and sort

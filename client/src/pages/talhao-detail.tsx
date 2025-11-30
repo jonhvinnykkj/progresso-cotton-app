@@ -487,7 +487,7 @@ export default function TalhaoDetail() {
 
             <div className="relative">
               {/* Back button and title */}
-              <div className="flex items-start gap-4 mb-6">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6 mb-6">
                 <Button
                   variant="outline"
                   size="icon"
@@ -498,15 +498,15 @@ export default function TalhaoDetail() {
                 </Button>
 
                 <div className="flex-1">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-primary/30 flex items-center justify-center">
-                      <span className="text-3xl font-bold text-primary">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-primary/30 flex items-center justify-center">
+                      <span className="text-2xl sm:text-3xl font-bold text-primary">
                         {talhaoId}
                       </span>
                     </div>
                     <div>
-                      <h1 className="text-3xl font-bold">Talhão {talhaoInfo.nome}</h1>
-                      <p className="text-muted-foreground">
+                      <h1 className="text-2xl sm:text-3xl font-bold">Talhão {talhaoInfo.nome}</h1>
+                      <p className="text-sm sm:text-base text-muted-foreground">
                         {hectares.toFixed(1)} hectares • Safra {safraAtiva?.nome}
                       </p>
                     </div>
@@ -514,17 +514,17 @@ export default function TalhaoDetail() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap gap-2 w-full md:w-auto md:justify-end">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setAddLossModalOpen(true)}
-                    className="gap-2"
+                    className="gap-2 flex-1 md:flex-none"
                   >
                     <Plus className="w-4 h-4" />
                     Perda
                   </Button>
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button variant="outline" size="sm" className="gap-2 flex-1 md:flex-none">
                     <Download className="w-4 h-4" />
                     Exportar
                   </Button>
@@ -532,7 +532,7 @@ export default function TalhaoDetail() {
               </div>
 
               {/* Hero KPIs */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="p-4 rounded-xl bg-background/50 backdrop-blur">
                   <div className="flex items-center gap-2 text-muted-foreground mb-2">
                     <Package className="w-4 h-4" />
@@ -812,7 +812,7 @@ export default function TalhaoDetail() {
               )}
 
               {/* Quick Stats */}
-              <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="p-4 rounded-xl bg-card border border-border/50">
                   <p className="text-xs text-muted-foreground mb-1">Peso Médio/Fardo</p>
                   <p className="text-xl font-bold">
@@ -1109,13 +1109,13 @@ export default function TalhaoDetail() {
                   />
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                   <select
                     value={statusFilter}
                     onChange={(e) =>
                       setStatusFilter(e.target.value as BaleStatus | "all")
                     }
-                    className="px-4 py-2.5 rounded-xl bg-card border border-border/50 text-sm"
+                    className="px-4 py-2.5 rounded-xl bg-card border border-border/50 text-sm flex-1 sm:flex-none"
                   >
                     <option value="all">Todos os status</option>
                     <option value="campo">Campo</option>
@@ -1125,7 +1125,7 @@ export default function TalhaoDetail() {
 
                   <button
                     onClick={() => setSortBy(sortBy === "date" ? "numero" : "date")}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-card border border-border/50 text-sm"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-card border border-border/50 text-sm flex-1 sm:flex-none"
                   >
                     <SortAsc className="w-4 h-4" />
                     {sortBy === "date" ? "Data" : "Número"}

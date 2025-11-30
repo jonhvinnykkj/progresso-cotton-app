@@ -1444,6 +1444,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Alpha Vantage API Key (obter grátis em https://www.alphavantage.co/support/#api-key)
   const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'G2WYEZ7T7C6CW8T5';
 
+  // Persistência simples via tabela settings
+  const COTACAO_CACHE_KEY = 'cotacao_cache';
+  const COTACAO_HISTORICO_KEY = 'cotacao_historico';
+  const COTACAO_CONFIG_KEY = 'cotacao_config';
+  const DEFAULT_CAROCO_FACTOR = 0.27;
+  const CACHE_TTL_MINUTES = 180; // 3h para considerar stale
+
+  let carocoFactor = DEFAULT_CAROCO_FACTOR;
+
   // Armazenamento em memória das cotações (fallback)
   let cotacaoCache: {
     pluma: number;
@@ -1481,6 +1490,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     dolarMedio: 0,
     dataAtualizacao: new Date().toISOString()
   };
+
+  async function loadCotacaoConfig(): Promise<void> {
+    try {
+      const cfgSetting = await storage.getSetting(COTACAO_CONFIG_KEY);
+      if (cfgSetting?.value) {
+        const parsed = JSON.parse(cfgSetting.value);
+        if (typeof parsed.carocoFactor === 'number') {
+          carocoFactor = parsed.carocoFactor;
+        }
+      } else {
+        await storage.updateSetting(COTACAO_CONFIG_KEY, JSON.stringify({ carocoFactor }));
+      }
+    } catch (error) {
+      console.warn('[Cotação] ⚠️ Não foi possível carregar config de caroço. Usando default.', error);
+    }
+  }
+
+  async function persistCotacaoCache() {
+    try {
+      await storage.updateSetting(COTACAO_CACHE_KEY, JSON.stringify(cotacaoCache));
+    } catch (error) {
+      console.warn('[Cotação] ⚠️ Falha ao persistir cache:', error);
+    }
+  }
+
+  async function persistHistoricoCache() {
+    try {
+      await storage.updateSetting(COTACAO_HISTORICO_KEY, JSON.stringify(historicoCache));
+    } catch (error) {
+      console.warn('[Cotação] ⚠️ Falha ao persistir histórico:', error);
+    }
+  }
+
+  async function carregarCachesPersistidos() {
+    try {
+      const cacheSetting = await storage.getSetting(COTACAO_CACHE_KEY);
+      if (cacheSetting?.value) {
+        const parsed = JSON.parse(cacheSetting.value);
+        cotacaoCache = { ...cotacaoCache, ...parsed };
+      }
+    } catch (error) {
+      console.warn('[Cotação] ⚠️ Não foi possível carregar cache persistido:', error);
+    }
+
+    try {
+      const historicoSetting = await storage.getSetting(COTACAO_HISTORICO_KEY);
+      if (historicoSetting?.value) {
+        const parsed = JSON.parse(historicoSetting.value);
+        historicoCache = { ...historicoCache, ...parsed };
+      }
+    } catch (error) {
+      console.warn('[Cotação] ⚠️ Não foi possível carregar histórico persistido:', error);
+    }
+  }
+
+  function getCotacaoMeta() {
+    const updatedAt = cotacaoCache.dataAtualizacao ? new Date(cotacaoCache.dataAtualizacao).getTime() : 0;
+    const ageMinutes = updatedAt ? (Date.now() - updatedAt) / 60000 : null;
+    const stale = ageMinutes === null ? true : ageMinutes > CACHE_TTL_MINUTES;
+    return { ageMinutes, stale };
+  }
+
+  function getHistoricoMeta() {
+    const updatedAt = historicoCache.dataAtualizacao ? new Date(historicoCache.dataAtualizacao).getTime() : 0;
+    const ageMinutes = updatedAt ? (Date.now() - updatedAt) / 60000 : null;
+    const stale = ageMinutes === null ? true : ageMinutes > CACHE_TTL_MINUTES;
+    return { ageMinutes, stale };
+  }
 
   // Função para buscar variação mensal do dólar
   async function fetchDolarVariacao(): Promise<number | null> {
@@ -1650,7 +1727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         historicoCache.caroco = cottonHistory.map((item: any) => {
           const centsLb = parseFloat(item.value);
-          const reaisArroba = convertToReaisPerArroba(centsLb, dolarMedio) * 0.27;
+          const reaisArroba = convertToReaisPerArroba(centsLb, dolarMedio) * carocoFactor;
           return {
             data: item.date,
             valor: Math.round(reaisArroba * 100) / 100,
@@ -1664,6 +1741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       historicoCache.dataAtualizacao = new Date().toISOString();
+      await persistHistoricoCache();
       console.log(`[Histórico] ✅ Cache atualizado às ${new Date().toLocaleString('pt-BR')}`);
       return true;
     } catch (error) {
@@ -1685,7 +1763,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (cottonData && usdBrlRate) {
         const plumaPrice = convertToReaisPerArroba(cottonData.price, usdBrlRate);
-        const carocoPrice = Math.round(plumaPrice * 0.27 * 100) / 100;
+        const carocoPrice = Math.round(plumaPrice * carocoFactor * 100) / 100;
         const variacaoAlgodao = cottonData.variacao;
 
         cotacaoCache = {
@@ -1701,6 +1779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           variacaoCaroco: variacaoAlgodao
         };
 
+        await persistCotacaoCache();
         console.log(`[Cotação] ✅ Atualizada: Pluma R$ ${plumaPrice}/@ | Dólar R$ ${usdBrlRate} | Algodão ${cottonData.price} ¢/lb`);
         return true;
       } else {
@@ -1752,21 +1831,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Iniciar o scheduler e fazer primeira atualização
   console.log('[Cotação] 🚀 Iniciando scheduler de cotações e histórico (8h, 12h, 18h)');
-  atualizarTudo(); // Atualizar imediatamente ao iniciar o servidor
+  await carregarCachesPersistidos();
+  await loadCotacaoConfig();
+  await atualizarTudo(); // Atualizar imediatamente ao iniciar o servidor
   agendarProximaAtualizacao(); // Agendar próximas atualizações
 
   // GET: Buscar cotação atual (sempre retorna cache, atualização é automática pelo scheduler)
   app.get("/api/cotacao-algodao", authenticateToken, async (req, res) => {
     try {
       // Se ainda não tem dados da API (servidor acabou de iniciar), aguardar primeira atualização
+      const metaAntes = getCotacaoMeta();
       if (cotacaoCache.fonte !== 'ICE Futures (NY)' && cotacaoCache.pluma === 140) {
+        await atualizarCotacaoCache();
+      } else if (metaAntes.stale) {
         await atualizarCotacaoCache();
       }
 
-      res.json(cotacaoCache);
+      const metaDepois = getCotacaoMeta();
+      res.json({
+        ...cotacaoCache,
+        ageMinutes: metaDepois.ageMinutes,
+        stale: metaDepois.stale,
+        carocoFactor,
+      });
     } catch (error) {
       console.error("Error fetching cotton price:", error);
-      res.json(cotacaoCache);
+      const metaErro = getCotacaoMeta();
+      res.json({ ...cotacaoCache, ageMinutes: metaErro.ageMinutes, stale: metaErro.stale, carocoFactor });
     }
   });
 
@@ -1775,6 +1866,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const tipo = req.query.tipo as string || 'dolar';
       const dias = Math.min(parseInt(req.query.dias as string) || 30, 3650);
+      const metaHistorico = getHistoricoMeta();
 
       console.log(`[Histórico] Buscando do cache: tipo=${tipo}, dias=${dias}`);
 
@@ -1793,7 +1885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (tipo === 'dolar') {
         if (historicoCache.dolar.length === 0) {
-          return res.json({ tipo: 'dolar', historico: [], message: 'Cache ainda não carregado, aguarde próxima atualização' });
+          return res.json({ tipo: 'dolar', historico: [], message: 'Cache ainda não carregado, aguarde próxima atualização', ageMinutes: metaHistorico.ageMinutes, stale: metaHistorico.stale });
         }
 
         const historico = filtrarPorDias(historicoCache.dolar, dias);
@@ -1802,13 +1894,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           historico,
           periodo: `${dias} dias`,
           fonte: 'AwesomeAPI (cache)',
-          atualizadoEm: historicoCache.dataAtualizacao
+          atualizadoEm: historicoCache.dataAtualizacao,
+          ageMinutes: metaHistorico.ageMinutes,
+          stale: metaHistorico.stale
         });
       }
 
       if (tipo === 'algodao') {
         if (historicoCache.algodao.length === 0) {
-          return res.json({ tipo: 'algodao', historico: [], message: 'Cache ainda não carregado' });
+          return res.json({ tipo: 'algodao', historico: [], message: 'Cache ainda não carregado', ageMinutes: metaHistorico.ageMinutes, stale: metaHistorico.stale });
         }
 
         // Para algodão, filtrar por meses
@@ -1819,13 +1913,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           historico,
           periodo: `${meses} meses`,
           fonte: 'ICE Futures (cache)',
-          atualizadoEm: historicoCache.dataAtualizacao
+          atualizadoEm: historicoCache.dataAtualizacao,
+          ageMinutes: metaHistorico.ageMinutes,
+          stale: metaHistorico.stale
         });
       }
 
       if (tipo === 'pluma') {
         if (historicoCache.pluma.length === 0) {
-          return res.json({ tipo: 'pluma', historico: [], message: 'Cache ainda não carregado' });
+          return res.json({ tipo: 'pluma', historico: [], message: 'Cache ainda não carregado', ageMinutes: metaHistorico.ageMinutes, stale: metaHistorico.stale });
         }
 
         const meses = Math.ceil(dias / 30);
@@ -1836,13 +1932,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           dolarMedio: historicoCache.dolarMedio,
           periodo: `${meses} meses`,
           fonte: 'ICE Futures (cache)',
-          atualizadoEm: historicoCache.dataAtualizacao
+          atualizadoEm: historicoCache.dataAtualizacao,
+          ageMinutes: metaHistorico.ageMinutes,
+          stale: metaHistorico.stale
         });
       }
 
       if (tipo === 'caroco') {
         if (historicoCache.caroco.length === 0) {
-          return res.json({ tipo: 'caroco', historico: [], message: 'Cache ainda não carregado' });
+          return res.json({ tipo: 'caroco', historico: [], message: 'Cache ainda não carregado', ageMinutes: metaHistorico.ageMinutes, stale: metaHistorico.stale });
         }
 
         const meses = Math.ceil(dias / 30);
@@ -1853,7 +1951,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           dolarMedio: historicoCache.dolarMedio,
           periodo: `${meses} meses`,
           fonte: 'ICE Futures (cache)',
-          atualizadoEm: historicoCache.dataAtualizacao
+          atualizadoEm: historicoCache.dataAtualizacao,
+          ageMinutes: metaHistorico.ageMinutes,
+          stale: metaHistorico.stale
         });
       }
 
@@ -1862,6 +1962,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("[Histórico] Erro:", error);
       res.status(500).json({ error: "Erro ao buscar histórico", details: String(error) });
     }
+  });
+
+  // GET: Health/meta das cotações
+  app.get("/api/cotacao-algodao/health", authenticateToken, async (_req, res) => {
+    const metaCotacao = getCotacaoMeta();
+    const metaHistorico = getHistoricoMeta();
+
+    res.json({
+      fonte: cotacaoCache.fonte,
+      atualizadoEm: cotacaoCache.dataAtualizacao,
+      ageMinutes: metaCotacao.ageMinutes,
+      stale: metaCotacao.stale,
+      carocoFactor,
+      historico: {
+        atualizadoEm: historicoCache.dataAtualizacao,
+        ageMinutes: metaHistorico.ageMinutes,
+        stale: metaHistorico.stale,
+      },
+      ttlMinutes: CACHE_TTL_MINUTES,
+    });
   });
 
   // POST: Forçar atualização da API
@@ -1874,7 +1994,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (cottonData && usdBrlRate) {
         const plumaPrice = convertToReaisPerArroba(cottonData.price, usdBrlRate);
-        const carocoPrice = Math.round(plumaPrice * 0.27 * 100) / 100;
+        const carocoPrice = Math.round(plumaPrice * carocoFactor * 100) / 100;
 
         cotacaoCache = {
           pluma: plumaPrice,
@@ -1885,6 +2005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fonte: 'Alpha Vantage'
         };
 
+        await persistCotacaoCache();
         res.json(cotacaoCache);
       } else {
         res.status(503).json({
@@ -1895,6 +2016,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error refreshing cotton price:", error);
       res.status(500).json({ error: "Erro ao atualizar cotação" });
+    }
+  });
+
+  // PUT: Ajustar configuração (ex.: fator do caroço)
+  app.put("/api/cotacao-algodao/config", authenticateToken, authorizeRoles("admin", "superadmin"), async (req, res) => {
+    try {
+      const body = z.object({
+        carocoFactor: z.number().min(0).max(1),
+      }).parse(req.body);
+
+      carocoFactor = body.carocoFactor;
+      // Recalcular preço de caroço atual baseado no último cache de pluma
+      if (cotacaoCache.pluma > 0) {
+        cotacaoCache.caroco = Math.round(cotacaoCache.pluma * carocoFactor * 100) / 100;
+        await persistCotacaoCache();
+      }
+      await storage.updateSetting(COTACAO_CONFIG_KEY, JSON.stringify({ carocoFactor }));
+
+      res.json({
+        carocoFactor,
+        carocoAtual: cotacaoCache.caroco,
+        atualizadoEm: new Date().toISOString(),
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Dados inválidos", details: error.errors });
+      }
+      console.error("Error updating cotacao config:", error);
+      res.status(500).json({ error: "Erro ao salvar configuração" });
     }
   });
 

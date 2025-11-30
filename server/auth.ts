@@ -28,12 +28,25 @@ interface JWTPayload {
   roles: UserRole[];
 }
 
+// Safely parse roles from user object
+function parseUserRoles(roles: string | string[] | null | undefined): UserRole[] {
+  if (!roles) return [];
+  if (Array.isArray(roles)) return roles as UserRole[];
+  try {
+    const parsed = JSON.parse(roles);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    console.error("[auth] Failed to parse roles:", roles);
+    return [];
+  }
+}
+
 // Generate access token
 export function generateAccessToken(user: User): string {
   const payload: JWTPayload = {
     userId: user.id,
     username: user.username,
-    roles: user.roles ? JSON.parse(user.roles) : [],
+    roles: parseUserRoles(user.roles),
   };
 
   return jwt.sign(payload, JWT_SECRET, {
@@ -46,7 +59,7 @@ export function generateRefreshToken(user: User): string {
   const payload: JWTPayload = {
     userId: user.id,
     username: user.username,
-    roles: user.roles ? JSON.parse(user.roles) : [],
+    roles: parseUserRoles(user.roles),
   };
 
   return jwt.sign(payload, JWT_SECRET, {
@@ -105,22 +118,27 @@ export function authenticateToken(
 export function authorizeRoles(...allowedRoles: UserRole[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
+      console.log("[authorizeRoles] No user in request");
       return res.status(401).json({
         error: "Usuário não autenticado",
       });
     }
 
-    const userRoles = req.user.roles;
+    const userRoles = req.user.roles || [];
+    console.log("[authorizeRoles] User:", req.user.username, "Roles:", userRoles, "Required:", allowedRoles);
+
     const hasPermission = allowedRoles.some((role) =>
       userRoles.includes(role)
     );
 
     // Superadmin always has access
     if (userRoles.includes("superadmin")) {
+      console.log("[authorizeRoles] Superadmin access granted");
       return next();
     }
 
     if (!hasPermission) {
+      console.log("[authorizeRoles] Access denied for", req.user.username);
       return res.status(403).json({
         error: "Acesso negado. Permissões insuficientes.",
         requiredRoles: allowedRoles,
@@ -128,6 +146,7 @@ export function authorizeRoles(...allowedRoles: UserRole[]) {
       });
     }
 
+    console.log("[authorizeRoles] Access granted for", req.user.username);
     next();
   };
 }

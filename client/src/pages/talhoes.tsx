@@ -761,7 +761,7 @@ export default function Talhoes() {
                       <button
                         onClick={() => toggleSelection(talhao.id)}
                         className={cn(
-                          "absolute top-3 right-3 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all",
+                          "absolute top-3 left-3 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all bg-background/80",
                           selectedTalhoes.includes(talhao.id)
                             ? "bg-primary border-primary text-primary-foreground"
                             : "border-border/50 hover:border-primary/50"
@@ -784,15 +784,15 @@ export default function Talhoes() {
                             status={talhao.status}
                             size={40}
                           />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-base sm:text-lg truncate">
-                              Talhão {talhao.nome}
-                            </p>
-                            <p className="text-xs sm:text-sm text-muted-foreground">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-base sm:text-lg truncate">
+                          Talhão {talhao.nome}
+                        </p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                               {talhao.hectares.toFixed(1)} ha
                             </p>
                           </div>
-                          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground shrink-0" />
+                          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground shrink-0 ml-1 sm:ml-2" />
                         </div>
 
                         {/* Stats */}
@@ -1225,7 +1225,10 @@ export default function Talhoes() {
           </DialogHeader>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px]">
+            <div className="mb-3 text-sm text-muted-foreground">
+              {comparisonData.length} talhão(ões) selecionados • destaque para melhor produtividade e menor perda
+            </div>
+            <table className="w-full min-w-[760px]">
               <thead>
                 <tr className="border-b border-border/50">
                   <th className="p-3 text-left text-sm font-medium text-muted-foreground">
@@ -1312,6 +1315,28 @@ export default function Talhoes() {
                 </tr>
                 <tr className="border-b border-border/30">
                   <td className="p-3 text-sm text-muted-foreground flex items-center gap-2">
+                    <Scale className="w-4 h-4" />
+                    Peso Médio/Fardo (kg)
+                  </td>
+                  {comparisonData.map((t) => (
+                    <td key={t.id} className="p-3 text-center font-medium">
+                      {t.totalFardos > 0 ? (t.pesoBrutoTotal / t.totalFardos).toFixed(0) : "-"}
+                    </td>
+                  ))}
+                </tr>
+                <tr className="border-b border-border/30">
+                  <td className="p-3 text-sm text-muted-foreground flex items-center gap-2">
+                    <Target className="w-4 h-4" />
+                    Fardos/ha
+                  </td>
+                  {comparisonData.map((t) => (
+                    <td key={t.id} className="p-3 text-center font-medium">
+                      {t.hectares > 0 ? (t.totalFardos / t.hectares).toFixed(1) : "-"}
+                    </td>
+                  ))}
+                </tr>
+                <tr className="border-b border-border/30">
+                  <td className="p-3 text-sm text-muted-foreground flex items-center gap-2">
                     <CheckCircle className="w-4 h-4" />
                     Beneficiado (%)
                   </td>
@@ -1329,12 +1354,12 @@ export default function Talhoes() {
                     Perdas
                   </td>
                   {comparisonData.map((t) => {
+                    const perdasPositivas = comparisonData.filter((c) => c.perdasValorBRL > 0);
                     const minPerdas = Math.min(
-                      ...comparisonData
-                        .filter((c) => c.perdasValorBRL > 0)
-                        .map((c) => c.perdasValorBRL)
+                      ...perdasPositivas.map((c) => c.perdasValorBRL),
+                      Infinity
                     );
-                    const isMin = t.perdasValorBRL === minPerdas && minPerdas > 0;
+                    const isMin = t.perdasValorBRL === minPerdas && minPerdas !== Infinity;
                     return (
                       <td
                         key={t.id}
@@ -1347,6 +1372,34 @@ export default function Talhoes() {
                         {t.perdasValorBRL > 0
                           ? `R$ ${(t.perdasValorBRL / 1000).toFixed(1)}k`
                           : "-"}
+                      </td>
+                    );
+                  })}
+                </tr>
+                <tr>
+                  <td className="p-3 text-sm text-muted-foreground flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    Perdas (@/ha)
+                  </td>
+                  {comparisonData.map((t) => {
+                    const perdasArrobasHa = t.perdasArrobasHa || 0;
+                    const melhor = Math.min(
+                      ...comparisonData
+                        .filter((c) => (c.perdasArrobasHa || 0) > 0)
+                        .map((c) => c.perdasArrobasHa || 0),
+                      Infinity
+                    );
+                    const isMelhor = perdasArrobasHa === melhor && melhor !== Infinity;
+                    return (
+                      <td
+                        key={t.id}
+                        className={cn(
+                          "p-3 text-center font-medium",
+                          perdasArrobasHa > 0 ? "text-red-500" : "",
+                          isMelhor && "text-green-500"
+                        )}
+                      >
+                        {perdasArrobasHa > 0 ? `${perdasArrobasHa.toFixed(2)} @/ha` : "-"}
                       </td>
                     );
                   })}

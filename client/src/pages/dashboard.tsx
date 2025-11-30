@@ -88,6 +88,8 @@ export default function Dashboard() {
   const selectedSafra = safraAtiva?.nome || "";
   const metaProdutividade =
     (safraAtiva?.metaProdutividade && parseFloat(safraAtiva.metaProdutividade)) || 350;
+  const impurezaPercent = 0.03;
+  const plumaPercentDefault = 0.4;
 
   // Query de fardos
   const { data: bales = [] } = useQuery<Bale[]>({
@@ -385,8 +387,10 @@ export default function Dashboard() {
     const valorCarocoBRL = pesoArrobasCaroco * cotacaoCaroco;
     const valorTotalBRL = valorPlumaBRL + valorCarocoBRL;
 
-    const valorMedioPorArroba =
-      (cotacaoPluma * 0.4 + cotacaoCaroco * 0.57) / 0.97;
+  const carocoPercentDefault = Math.max(0, 1 - impurezaPercent - plumaPercentDefault);
+  const valorMedioPorArroba =
+    (cotacaoPluma * plumaPercentDefault + cotacaoCaroco * carocoPercentDefault) /
+    (plumaPercentDefault + carocoPercentDefault);
 
     let perdasCampoArrobasTotais = 0;
     perdasPorTalhao.forEach((p) => {
@@ -585,25 +589,64 @@ export default function Dashboard() {
 
   // Projeções
   const projections = useMemo(() => {
-    const currentProd = produtividade.temDadosReais
-      ? produtividade.real
-      : produtividade.prevista;
-    const remainingHa = totalHectares * 0.1; // 10% restante estimado
-    const projectedTotal =
-      valorEstimado.valorLiquidoBRL +
-      remainingHa * currentProd * 15 * cotacaoPluma * 0.4;
+    const plumaPercent = plumaPercentDefault;
+    const carocoPercent = Math.max(0, 1 - impurezaPercent - plumaPercent);
+    const precoArroba = plumaPercent * cotacaoPluma + carocoPercent * cotacaoCaroco;
+
+    const totalHectaresCalc = talhoesSafra.reduce((acc, t) => {
+      const ha = parseFloat(t.hectares.replace(",", ".")) || 0;
+      return acc + ha;
+    }, 0);
+
+    const totalPesoBrutoKg = pesoBrutoTotais.reduce(
+      (acc, p) => acc + (Number(p.pesoBrutoTotal) || 0),
+      0
+    );
+
+    // Estimar hectares colhidos a partir do peso bruto de cada talhão e da meta de produtividade
+    const metaProd = metaProdutividade > 0 ? metaProdutividade : 1;
+    const areaColhidaEstimado = talhoesSafra.reduce((acc, t) => {
+      const pesoTalhao =
+        pesoBrutoTotais.find((p) => p.talhao === t.nome)?.pesoBrutoTotal || 0;
+      if (pesoTalhao <= 0) return acc;
+      const haTalhao = parseFloat(t.hectares.replace(",", ".")) || 0;
+      const haEstimado = pesoTalhao / (metaProd * 15); // kg / (arrobas/ha * 15 kg)
+      return acc + Math.min(haTalhao || haEstimado, haEstimado);
+    }, 0);
+
+    // Fallback: se não há peso ainda, usar progressPercent para estimar colheita
+    const areaColhidaFinal =
+      areaColhidaEstimado === 0 && totalHectaresCalc > 0
+        ? (progressPercent / 100) * totalHectaresCalc
+        : areaColhidaEstimado;
+
+    const remainingHa = Math.max(totalHectaresCalc - areaColhidaFinal, 0);
+    const completionPercent =
+      totalHectaresCalc > 0
+        ? Math.min((areaColhidaFinal / totalHectaresCalc) * 100, 100)
+        : 0;
+
+    const arrobasAtuais = totalPesoBrutoKg / 15;
+    const valorAtual = arrobasAtuais * precoArroba;
+    const valorFuturo = remainingHa * metaProd * precoArroba;
 
     return {
-      currentValue: valorEstimado.valorLiquidoBRL,
-      projectedValue: projectedTotal,
+      currentValue: valorAtual,
+      projectedValue: valorAtual + valorFuturo,
       remainingHa,
-      completionPercent: progressPercent,
+      completionPercent,
+      precoArroba,
+      areaColhida: areaColhidaFinal,
+      totalHectares: totalHectaresCalc,
+      plumaPercent,
+      carocoPercent,
     };
   }, [
-    valorEstimado,
-    produtividade,
-    totalHectares,
+    talhoesSafra,
+    pesoBrutoTotais,
     cotacaoPluma,
+    cotacaoCaroco,
+    metaProdutividade,
     progressPercent,
   ]);
 
@@ -1505,6 +1548,37 @@ export default function Dashboard() {
                     </p>
                   </div>
                 </div>
+
+                <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-3 rounded-lg bg-background/70 border border-border/40">
+                    <p className="text-xs text-muted-foreground">Área colhida (est.)</p>
+                    <p className="text-lg font-bold">
+                      {projections.areaColhida.toFixed(1)} ha
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background/70 border border-border/40">
+                    <p className="text-xs text-muted-foreground">Área restante (est.)</p>
+                    <p className="text-lg font-bold">
+                      {projections.remainingHa.toFixed(1)} ha
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background/70 border border-border/40">
+                    <p className="text-xs text-muted-foreground">Preço médio/@</p>
+                    <p className="text-lg font-bold">
+                      R$ {projections.precoArroba.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background/70 border border-border/40">
+                    <p className="text-xs text-muted-foreground">Meta safra</p>
+                    <p className="text-lg font-bold">{metaProdutividade} @/ha</p>
+                  </div>
+                </div>
+
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Premissas: rendimento padrão {Math.round(plumaPercentDefault * 100)}% pluma /{" "}
+                  {Math.round((1 - impurezaPercent - plumaPercentDefault) * 100)}% caroço /{" "}
+                  {Math.round(impurezaPercent * 100)}% impurezas; receita futura usa meta de {metaProdutividade} @/ha.
+                </p>
 
                 <div className="mt-6">
                   <div className="flex justify-between text-sm mb-2">

@@ -53,7 +53,7 @@ export interface IStorage {
   getAllBales(): Promise<Bale[]>;
   getBale(id: string): Promise<Bale | undefined>;
   getBaleByQRCode(qrCode: string): Promise<Bale | undefined>;
-  createSingleBale(id: string, safra: string, talhao: string, numero: string, userId: string): Promise<Bale>;
+  createSingleBale(id: string, safra: string, talhao: string, numero: string | number, userId: string): Promise<Bale>;
   batchCreateBales(data: BatchCreateBales, userId: string): Promise<Bale[]>;
   updateBaleStatus(id: string, status: BaleStatus, userId: string): Promise<Bale>;
   getBaleStats(safra?: string): Promise<{
@@ -406,9 +406,9 @@ export class PostgresStorage implements IStorage {
     }
   }
 
-  async createSingleBale(id: string, safra: string, talhao: string, numero: string, userId: string): Promise<Bale> {
+  async createSingleBale(id: string, safra: string, talhao: string, numero: string | number, userId: string): Promise<Bale> {
     const now = new Date();
-    const numeroInt = parseInt(numero);
+    const numeroInt = typeof numero === 'number' ? numero : parseInt(numero, 10);
 
     const baleData = {
       id: id, // Ex: S25/26-T2B-00001

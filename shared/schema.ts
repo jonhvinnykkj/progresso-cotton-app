@@ -350,6 +350,7 @@ export const safras = pgTable("safras", {
   nome: text("nome").notNull().unique(), // Ex: "24/25", "25/26"
   descricao: text("descricao"), // Descrição opcional
   isAtiva: integer("is_ativa").notNull().default(1), // 1 = ativa (safra padrão), 0 = inativa
+  metaProdutividade: text("meta_produtividade").notNull().default("350"), // Meta em @/ha
   createdAt: timestamp("created_at").notNull().defaultNow(),
   createdBy: text("created_by"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -372,11 +373,13 @@ export const talhoesSafra = pgTable("talhoes_safra", {
 export const createSafraSchema = z.object({
   nome: z.string().min(1, "Nome da safra é obrigatório").regex(/^\d{2}\/\d{2}$/, "Formato inválido. Use: XX/XX"),
   descricao: z.string().optional(),
+  metaProdutividade: z.string().optional(),
 });
 
 export const updateSafraSchema = z.object({
   descricao: z.string().optional(),
   isAtiva: z.number().min(0).max(1).optional(),
+  metaProdutividade: z.string().optional(),
 });
 
 export type CreateSafra = z.infer<typeof createSafraSchema>;

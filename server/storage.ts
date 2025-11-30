@@ -1292,6 +1292,7 @@ export class PostgresStorage implements IStorage {
           nome: data.nome,
           descricao: data.descricao || null,
           isAtiva,
+          metaProdutividade: data.metaProdutividade || "350",
           createdAt: now,
           createdBy: userId,
           updatedAt: now,
@@ -1316,6 +1317,9 @@ export class PostgresStorage implements IStorage {
       if (data.isAtiva !== undefined) {
         updates.isAtiva = data.isAtiva;
       }
+       if (data.metaProdutividade !== undefined) {
+         updates.metaProdutividade = data.metaProdutividade;
+       }
 
       const result = await db
         .update(safrasTable)

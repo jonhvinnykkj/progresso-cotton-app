@@ -82,6 +82,8 @@ export default function TalhaoDetail() {
   const safraAtiva = settingsData?.safraAtiva;
   const talhoesSafra = settingsData?.talhoesSafra || [];
   const selectedSafra = safraAtiva?.nome || "";
+  const metaProdutividade =
+    (safraAtiva?.metaProdutividade && parseFloat(safraAtiva.metaProdutividade)) || 350;
 
   // Buscar info do talhão
   const talhaoInfo = talhoesSafra.find((t) => t.nome === talhaoId);
@@ -241,7 +243,7 @@ export default function TalhaoDetail() {
     const valorEstimado = arrobasPluma * cotacaoPluma + arrobasCaroco * cotacaoCaroco;
 
     // Performance score
-    const maxProd = 350;
+    const maxProd = metaProdutividade;
     const prodAtual = temDadosReais ? produtividadeReal : produtividadePrevista;
     const performanceScore = Math.min((prodAtual / maxProd) * 100, 100);
 
@@ -362,9 +364,9 @@ export default function TalhaoDetail() {
       mediaGeral,
       talhaoValue,
       diffFromMedia,
-      meta: 350,
+      meta: metaProdutividade,
     };
-  }, [talhoesSafra, allBales, pesoBrutoTotais, stats]);
+  }, [talhoesSafra, allBales, pesoBrutoTotais, stats, metaProdutividade]);
 
   // Filtrar fardos
   const filteredBales = useMemo(() => {

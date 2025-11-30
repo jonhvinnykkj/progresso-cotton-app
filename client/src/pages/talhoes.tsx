@@ -94,6 +94,8 @@ export default function Talhoes() {
   });
 
   const talhaoStats = talhaoStatsData ? Object.values(talhaoStatsData) : [];
+  const metaProdutividade =
+    (safraAtiva?.metaProdutividade && parseFloat(safraAtiva.metaProdutividade)) || 350;
 
   const { data: bales = [] } = useQuery<Bale[]>({
     queryKey: ["/api/bales", selectedSafra],
@@ -214,7 +216,7 @@ export default function Talhoes() {
 
   // Calcular dados de cada talhão
   const talhoesData = useMemo(() => {
-    const maxProdutividade = 350; // meta
+    const maxProdutividade = metaProdutividade; // meta por safra
     const impurezaPercent = 0.03;
     const defaultPlumaPercent = 0.4;
 
@@ -320,6 +322,7 @@ export default function Talhoes() {
     rendimentos,
     cotacaoPluma,
     cotacaoCaroco,
+    metaProdutividade,
   ]);
 
   // Filter and sort

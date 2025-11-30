@@ -51,6 +51,7 @@ import {
   Sparkles,
   LandPlot,
   MoreVertical,
+  Target,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -66,6 +67,7 @@ interface Safra {
   nome: string;
   descricao: string | null;
   isAtiva: number;
+  metaProdutividade?: string | null;
   createdAt: string;
 }
 
@@ -95,7 +97,9 @@ export function SafraConfig() {
   const [expandedSafras, setExpandedSafras] = useState<Set<string>>(new Set());
   const [editingSafraId, setEditingSafraId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [editingMeta, setEditingMeta] = useState("");
   const [newSafraNome, setNewSafraNome] = useState("");
+  const [newSafraMeta, setNewSafraMeta] = useState("350");
   const [parsedTalhoes, setParsedTalhoes] = useState<ParsedTalhao[]>([]);
   const [selectedTalhoes, setSelectedTalhoes] = useState<Set<string>>(new Set());
   const [isUploading, setIsUploading] = useState(false);
@@ -130,14 +134,15 @@ export function SafraConfig() {
 
   // Create safra mutation
   const createSafraMutation = useMutation({
-    mutationFn: async (nome: string) => {
-      const response = await apiRequest("POST", "/api/safras", { nome });
+    mutationFn: async ({ nome, meta }: { nome: string; meta: string }) => {
+      const response = await apiRequest("POST", "/api/safras", { nome, metaProdutividade: meta });
       return response.json();
     },
     onSuccess: (data: Safra) => {
       queryClient.invalidateQueries({ queryKey: ["/api/safras"] });
       setShowCreateDialog(false);
       setNewSafraNome("");
+      setNewSafraMeta("350");
       // Auto-expand the new safra and open upload dialog
       setExpandedSafras(prev => new Set([...prev, data.id]));
       setSelectedSafra(data);
@@ -160,8 +165,10 @@ export function SafraConfig() {
 
   // Update safra name mutation
   const updateSafraMutation = useMutation({
-    mutationFn: async ({ id, nome }: { id: string; nome: string }) => {
-      const response = await apiRequest("PATCH", `/api/safras/${id}`, { nome });
+    mutationFn: async ({ id, nome, meta }: { id: string; nome: string; meta?: string }) => {
+      const payload: any = { nome };
+      if (meta !== undefined) payload.metaProdutividade = meta;
+      const response = await apiRequest("PATCH", `/api/safras/${id}`, payload);
       return response.json();
     },
     onSuccess: () => {
@@ -332,12 +339,17 @@ export function SafraConfig() {
   const startEditing = (safra: Safra) => {
     setEditingSafraId(safra.id);
     setEditingName(safra.nome);
+    setEditingMeta(safra.metaProdutividade || "350");
   };
 
   // Save edited name
   const saveEditedName = () => {
     if (editingSafraId && editingName.trim()) {
-      updateSafraMutation.mutate({ id: editingSafraId, nome: editingName.trim() });
+      updateSafraMutation.mutate({
+        id: editingSafraId,
+        nome: editingName.trim(),
+        meta: editingMeta.trim() || undefined,
+      });
     }
   };
 
@@ -484,12 +496,22 @@ export function SafraConfig() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           {isEditing ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                               <Input
                                 value={editingName}
                                 onChange={(e) => setEditingName(e.target.value)}
                                 className="h-8 w-32 rounded-lg"
                                 autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveEditedName();
+                                  if (e.key === 'Escape') setEditingSafraId(null);
+                                }}
+                              />
+                              <Input
+                                value={editingMeta}
+                                onChange={(e) => setEditingMeta(e.target.value)}
+                                className="h-8 w-28 rounded-lg"
+                                placeholder="Meta @/ha"
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') saveEditedName();
                                   if (e.key === 'Escape') setEditingSafraId(null);
@@ -538,6 +560,10 @@ export function SafraConfig() {
                           <span className="flex items-center gap-1">
                             <MapPin className="w-3.5 h-3.5" />
                             {stats.hectares.toFixed(1)} ha
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Target className="w-3.5 h-3.5" />
+                            Meta {safra.metaProdutividade || "350"} @/ha
                           </span>
                         </div>
                       </div>
@@ -693,12 +719,29 @@ export function SafraConfig() {
                 className="rounded-xl h-11"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && newSafraNome) {
-                    createSafraMutation.mutate(newSafraNome);
+                    createSafraMutation.mutate({ nome: newSafraNome, meta: newSafraMeta });
                   }
                 }}
               />
               <p className="text-xs text-muted-foreground">
                 Use o formato XX/XX (ex: 24/25, 25/26)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="safra-meta">Meta de Produtividade (@/ha)</Label>
+              <Input
+                id="safra-meta"
+                type="number"
+                min="0"
+                step="1"
+                placeholder="Ex: 350"
+                value={newSafraMeta}
+                onChange={(e) => setNewSafraMeta(e.target.value)}
+                className="rounded-xl h-11"
+              />
+              <p className="text-xs text-muted-foreground">
+                Usada para o score e projeções de produtividade (pode ser ajustada depois).
               </p>
             </div>
           </div>
@@ -712,7 +755,7 @@ export function SafraConfig() {
               Cancelar
             </Button>
             <Button
-              onClick={() => createSafraMutation.mutate(newSafraNome)}
+              onClick={() => createSafraMutation.mutate({ nome: newSafraNome, meta: newSafraMeta })}
               disabled={!newSafraNome || createSafraMutation.isPending}
               className="rounded-xl bg-primary"
             >

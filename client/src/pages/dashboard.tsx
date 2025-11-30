@@ -86,6 +86,8 @@ export default function Dashboard() {
   const safraAtiva = settingsData?.safraAtiva;
   const talhoesSafra = settingsData?.talhoesSafra || [];
   const selectedSafra = safraAtiva?.nome || "";
+  const metaProdutividade =
+    (safraAtiva?.metaProdutividade && parseFloat(safraAtiva.metaProdutividade)) || 350;
 
   // Query de fardos
   const { data: bales = [] } = useQuery<Bale[]>({
@@ -481,7 +483,7 @@ export default function Dashboard() {
         perdasPorTalhao.find((p) => p.talhao === t.nome)?.totalPerdas || 0;
 
       // Calcular intensidade (0-100) baseada em produtividade
-      const maxProd = 350; // meta de produtividade @/ha
+      const maxProd = metaProdutividade; // meta de produtividade @/ha
       const intensity = Math.min((produtividade / maxProd) * 100, 100);
 
       return {
@@ -494,7 +496,7 @@ export default function Dashboard() {
         hasData: fardos > 0,
       };
     });
-  }, [talhoesSafra, bales, pesoBrutoTotais, perdasPorTalhao]);
+  }, [talhoesSafra, bales, pesoBrutoTotais, perdasPorTalhao, metaProdutividade]);
 
   // Sparkline data para cotações
   const generateSparkline = (baseValue: number, variation: number = 0.05) => {
@@ -1611,7 +1613,7 @@ export default function Dashboard() {
                     <Target className="w-4 h-4" />
                     <span className="text-xs uppercase">Meta</span>
                   </div>
-                  <p className="text-2xl font-bold">350</p>
+                  <p className="text-2xl font-bold">{metaProdutividade}</p>
                   <p className="text-xs text-muted-foreground">@/ha objetivo</p>
                 </div>
 

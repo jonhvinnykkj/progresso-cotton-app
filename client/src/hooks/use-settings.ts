@@ -7,6 +7,7 @@ export interface Safra {
   nome: string;
   descricao: string | null;
   isAtiva: number;
+  metaProdutividade?: string | null;
   createdAt: string;
 }
 

@@ -36,7 +36,9 @@ export function useOfflineBaleCreation() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create bale');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[createBale] Server error:', response.status, errorData);
+        throw new Error(errorData.error || `Erro ${response.status}: Falha ao criar fardo`);
       }
 
       return await response.json();
@@ -80,7 +82,9 @@ export function useOfflineBaleCreation() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create batch');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[createBatch] Server error:', response.status, errorData);
+        throw new Error(errorData.error || `Erro ${response.status}: Falha ao criar lote`);
       }
 
       return await response.json();

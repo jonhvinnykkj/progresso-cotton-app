@@ -363,6 +363,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id, safra, talhao, numero } = req.body;
 
+      console.log("[POST /api/bales] Received:", { id, safra, talhao, numero, userId: req.user?.userId });
+
       if (!id || !safra || !talhao || !numero) {
         return res.status(400).json({
           error: "Dados inválidos: id, safra, talhao e numero são obrigatórios",
@@ -381,14 +383,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.userId || "unknown-user";
       const bale = await storage.createSingleBale(id, safra, talhao, numero, userId);
 
+      console.log("[POST /api/bales] Created:", bale.id);
+
       // Notify all clients about the new bale
       notifyBaleChange();
 
       res.status(201).json(bale);
-    } catch (error) {
-      console.error("Error creating bale:", error);
+    } catch (error: any) {
+      console.error("[POST /api/bales] Error:", error);
+      console.error("[POST /api/bales] Error stack:", error?.stack);
+      console.error("[POST /api/bales] Error code:", error?.code);
       res.status(500).json({
         error: error instanceof Error ? error.message : "Erro ao criar fardo",
+        code: error?.code,
+        details: process.env.NODE_ENV !== 'production' ? error?.stack : undefined,
       });
     }
   });

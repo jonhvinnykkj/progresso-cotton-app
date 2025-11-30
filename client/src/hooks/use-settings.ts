@@ -19,6 +19,8 @@ export interface TalhaoSafra {
   geometry: string;
   centroid: string | null;
   cultura: string;
+  colheitaStatus?: string;
+  areaColhida?: string;
 }
 
 export interface Settings {

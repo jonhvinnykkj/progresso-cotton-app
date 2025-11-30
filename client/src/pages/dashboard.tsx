@@ -605,20 +605,33 @@ export default function Dashboard() {
 
     // Estimar hectares colhidos a partir do peso bruto de cada talhão e da meta de produtividade
     const metaProd = metaProdutividade > 0 ? metaProdutividade : 1;
-    const areaColhidaEstimado = talhoesSafra.reduce((acc, t) => {
+    const areaColhidaCalculada = talhoesSafra.reduce((acc, t) => {
+      const haTalhao = parseFloat(t.hectares.replace(",", ".")) || 0;
+      const areaReal =
+        parseFloat((t.areaColhida || "0").replace(",", ".")) || 0;
+      const status = t.colheitaStatus || "planejado";
+
+      if (areaReal > 0) {
+        return acc + Math.min(areaReal, haTalhao || areaReal);
+      }
+
+      if (status === "concluido") {
+        return acc + haTalhao;
+      }
+
       const pesoTalhao =
         pesoBrutoTotais.find((p) => p.talhao === t.nome)?.pesoBrutoTotal || 0;
       if (pesoTalhao <= 0) return acc;
-      const haTalhao = parseFloat(t.hectares.replace(",", ".")) || 0;
+
       const haEstimado = pesoTalhao / (metaProd * 15); // kg / (arrobas/ha * 15 kg)
       return acc + Math.min(haTalhao || haEstimado, haEstimado);
     }, 0);
 
-    // Fallback: se não há peso ainda, usar progressPercent para estimar colheita
+    // Fallback: se não há dados, usar progresso dos fardos
     const areaColhidaFinal =
-      areaColhidaEstimado === 0 && totalHectaresCalc > 0
+      areaColhidaCalculada === 0 && totalHectaresCalc > 0
         ? (progressPercent / 100) * totalHectaresCalc
-        : areaColhidaEstimado;
+        : areaColhidaCalculada;
 
     const remainingHa = Math.max(totalHectaresCalc - areaColhidaFinal, 0);
     const completionPercent =
@@ -918,9 +931,16 @@ export default function Dashboard() {
                     <Activity className="w-4 h-4 text-primary" />
                     Pipeline de Produção
                   </h2>
-                  <span className="text-sm text-muted-foreground">
-                    {progressPercent.toFixed(0)}% concluído
-                  </span>
+                  <div className="flex flex-col text-right">
+                    <span className="text-sm text-muted-foreground">
+                      {progressPercent.toFixed(0)}% dos fardos concluídos
+                    </span>
+                    <span className="text-xs text-primary font-medium">
+                      Colheita: {projections.completionPercent.toFixed(0)}% (
+                      {projections.areaColhida.toFixed(1)} /{" "}
+                      {projections.totalHectares.toFixed(1)} ha)
+                    </span>
+                  </div>
                 </div>
 
                 {/* Flow Visualization */}

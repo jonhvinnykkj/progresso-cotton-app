@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { useAuth } from "@/lib/auth-context";
@@ -32,6 +32,7 @@ import {
   Scale,
   Target,
   Zap,
+  Loader2,
 } from "lucide-react";
 import { Page, PageContent } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface TalhaoStats {
   talhao: string;
@@ -58,6 +61,8 @@ type StatusFilter = "all" | "active" | "inactive" | "with-losses";
 export default function Talhoes() {
   const [, setLocation] = useLocation();
   useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // State
   const [viewMode, setViewMode] = useState<ViewMode>("cards");
@@ -68,6 +73,20 @@ export default function Talhoes() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedTalhoes, setSelectedTalhoes] = useState<string[]>([]);
   const [compareModalOpen, setCompareModalOpen] = useState(false);
+  const [colheitaEdits, setColheitaEdits] = useState<Record<string, string>>({});
+  const [savingTalhaoId, setSavingTalhaoId] = useState<string | null>(null);
+  const [colheitaModal, setColheitaModal] = useState<{
+    open: boolean;
+    talhao?: {
+      id: string;
+      talhaoSafraId: string;
+      colheitaStatus: string;
+      areaColhida: number;
+      hectares: number;
+      nome: string;
+    };
+    status: string;
+  }>({ open: false, status: "planejado" });
 
   // Usar talhões dinâmicos da safra ativa
   const { data: settingsData } = useSettings();
@@ -191,6 +210,54 @@ export default function Talhoes() {
     enabled: !!selectedSafra,
   });
 
+  const updateColheitaMutation = useMutation({
+    mutationFn: async ({
+      talhaoId,
+      colheitaStatus,
+      areaColhida,
+    }: {
+      talhaoId: string;
+      colheitaStatus: string;
+      areaColhida: string;
+    }) => {
+      const url = API_URL
+        ? `${API_URL}/api/safras/talhoes/${talhaoId}/colheita`
+        : `/api/safras/talhoes/${talhaoId}/colheita`;
+
+      const response = await fetch(url, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        credentials: "include",
+        body: JSON.stringify({ colheitaStatus, areaColhida }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Erro ao salvar colheita");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings", "safra-ativa"] });
+      toast({
+        title: "Colheita atualizada",
+        description: "Status e área colhida salvos com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Não foi possível salvar",
+        description:
+          error instanceof Error ? error.message : "Tente novamente em instantes.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Query de cotação do algodão
   interface CotacaoData {
     pluma: number;
@@ -222,6 +289,11 @@ export default function Talhoes() {
 
     return talhoesSafra.map((talhaoInfo) => {
       const hectares = parseFloat(talhaoInfo.hectares.replace(",", ".")) || 0;
+      const areaColhida =
+        parseFloat((talhaoInfo.areaColhida || "0").replace(",", ".")) || 0;
+      const colheitaStatus = talhaoInfo.colheitaStatus || "planejado";
+      const colheitaPercent =
+        hectares > 0 ? Math.min((areaColhida / hectares) * 100, 100) : 0;
       const stats = talhaoStats.find((s) => s.talhao === talhaoInfo.nome);
       const pesoBruto = pesoBrutoTotais.find(
         (p) => p.talhao === talhaoInfo.nome
@@ -311,6 +383,10 @@ export default function Talhoes() {
         performanceScore,
         status,
         pesoBrutoTotal,
+        areaColhida,
+        colheitaStatus,
+        colheitaPercent,
+        talhaoSafraId: talhaoInfo.id,
       };
     });
   }, [
@@ -394,6 +470,29 @@ export default function Talhoes() {
     );
   };
 
+  const handleColheitaChange = async (status: string) => {
+    if (!colheitaModal.talhao) return;
+    const talhao = colheitaModal.talhao;
+
+    setColheitaModal((prev) => ({ ...prev, status }));
+
+    const areaColhidaToSend =
+      status === "concluido" ? talhao.hectares.toString() : "0";
+
+    setSavingTalhaoId(talhao.id);
+    try {
+      await updateColheitaMutation.mutateAsync({
+        talhaoId: talhao.talhaoSafraId,
+        colheitaStatus: status,
+        areaColhida: areaColhidaToSend,
+      });
+      setColheitaEdits((prev) => ({ ...prev, [talhao.id]: status }));
+      setColheitaModal((prev) => ({ ...prev, open: false }));
+    } finally {
+      setSavingTalhaoId(null);
+    }
+  };
+
   // Sort options
   const sortOptions: { value: SortOption; label: string }[] = [
     { value: "fardos", label: "Fardos" },
@@ -409,6 +508,12 @@ export default function Talhoes() {
     { value: "active", label: "Ativos" },
     { value: "inactive", label: "Inativos" },
     { value: "with-losses", label: "Com Perdas" },
+  ];
+
+  const colheitaStatusOptions = [
+    { value: "planejado", label: "Planejado" },
+    { value: "colhendo", label: "Colhendo" },
+    { value: "concluido", label: "Concluído" },
   ];
 
   // Performance color
@@ -745,32 +850,56 @@ export default function Talhoes() {
               {/* Cards View */}
               {viewMode === "cards" && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {filteredAndSortedTalhoes.map((talhao) => (
-                    <div
-                      key={talhao.id}
-                      className={cn(
-                        "relative p-3 sm:p-5 rounded-xl bg-card border transition-all",
-                        selectedTalhoes.includes(talhao.id)
-                          ? "border-primary shadow-lg"
-                          : talhao.totalFardos > 0
-                          ? "border-border/50 hover:border-primary/30 hover:shadow-md"
-                          : "border-border/30 opacity-60"
-                      )}
-                    >
-                      {/* Selection checkbox */}
-                      <button
-                        onClick={() => toggleSelection(talhao.id)}
+                  {filteredAndSortedTalhoes.map((talhao) => {
+                    const colheitaEdit =
+                      colheitaEdits[talhao.id] || talhao.colheitaStatus;
+
+                    const colheitaStatusDisplay = colheitaEdit;
+                    const areaColhidaDisplay =
+                      colheitaStatusDisplay === "concluido"
+                        ? talhao.hectares
+                        : talhao.areaColhida;
+                    const colheitaPercentDisplay =
+                      colheitaStatusDisplay === "concluido"
+                        ? 100
+                        : talhao.hectares > 0
+                        ? Math.min(
+                            (areaColhidaDisplay / talhao.hectares) * 100,
+                            100
+                          )
+                        : 0;
+
+                    const colheitaBadgeClass = cn(
+                      "px-2 py-0.5 rounded-full text-[10px] font-medium",
+                      colheitaStatusDisplay === "concluido"
+                        ? "bg-green-500/15 text-green-600"
+                        : colheitaStatusDisplay === "colhendo"
+                        ? "bg-yellow-500/15 text-yellow-600"
+                        : "bg-muted text-foreground/70"
+                    );
+
+                    return (
+                      <div
+                        key={talhao.id}
                         className={cn(
-                          "absolute top-3 left-3 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all bg-background/80",
+                          "relative p-3 sm:p-5 rounded-xl bg-card border transition-all",
                           selectedTalhoes.includes(talhao.id)
-                            ? "bg-primary border-primary text-primary-foreground"
-                            : "border-border/50 hover:border-primary/50"
+                            ? "border-primary shadow-lg"
+                            : talhao.totalFardos > 0
+                            ? "border-border/50 hover:border-primary/30 hover:shadow-md"
+                            : "border-border/30 opacity-60"
                         )}
                       >
-                        {selectedTalhoes.includes(talhao.id) && (
-                          <Check className="w-4 h-4" />
-                        )}
-                      </button>
+                        <div className="flex justify-between items-center mb-2">
+                          <Button
+                            size="sm"
+                            variant={selectedTalhoes.includes(talhao.id) ? "default" : "outline"}
+                            onClick={() => toggleSelection(talhao.id)}
+                            className="h-8 px-3 text-xs"
+                          >
+                            {selectedTalhoes.includes(talhao.id) ? "Comparando" : "Comparar"}
+                          </Button>
+                        </div>
 
                       {/* Clickable area */}
                       <button
@@ -941,8 +1070,64 @@ export default function Talhoes() {
                           </div>
                         )}
                       </button>
-                    </div>
-                  ))}
+                        {/* Colheita controls */}
+                        <div className="mt-3 sm:mt-4 p-3 sm:p-4 rounded-lg bg-muted/20 border border-border/50 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs sm:text-sm text-muted-foreground font-medium">
+                                Colheita
+                              </span>
+                              <span className={colheitaBadgeClass}>
+                                {colheitaStatusOptions.find(
+                                  (opt) => opt.value === colheitaStatusDisplay
+                                )?.label || "Planejado"}
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-muted-foreground">
+                              {colheitaPercentDisplay.toFixed(0)}% do talhão
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              Defina o status para atualizar progresso.
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setColheitaModal({
+                                  open: true,
+                                  talhao,
+                                  status: colheitaStatusDisplay,
+                                })
+                              }
+                            >
+                              Definir status
+                            </Button>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                            <span>
+                              {areaColhidaDisplay > 0
+                                ? `${areaColhidaDisplay.toFixed(1)} ha colhidos`
+                                : "Área colhida não registrada"}
+                            </span>
+                            <span className="font-medium text-foreground">
+                              {talhao.hectares > 0
+                                ? `${(areaColhidaDisplay / talhao.hectares).toLocaleString(
+                                    "pt-BR",
+                                    {
+                                      style: "percent",
+                                      minimumFractionDigits: 0,
+                                      maximumFractionDigits: 0,
+                                    }
+                                  )}`
+                                : "-"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -1413,6 +1598,70 @@ export default function Talhoes() {
               Fechar
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Colheita status modal */}
+      <Dialog
+        open={colheitaModal.open}
+        onOpenChange={(open) => setColheitaModal((prev) => ({ ...prev, open }))}
+      >
+        <DialogContent className="max-w-md w-full">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 text-primary" />
+              Status da Colheita
+            </DialogTitle>
+            <DialogDescription>
+              Escolha em que etapa a colheita do talhão está. Concluído marca toda
+              a área como colhida e atualiza o dashboard.
+            </DialogDescription>
+          </DialogHeader>
+
+          {colheitaModal.talhao && (
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-muted/40 border border-border/50">
+                <p className="text-sm font-semibold">
+                  Talhão {colheitaModal.talhao.nome || colheitaModal.talhao.id}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {colheitaModal.talhao.hectares.toFixed(1)} ha
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Pipeline</p>
+                <div className="flex items-center gap-2 text-xs">
+                  {colheitaStatusOptions.map((opt, idx) => (
+                    <div key={opt.value} className="flex items-center gap-2">
+                      <button
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg border text-sm transition-all",
+                          colheitaModal.status === opt.value
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background border-border/60 text-foreground"
+                        )}
+                        onClick={() => handleColheitaChange(opt.value)}
+                        disabled={savingTalhaoId === colheitaModal.talhao.id}
+                      >
+                        {opt.label}
+                      </button>
+                      {idx < colheitaStatusOptions.length - 1 && (
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {savingTalhaoId === colheitaModal.talhao.id && (
+                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Salvando status...
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </Page>

@@ -144,6 +144,7 @@ export interface IStorage {
   getTalhoesBySafraNome(safraNome: string): Promise<TalhaoSafra[]>;
   createTalhaoSafra(data: CreateTalhaoSafra, userId: string): Promise<TalhaoSafra>;
   batchCreateTalhoesSafra(data: BatchCreateTalhoesSafra, userId: string): Promise<TalhaoSafra[]>;
+  updateTalhaoSafraColheita(talhaoId: string, data: { colheitaStatus?: string; areaColhida?: string }): Promise<TalhaoSafra>;
   deleteTalhoesBySafra(safraId: string): Promise<void>;
 
   // Perdas methods
@@ -1417,6 +1418,8 @@ export class PostgresStorage implements IStorage {
           geometry: data.geometry,
           centroid: data.centroid || null,
           cultura: data.cultura || 'algodao',
+          colheitaStatus: data.colheitaStatus || 'planejado',
+          areaColhida: data.areaColhida || '0',
           createdAt: now,
           createdBy: userId,
         })
@@ -1440,6 +1443,8 @@ export class PostgresStorage implements IStorage {
         geometry: talhao.geometry,
         centroid: talhao.centroid || null,
         cultura: 'algodao',
+        colheitaStatus: talhao.colheitaStatus || 'planejado',
+        areaColhida: talhao.areaColhida || '0',
         createdAt: now,
         createdBy: userId,
       }));
@@ -1463,6 +1468,23 @@ export class PostgresStorage implements IStorage {
       console.error('❌ Error deleting talhoes safra:', error);
       throw new Error('Erro ao deletar talhões da safra');
     }
+  }
+
+  async updateTalhaoSafraColheita(talhaoId: string, data: { colheitaStatus?: string; areaColhida?: string }): Promise<TalhaoSafra> {
+    const updates: Record<string, any> = {};
+    if (data.colheitaStatus !== undefined) updates.colheitaStatus = data.colheitaStatus;
+    if (data.areaColhida !== undefined) updates.areaColhida = data.areaColhida;
+
+    const result = await db
+      .update(talhoesSafraTable)
+      .set(updates)
+      .where(eq(talhoesSafraTable.id, talhaoId))
+      .returning();
+
+    if (!result[0]) {
+      throw new Error('Talhão não encontrado');
+    }
+    return result[0];
   }
 
   // Método para atualizar a configuração de safra padrão (migrar para novo sistema)

@@ -365,6 +365,8 @@ export const talhoesSafra = pgTable("talhoes_safra", {
   geometry: text("geometry").notNull(), // GeoJSON do polígono (para renderizar no mapa)
   centroid: text("centroid"), // GeoJSON do centróide (para posicionar labels)
   cultura: text("cultura").notNull().default("algodao"), // Tipo de cultura (sempre algodão neste caso)
+  colheitaStatus: text("colheita_status").notNull().default("planejado"), // planejado | colhendo | concluido
+  areaColhida: text("area_colhida").notNull().default("0"), // hectares colhidos (string para manter padrão de armazenamento)
   createdAt: timestamp("created_at").notNull().defaultNow(),
   createdBy: text("created_by"),
 });
@@ -394,6 +396,8 @@ export const createTalhaoSafraSchema = z.object({
   geometry: z.string().min(1, "Geometria é obrigatória"),
   centroid: z.string().optional(),
   cultura: z.string().default("algodao"),
+  colheitaStatus: z.enum(["planejado", "colhendo", "concluido"]).optional(),
+  areaColhida: z.string().optional(),
 });
 
 export const batchCreateTalhoesSafraSchema = z.object({
@@ -403,6 +407,8 @@ export const batchCreateTalhoesSafraSchema = z.object({
     hectares: z.string().min(1),
     geometry: z.string().min(1),
     centroid: z.string().optional(),
+    colheitaStatus: z.enum(["planejado", "colhendo", "concluido"]).optional(),
+    areaColhida: z.string().optional(),
   })).min(1, "Selecione pelo menos um talhão"),
 });
 

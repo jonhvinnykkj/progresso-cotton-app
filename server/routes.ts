@@ -21,6 +21,7 @@ import {
   createSafraSchema,
   updateSafraSchema,
   batchCreateTalhoesSafraSchema,
+  createTalhaoSafraSchema,
 } from "@shared/schema";
 import { parseShapefileFromBuffers, parseGeoJSON } from "./shapefile-parser";
 import multer from "multer";
@@ -1860,6 +1861,194 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ ...cotacaoCache, ageMinutes: metaErro.ageMinutes, stale: metaErro.stale, carocoFactor });
     }
   });
+
+  // ========== SAFRAS ENDPOINTS ==========
+
+  // Get all safras
+  app.get("/api/safras", authenticateToken, async (_req, res) => {
+    try {
+      const safras = await storage.getAllSafras();
+      res.json(safras);
+    } catch (error) {
+      console.error("Error fetching safras:", error);
+      res.status(500).json({ error: "Erro ao buscar safras" });
+    }
+  });
+
+  // Get active safra
+  app.get("/api/safras/ativa", authenticateToken, async (_req, res) => {
+    try {
+      const safra = await storage.getSafraAtiva();
+      res.json(safra || null);
+    } catch (error) {
+      console.error("Error fetching active safra:", error);
+      res.status(500).json({ error: "Erro ao buscar safra ativa" });
+    }
+  });
+
+  // Get safra by ID
+  app.get("/api/safras/:id", authenticateToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const safra = await storage.getSafraById(id);
+      if (!safra) {
+        return res.status(404).json({ error: "Safra não encontrada" });
+      }
+      res.json(safra);
+    } catch (error) {
+      console.error("Error fetching safra:", error);
+      res.status(500).json({ error: "Erro ao buscar safra" });
+    }
+  });
+
+  // Create safra
+  app.post("/api/safras", authenticateToken, authorizeRoles("admin", "superadmin"), async (req, res) => {
+    try {
+      const data = createSafraSchema.parse(req.body);
+      const userId = req.user?.userId || "unknown-user";
+      const safra = await storage.createSafra(data, userId);
+      res.status(201).json(safra);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error creating safra:", error);
+      res.status(500).json({ error: "Erro ao criar safra" });
+    }
+  });
+
+  // Update safra
+  app.patch("/api/safras/:id", authenticateToken, authorizeRoles("admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const data = updateSafraSchema.parse(req.body);
+      const safra = await storage.updateSafra(id, data);
+      res.json(safra);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error updating safra:", error);
+      res.status(500).json({ error: "Erro ao atualizar safra" });
+    }
+  });
+
+  // Activate safra
+  app.post("/api/safras/:id/ativar", authenticateToken, authorizeRoles("admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const safra = await storage.setActiveSafra(id);
+      res.json(safra);
+    } catch (error) {
+      console.error("Error activating safra:", error);
+      res.status(500).json({ error: "Erro ao ativar safra" });
+    }
+  });
+
+  // Delete safra
+  app.delete("/api/safras/:id", authenticateToken, authorizeRoles("admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteSafra(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting safra:", error);
+      res.status(500).json({ error: "Erro ao deletar safra" });
+    }
+  });
+
+  // Create talhao safra
+  app.post("/api/safras/:id/talhoes", authenticateToken, authorizeRoles("admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const body = createTalhaoSafraSchema.parse({ ...req.body, safraId: id });
+      const userId = req.user?.userId || "unknown-user";
+      const talhao = await storage.createTalhaoSafra(body, userId);
+      res.status(201).json(talhao);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error creating talhao safra:", error);
+      res.status(500).json({ error: "Erro ao criar talhão" });
+    }
+  });
+
+  // Batch create talhoes safra
+  app.post("/api/safras/:id/talhoes/batch", authenticateToken, authorizeRoles("admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const data = batchCreateTalhoesSafraSchema.parse({ safraId: id, talhoes: req.body.talhoes });
+      const userId = req.user?.userId || "unknown-user";
+      const talhoes = await storage.batchCreateTalhoesSafra(data, userId);
+      res.status(201).json(talhoes);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error batch creating talhoes safra:", error);
+      res.status(500).json({ error: "Erro ao importar talhões" });
+    }
+  });
+
+  // Update colheita status/área de um talhão da safra
+  app.patch("/api/safras/talhoes/:talhaoId/colheita", authenticateToken, authorizeRoles("admin", "superadmin"), async (req, res) => {
+    try {
+      const { talhaoId } = req.params;
+      const payload = {
+        colheitaStatus: req.body.colheitaStatus,
+        areaColhida: req.body.areaColhida,
+      };
+      const talhao = await storage.updateTalhaoSafraColheita(talhaoId, payload);
+      res.json(talhao);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error updating talhao colheita:", error);
+      res.status(500).json({ error: "Erro ao atualizar colheita do talhão" });
+    }
+  });
+
+  // Get talhoes for safra
+  app.get("/api/safras/:id/talhoes", authenticateToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const talhoes = await storage.getTalhoesBySafra(id);
+      res.json(talhoes);
+    } catch (error) {
+      console.error("Error fetching talhoes safra:", error);
+      res.status(500).json({ error: "Erro ao buscar talhoes da safra" });
+    }
+  });
+
+  // Get talhoes for safra by nome (legacy)
+  app.get("/api/safras/:nome/talhoes-by-nome", authenticateToken, async (req, res) => {
+    try {
+      const { nome } = req.params;
+      const talhoes = await storage.getTalhoesBySafraNome(nome);
+      res.json(talhoes);
+    } catch (error) {
+      console.error("Error fetching talhoes safra by nome:", error);
+      res.status(500).json({ error: "Erro ao buscar talhoes da safra" });
+    }
+  });
+
 
   // GET: Buscar histórico de cotações (retorna dados do cache pré-carregado)
   app.get("/api/cotacao-algodao/historico", authenticateToken, async (req, res) => {

@@ -11,7 +11,7 @@ function resolveUrl(path: string): string {
 }
 
 // Get auth headers from localStorage
-function getAuthHeaders(): HeadersInit {
+function getAuthHeaders(): { Authorization?: string } {
   const token = localStorage.getItem("cotton_access_token");
   if (!token) {
     return {};
@@ -57,7 +57,16 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const authHeaders = getAuthHeaders();
+    
+    // Se não há token e a URL requer autenticação, retornar null ou lançar erro
     const url = queryKey.join("/") as string;
+    if (url.startsWith("/api") && !authHeaders.Authorization) {
+      if (unauthorizedBehavior === "returnNull") {
+        return null;
+      }
+      throw new Error("401: Token de autenticação não fornecido");
+    }
+    
     const fullUrl = resolveUrl(url);
 
     const res = await fetch(fullUrl, {

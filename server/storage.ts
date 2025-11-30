@@ -379,28 +379,39 @@ export class PostgresStorage implements IStorage {
       console.log(`✅ ${result.length} fardo(s) criado(s) com sucesso`);
       return result;
     } catch (error: any) {
-      // Se colunas novas não existirem, tenta inserir sem elas
-      if (error.code === '42703') {
-        const result = await db.insert(balesTable).values(balesData).returning({
-          id: balesTable.id,
-          safra: balesTable.safra,
-          talhao: balesTable.talhao,
-          numero: balesTable.numero,
-          status: balesTable.status,
-          createdAt: balesTable.createdAt,
-          updatedAt: balesTable.updatedAt,
-        });
-        console.log(`✅ ${result.length} fardo(s) criado(s) com sucesso (sem colunas de rastreamento)`);
-        return result.map(b => ({ 
-          ...b, 
-          statusHistory: null,
-          createdBy: 'unknown',
-          updatedBy: null,
-          transportedAt: null,
-          transportedBy: null,
-          processedAt: null,
-          processedBy: null,
-        }));
+      // Se coluna "tipo" não existe (código 42703), tenta sem ela usando SQL raw
+      if (error.code === '42703' && error.message?.includes('tipo')) {
+        console.log("[batchCreateBales] Column 'tipo' not found, using fallback insert");
+
+        // Criar em lote usando SQL raw
+        const createdBales: Bale[] = [];
+        for (const bale of balesData) {
+          const result = await db.execute(sql`
+            INSERT INTO bales (id, safra, talhao, numero, status, created_by, created_at, updated_at)
+            VALUES (${bale.id}, ${bale.safra}, ${bale.talhao}, ${bale.numero}, 'campo', ${bale.createdBy}, ${bale.createdAt}, ${bale.updatedAt})
+            RETURNING id, safra, talhao, numero, status, created_at, updated_at
+          `);
+          const row = result.rows[0] as any;
+          createdBales.push({
+            id: row.id,
+            safra: row.safra,
+            talhao: row.talhao,
+            numero: row.numero,
+            tipo: tipo as BaleType,
+            status: row.status as BaleStatus,
+            statusHistory: null,
+            createdBy: bale.createdBy,
+            createdAt: row.created_at,
+            updatedBy: null,
+            updatedAt: row.updated_at,
+            transportedAt: null,
+            transportedBy: null,
+            processedAt: null,
+            processedBy: null,
+          });
+        }
+        console.log(`✅ ${createdBales.length} fardo(s) criado(s) com sucesso (fallback)`);
+        return createdBales;
       }
       throw error;
     }
@@ -409,37 +420,45 @@ export class PostgresStorage implements IStorage {
   async createSingleBale(id: string, safra: string, talhao: string, numero: number, userId: string): Promise<Bale> {
     const now = new Date();
 
-    const baleData = {
-      id: id, // Ex: S25/26-T2B-00001
-      safra: safra,
-      talhao,
-      numero: numero,
-      status: "campo" as BaleStatus,
-      createdBy: userId,
-      createdAt: now,
-      updatedAt: now,
-    };
-
+    // Primeiro tenta com todas as colunas
     try {
-      const result = await db.insert(balesTable).values(baleData).returning();
+      const baleDataFull = {
+        id: id,
+        safra: safra,
+        talhao,
+        numero: numero,
+        tipo: "normal" as BaleType,
+        status: "campo" as BaleStatus,
+        createdBy: userId,
+        createdAt: now,
+        updatedAt: now,
+      };
+      const result = await db.insert(balesTable).values(baleDataFull).returning();
       return result[0];
     } catch (error: any) {
-      // Se colunas novas não existirem, tenta inserir sem elas
-      if (error.code === '42703') {
-        const result = await db.insert(balesTable).values(baleData).returning({
-          id: balesTable.id,
-          safra: balesTable.safra,
-          talhao: balesTable.talhao,
-          numero: balesTable.numero,
-          status: balesTable.status,
-          createdAt: balesTable.createdAt,
-          updatedAt: balesTable.updatedAt,
-        });
-        return { 
-          ...result[0], 
+      // Se coluna "tipo" não existe (código 42703), tenta sem ela usando SQL raw
+      if (error.code === '42703' && error.message?.includes('tipo')) {
+        console.log("[createSingleBale] Column 'tipo' not found, using fallback insert");
+
+        const result = await db.execute(sql`
+          INSERT INTO bales (id, safra, talhao, numero, status, created_by, created_at, updated_at)
+          VALUES (${id}, ${safra}, ${talhao}, ${numero}, 'campo', ${userId}, ${now}, ${now})
+          RETURNING id, safra, talhao, numero, status, created_at, updated_at
+        `);
+
+        const row = result.rows[0] as any;
+        return {
+          id: row.id,
+          safra: row.safra,
+          talhao: row.talhao,
+          numero: row.numero,
+          tipo: "normal" as BaleType,
+          status: row.status as BaleStatus,
           statusHistory: null,
-          createdBy: 'unknown',
+          createdBy: userId,
+          createdAt: row.created_at,
           updatedBy: null,
+          updatedAt: row.updated_at,
           transportedAt: null,
           transportedBy: null,
           processedAt: null,

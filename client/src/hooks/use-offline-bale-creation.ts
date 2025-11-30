@@ -9,6 +9,7 @@ interface CreateBaleData {
   safra: string;
   talhao: string;
   numero: number;
+  tipo?: "normal" | "bordadura" | "bituca";
 }
 
 interface CreateBatchData {

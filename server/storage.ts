@@ -53,7 +53,7 @@ export interface IStorage {
   getAllBales(): Promise<Bale[]>;
   getBale(id: string): Promise<Bale | undefined>;
   getBaleByQRCode(qrCode: string): Promise<Bale | undefined>;
-  createSingleBale(id: string, safra: string, talhao: string, numero: number, userId: string): Promise<Bale>;
+  createSingleBale(id: string, safra: string, talhao: string, numero: number, userId: string, tipo?: BaleType): Promise<Bale>;
   batchCreateBales(data: BatchCreateBales, userId: string): Promise<Bale[]>;
   updateBaleStatus(id: string, status: BaleStatus, userId: string): Promise<Bale>;
   getBaleStats(safra?: string): Promise<{
@@ -417,7 +417,7 @@ export class PostgresStorage implements IStorage {
     }
   }
 
-  async createSingleBale(id: string, safra: string, talhao: string, numero: number, userId: string): Promise<Bale> {
+  async createSingleBale(id: string, safra: string, talhao: string, numero: number, userId: string, tipo: BaleType = "normal"): Promise<Bale> {
     const now = new Date();
 
     // Primeiro tenta com todas as colunas
@@ -427,7 +427,7 @@ export class PostgresStorage implements IStorage {
         safra: safra,
         talhao,
         numero: numero,
-        tipo: "normal" as BaleType,
+        tipo: tipo,
         status: "campo" as BaleStatus,
         createdBy: userId,
         createdAt: now,
@@ -452,7 +452,7 @@ export class PostgresStorage implements IStorage {
           safra: row.safra,
           talhao: row.talhao,
           numero: row.numero,
-          tipo: "normal" as BaleType,
+          tipo: tipo,
           status: row.status as BaleStatus,
           statusHistory: null,
           createdBy: userId,

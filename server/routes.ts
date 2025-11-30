@@ -361,9 +361,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create single bale (requires campo, admin or superadmin role)
   app.post("/api/bales", authenticateToken, authorizeRoles("campo", "admin", "superadmin"), async (req, res) => {
     try {
-      const { id, safra, talhao, numero } = req.body;
+      const { id, safra, talhao, numero, tipo = "normal" } = req.body;
 
-      console.log("[POST /api/bales] Received:", { id, safra, talhao, numero, userId: req.user?.userId });
+      console.log("[POST /api/bales] Received:", { id, safra, talhao, numero, tipo, userId: req.user?.userId });
 
       if (!id || !safra || !talhao || !numero) {
         return res.status(400).json({
@@ -381,7 +381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Use userId from JWT token
       const userId = req.user?.userId || "unknown-user";
-      const bale = await storage.createSingleBale(id, safra, talhao, numero, userId);
+      const bale = await storage.createSingleBale(id, safra, talhao, numero, userId, tipo);
 
       console.log("[POST /api/bales] Created:", bale.id);
 

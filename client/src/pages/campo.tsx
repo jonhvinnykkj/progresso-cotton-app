@@ -429,6 +429,7 @@ function IndividualTab({
   const [wizardStep, setWizardStep] = useState(1);
   const [selectedTalhao, setSelectedTalhao] = useState<{ nome: string; hectares: string } | null>(null);
   const [numero, setNumero] = useState("");
+  const [tipo, setTipo] = useState<"normal" | "bordadura" | "bituca">("normal");
 
   const wizardRef = useRef<HTMLDivElement>(null);
 
@@ -445,6 +446,7 @@ function IndividualTab({
     setWizardStep(1);
     setSelectedTalhao(null);
     setNumero("");
+    setTipo("normal");
   };
 
   const handleCreateSingle = async () => {
@@ -459,12 +461,14 @@ function IndividualTab({
         safra: defaultSafra,
         talhao: selectedTalhao.nome,
         numero: parseInt(numero, 10),
+        tipo: tipo,
       });
 
+      const tipoLabel = tipo === "normal" ? "" : ` (${tipo})`;
       toast({
         variant: "success",
         title: "Fardo criado!",
-        description: `Fardo ${numero} criado no talhão ${selectedTalhao.nome}`,
+        description: `Fardo ${numero}${tipoLabel} criado no talhão ${selectedTalhao.nome}`,
       });
 
       resetWizard();
@@ -483,9 +487,16 @@ function IndividualTab({
     switch (wizardStep) {
       case 1: return !!selectedTalhao;
       case 2: return !!numero && /^\d{1,5}$/.test(numero);
+      case 3: return !!tipo; // Tipo selection
       default: return true;
     }
   };
+
+  const tipoOptions = [
+    { value: "normal", label: "Normal", description: "Fardo padrão", icon: "📦", color: "bg-primary" },
+    { value: "bordadura", label: "Bordadura", description: "Fardo de borda do talhão", icon: "🔲", color: "bg-amber-500" },
+    { value: "bituca", label: "Bituca", description: "Restos/sobras", icon: "♻️", color: "bg-orange-500" },
+  ] as const;
 
   const renderStepContent = () => {
     switch (wizardStep) {
@@ -555,6 +566,51 @@ function IndividualTab({
         return (
           <div className="space-y-6">
             <div className="text-center mb-6">
+              <div className="inline-flex p-3 rounded-full bg-amber-500/10 mb-3">
+                <Package className="w-6 h-6 text-amber-500" />
+              </div>
+              <h3 className="text-lg font-bold">Tipo do Fardo</h3>
+              <p className="text-sm text-muted-foreground">Selecione a classificação</p>
+            </div>
+
+            <div className="space-y-2">
+              {tipoOptions.map((option) => {
+                const isSelected = tipo === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => setTipo(option.value)}
+                    className={cn(
+                      "w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left",
+                      isSelected
+                        ? "bg-primary/10 border-primary"
+                        : "bg-card border-border/50 hover:border-primary/50"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center text-lg",
+                      isSelected ? option.color : "bg-muted"
+                    )}>
+                      {option.icon}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold">{option.label}</p>
+                      <p className="text-xs text-muted-foreground">{option.description}</p>
+                    </div>
+                    {isSelected && (
+                      <CheckCircle className="w-5 h-5 text-primary" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
               <div className="inline-flex p-3 rounded-full bg-green-500/10 mb-3">
                 <CheckCircle className="w-6 h-6 text-green-500" />
               </div>
@@ -570,6 +626,15 @@ function IndividualTab({
               <div className="flex justify-between items-center pb-3 border-b border-border/30">
                 <span className="text-sm text-muted-foreground">Número</span>
                 <span className="font-bold font-mono text-neon-cyan">{numero.padStart(5, '0')}</span>
+              </div>
+              <div className="flex justify-between items-center pb-3 border-b border-border/30">
+                <span className="text-sm text-muted-foreground">Tipo</span>
+                <span className={cn(
+                  "font-semibold capitalize",
+                  tipo === "normal" ? "text-primary" : tipo === "bordadura" ? "text-amber-500" : "text-orange-500"
+                )}>
+                  {tipo}
+                </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">ID Final</span>
@@ -613,15 +678,16 @@ function IndividualTab({
           <div className="h-1.5 bg-muted">
             <div
               className="h-full bg-neon-cyan transition-all duration-300"
-              style={{ width: `${(wizardStep / 3) * 100}%` }}
+              style={{ width: `${(wizardStep / 4) * 100}%` }}
             />
           </div>
 
-          <div className="flex justify-center gap-3 p-4 border-b border-border/30 bg-muted/20">
+          <div className="flex justify-center gap-2 sm:gap-3 p-4 border-b border-border/30 bg-muted/20">
             {[
               { num: 1, label: "Talhão" },
               { num: 2, label: "Número" },
-              { num: 3, label: "Confirmar" },
+              { num: 3, label: "Tipo" },
+              { num: 4, label: "Confirmar" },
             ].map((step) => (
               <div key={step.num} className="flex flex-col items-center gap-1">
                 <div
@@ -665,17 +731,17 @@ function IndividualTab({
             <Button
               className={cn(
                 "flex-1 h-12 rounded-xl text-base",
-                wizardStep === 3 ? "bg-green-500 hover:bg-green-600" : "bg-neon-cyan hover:bg-neon-cyan/90 text-black"
+                wizardStep === 4 ? "bg-green-500 hover:bg-green-600" : "bg-neon-cyan hover:bg-neon-cyan/90 text-black"
               )}
               onClick={() => {
-                if (wizardStep === 3) handleCreateSingle();
+                if (wizardStep === 4) handleCreateSingle();
                 else setWizardStep(wizardStep + 1);
               }}
               disabled={!canProceed() || isCreating}
             >
               {isCreating ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
-              ) : wizardStep === 3 ? (
+              ) : wizardStep === 4 ? (
                 <>
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Criar Fardo

@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Bale, Carregamento, Lote, Fardinho } from "@shared/schema";
+import type { Bale, Carregamento, Lote, Fardinho, ClassificacaoLote } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -82,8 +82,10 @@ export default function Algodoeira() {
   const [lotePesoPluma, setLotePesoPluma] = useState("");
   const [loteObs, setLoteObs] = useState("");
 
-  // Fardinhos state (separado dos lotes)
+  // Fardinhos state (vinculado a lotes)
+  const [fardinhoLoteId, setFardinhoLoteId] = useState("");
   const [fardinhoQtd, setFardinhoQtd] = useState("");
+  const [fardinhoPeso, setFardinhoPeso] = useState("");
   const [fardinhoObs, setFardinhoObs] = useState("");
 
   // Edit state for lotes (pluma)
@@ -94,6 +96,7 @@ export default function Algodoeira() {
   // Edit state for fardinhos
   const [editingFardinhoId, setEditingFardinhoId] = useState<string | null>(null);
   const [editingFardinhoQtd, setEditingFardinhoQtd] = useState("");
+  const [editingFardinhoPeso, setEditingFardinhoPeso] = useState("");
   const [editingFardinhoObs, setEditingFardinhoObs] = useState("");
 
   const { updateStatus } = useOfflineStatusUpdate();
@@ -191,6 +194,23 @@ export default function Algodoeira() {
       return data.pesoBrutoTotal || 0;
     },
     enabled: !!selectedSafra && (activeTab === "pluma" || activeTab === "fardinhos"),
+  });
+
+  // Query para buscar classificações de lote
+  const { data: classificacoes = [] } = useQuery<ClassificacaoLote[]>({
+    queryKey: ["/api/classificacoes-lote"],
+    queryFn: async () => {
+      const url = API_URL
+        ? `${API_URL}/api/classificacoes-lote`
+        : `/api/classificacoes-lote`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: activeTab === "fardinhos" || activeTab === "pluma",
   });
 
   // Mutation para criar carregamento
@@ -314,7 +334,9 @@ export default function Algodoeira() {
   const createFardinhoMutation = useMutation({
     mutationFn: async (data: {
       safra: string;
+      loteId: string;
       quantidade: number;
+      pesoUnitario: string;
       observacao?: string;
     }) => {
       const url = API_URL ? `${API_URL}/api/fardinhos` : `/api/fardinhos`;
@@ -340,7 +362,10 @@ export default function Algodoeira() {
         description: `${fardinhoQtd} fardinhos registrados com sucesso.`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/fardinhos", selectedSafra] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lotes", selectedSafra] });
+      setFardinhoLoteId("");
       setFardinhoQtd("");
+      setFardinhoPeso("");
       setFardinhoObs("");
     },
     onError: (error: Error) => {
@@ -419,7 +444,7 @@ export default function Algodoeira() {
 
   // Mutation para atualizar fardinho
   const updateFardinhoMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: { quantidade?: number; observacao?: string } }) => {
+    mutationFn: async ({ id, data }: { id: string; data: { quantidade?: number; pesoUnitario?: string; observacao?: string } }) => {
       const url = API_URL ? `${API_URL}/api/fardinhos/${id}` : `/api/fardinhos/${id}`;
       const response = await fetch(url, {
         method: "PATCH",
@@ -440,8 +465,10 @@ export default function Algodoeira() {
         description: "Registro de fardinhos atualizado com sucesso.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/fardinhos", selectedSafra] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lotes", selectedSafra] });
       setEditingFardinhoId(null);
       setEditingFardinhoQtd("");
+      setEditingFardinhoPeso("");
       setEditingFardinhoObs("");
     },
     onError: () => {
@@ -472,6 +499,7 @@ export default function Algodoeira() {
         description: "Registro de fardinhos removido com sucesso.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/fardinhos", selectedSafra] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lotes", selectedSafra] });
     },
     onError: () => {
       toast({
@@ -557,11 +585,29 @@ export default function Algodoeira() {
 
   // Handler para criar registro de fardinhos
   const handleCreateFardinho = () => {
+    if (!fardinhoLoteId) {
+      toast({
+        variant: "warning",
+        title: "Dados incompletos",
+        description: "Selecione o lote.",
+      });
+      return;
+    }
+
     if (!fardinhoQtd) {
       toast({
         variant: "warning",
         title: "Dados incompletos",
         description: "Informe a quantidade de fardinhos.",
+      });
+      return;
+    }
+
+    if (!fardinhoPeso) {
+      toast({
+        variant: "warning",
+        title: "Dados incompletos",
+        description: "Informe o peso unitário do fardinho.",
       });
       return;
     }
@@ -578,7 +624,9 @@ export default function Algodoeira() {
 
     createFardinhoMutation.mutate({
       safra: selectedSafra,
+      loteId: fardinhoLoteId,
       quantidade,
+      pesoUnitario: fardinhoPeso.replace(",", "."),
       observacao: fardinhoObs || undefined,
     });
   };
@@ -614,12 +662,13 @@ export default function Algodoeira() {
   const handleEditFardinho = (fardinho: Fardinho) => {
     setEditingFardinhoId(fardinho.id);
     setEditingFardinhoQtd(fardinho.quantidade.toString());
+    setEditingFardinhoPeso(fardinho.pesoUnitario);
     setEditingFardinhoObs(fardinho.observacao || "");
   };
 
   // Handler para salvar edição de fardinho
   const handleSaveFardinho = () => {
-    if (!editingFardinhoId || !editingFardinhoQtd) return;
+    if (!editingFardinhoId || !editingFardinhoQtd || !editingFardinhoPeso) return;
 
     const quantidade = parseInt(editingFardinhoQtd);
     if (isNaN(quantidade) || quantidade <= 0) {
@@ -635,6 +684,7 @@ export default function Algodoeira() {
       id: editingFardinhoId,
       data: {
         quantidade,
+        pesoUnitario: editingFardinhoPeso.replace(",", "."),
         observacao: editingFardinhoObs || undefined,
       },
     });
@@ -644,6 +694,7 @@ export default function Algodoeira() {
   const handleCancelEditFardinho = () => {
     setEditingFardinhoId(null);
     setEditingFardinhoQtd("");
+    setEditingFardinhoPeso("");
     setEditingFardinhoObs("");
   };
 
@@ -1567,38 +1618,70 @@ export default function Algodoeira() {
                   <div>
                     <h2 className="text-lg font-semibold">Registrar Fardinhos</h2>
                     <p className="text-sm text-muted-foreground">
-                      Informe a quantidade de fardinhos produzidos
+                      Vincule fardinhos a um lote com peso unitário
                     </p>
                   </div>
                 </div>
               </div>
 
               <div className="p-5 space-y-5">
-                {/* Seleção de Safra */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-muted-foreground">
-                    Safra
-                  </label>
-                  <div className="h-12 rounded-xl bg-surface border border-border/50 flex items-center px-3">
-                    <span className="text-sm font-medium">
-                      {safraAtiva ? `Safra ${safraAtiva.nome}` : "Nenhuma safra configurada"}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Input de quantidade de fardinhos */}
+                {/* Seleção de Lote */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    Quantidade de Fardinhos
+                    <Hash className="w-4 h-4" />
+                    Lote
                   </label>
-                  <Input
-                    type="number"
-                    placeholder="Ex: 50"
-                    value={fardinhoQtd}
-                    onChange={(e) => setFardinhoQtd(e.target.value)}
-                    className="h-12 rounded-xl bg-surface border-border/50 text-lg font-mono"
-                  />
+                  {(lotes ?? []).length === 0 ? (
+                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm text-amber-400">
+                      Nenhum lote disponível. Crie um lote primeiro na aba "Pluma".
+                    </div>
+                  ) : (
+                    <Select value={fardinhoLoteId} onValueChange={setFardinhoLoteId}>
+                      <SelectTrigger className="h-12 rounded-xl bg-surface border-border/50">
+                        <SelectValue placeholder="Selecione o lote" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(lotes ?? []).map((lote) => (
+                          <SelectItem key={lote.id} value={lote.id}>
+                            Lote #{lote.numeroLote} - {parseFloat(lote.pesoPluma).toLocaleString("pt-BR")} KG ({lote.qtdFardinhos} fardinhos)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                {/* Quantidade e Peso */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Input de quantidade de fardinhos */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                      <Package className="w-4 h-4" />
+                      Quantidade
+                    </label>
+                    <Input
+                      type="number"
+                      placeholder="Ex: 50"
+                      value={fardinhoQtd}
+                      onChange={(e) => setFardinhoQtd(e.target.value)}
+                      className="h-12 rounded-xl bg-surface border-border/50 text-lg font-mono"
+                    />
+                  </div>
+
+                  {/* Input de peso unitário */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                      <Scale className="w-4 h-4" />
+                      Peso (KG)
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="Ex: 200"
+                      value={fardinhoPeso}
+                      onChange={(e) => setFardinhoPeso(e.target.value)}
+                      className="h-12 rounded-xl bg-surface border-border/50 text-lg font-mono"
+                    />
+                  </div>
                 </div>
 
                 {/* Observação opcional */}
@@ -1615,25 +1698,28 @@ export default function Algodoeira() {
                   />
                 </div>
 
-                {/* Preview do peso médio */}
-                {fardinhoQtd && totaisLotes.totalPesoPluma > 0 && (
-                  <div className="p-4 rounded-xl bg-neon-orange/10 border border-neon-orange/20">
+                {/* Preview do peso pluma calculado */}
+                {fardinhoQtd && fardinhoPeso && (
+                  <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Scale className="w-4 h-4 text-neon-orange" />
-                        <span className="text-sm font-semibold text-neon-orange">Peso Médio após registro</span>
+                        <Wheat className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-semibold text-primary">Peso Pluma a adicionar</span>
                       </div>
-                      <p className="text-xl font-bold font-mono text-neon-orange">
-                        {(totaisLotes.totalPesoPluma / (totaisLotes.totalFardinhos + parseInt(fardinhoQtd || "0"))).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} KG
+                      <p className="text-xl font-bold font-mono text-primary">
+                        {(parseInt(fardinhoQtd || "0") * parseFloat(fardinhoPeso.replace(",", ".") || "0")).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} KG
                       </p>
                     </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      = {fardinhoQtd} fardinhos × {fardinhoPeso} KG
+                    </p>
                   </div>
                 )}
 
                 {/* Botão registrar */}
                 <Button
                   onClick={handleCreateFardinho}
-                  disabled={createFardinhoMutation.isPending || !fardinhoQtd}
+                  disabled={createFardinhoMutation.isPending || !fardinhoLoteId || !fardinhoQtd || !fardinhoPeso}
                   className="w-full h-14 rounded-xl bg-neon-cyan hover:bg-neon-cyan/90 text-black font-bold text-base shadow-glow-cyan"
                 >
                   {createFardinhoMutation.isPending ? (
@@ -1677,6 +1763,8 @@ export default function Algodoeira() {
                   <div className="space-y-2 max-h-80 overflow-y-auto">
                     {(fardinhos ?? []).map((fardinho) => {
                       const isEditing = editingFardinhoId === fardinho.id;
+                      const lote = (lotes ?? []).find(l => l.id === fardinho.loteId);
+                      const pesoTotal = fardinho.quantidade * parseFloat(fardinho.pesoUnitario || "0");
 
                       if (isEditing) {
                         return (
@@ -1698,12 +1786,19 @@ export default function Algodoeira() {
                               />
                               <Input
                                 type="text"
-                                placeholder="Observação"
-                                value={editingFardinhoObs}
-                                onChange={(e) => setEditingFardinhoObs(e.target.value)}
-                                className="h-10 rounded-lg bg-surface border-border/50"
+                                placeholder="Peso (KG)"
+                                value={editingFardinhoPeso}
+                                onChange={(e) => setEditingFardinhoPeso(e.target.value)}
+                                className="h-10 rounded-lg bg-surface border-border/50 font-mono"
                               />
                             </div>
+                            <Input
+                              type="text"
+                              placeholder="Observação"
+                              value={editingFardinhoObs}
+                              onChange={(e) => setEditingFardinhoObs(e.target.value)}
+                              className="h-10 rounded-lg bg-surface border-border/50"
+                            />
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
@@ -1740,11 +1835,16 @@ export default function Algodoeira() {
                         >
                           <div className="flex items-center gap-3">
                             <Package className="w-5 h-5 text-neon-cyan" />
-                            <span className="text-sm font-mono font-bold">
-                              {fardinho.quantidade} fardinhos
-                            </span>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-mono font-bold">
+                                {fardinho.quantidade} × {parseFloat(fardinho.pesoUnitario).toLocaleString("pt-BR")} KG
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                = {pesoTotal.toLocaleString("pt-BR")} KG {lote ? `(Lote #${lote.numeroLote})` : ""}
+                              </span>
+                            </div>
                             {fardinho.observacao && (
-                              <span className="text-xs text-muted-foreground truncate max-w-32">
+                              <span className="text-xs text-muted-foreground truncate max-w-24">
                                 {fardinho.observacao}
                               </span>
                             )}

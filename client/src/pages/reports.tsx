@@ -51,7 +51,7 @@ import { ptBR } from "date-fns/locale";
 import { useLocation } from "wouter";
 
 // Tipos de relatório
-type ReportType = "safra-summary" | "productivity" | "shipments" | "processing" | "inventory";
+type ReportType = "safra-summary" | "productivity" | "shipments" | "processing" | "inventory" | "lotes-classificacao";
 
 interface ReportOption {
   id: ReportType;
@@ -102,6 +102,14 @@ const REPORT_OPTIONS: ReportOption[] = [
     icon: Package,
     color: "text-cyan-500",
     bgColor: "bg-cyan-500/10",
+  },
+  {
+    id: "lotes-classificacao",
+    title: "Lotes por Classificação",
+    description: "Lotes com peso bruto (1.8 × líquido)",
+    icon: Scale,
+    color: "text-yellow-500",
+    bgColor: "bg-yellow-500/10",
   },
 ];
 

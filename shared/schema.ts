@@ -91,14 +91,26 @@ export const rendimentoTalhao = pgTable("rendimento_talhao", {
   updatedBy: text("updated_by"), // Usuário que atualizou
 });
 
+// Classificação de lotes (peso padrão por classificação)
+// Cada classificação representa um peso padrão de fardinho (ex: 130kg, 140kg, etc.)
+export const classificacoesLote = pgTable("classificacoes_lote", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nome: text("nome").notNull().unique(), // Nome da classificação (ex: "130", "140", "150")
+  pesoKg: text("peso_kg").notNull(), // Peso padrão do fardinho em KG
+  descricao: text("descricao"), // Descrição opcional
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: text("created_by"),
+});
+
 // Lotes de beneficiamento (batches processadas na algodoeira)
-// Lote = quantidade de fardos beneficiados em um dia, independente de talhão
+// Lote = agrupamento de fardinhos com mesma classificação de peso
 export const lotes = pgTable("lotes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   safra: text("safra").notNull(),
-  numeroLote: integer("numero_lote").notNull(), // Número sequencial do lote na safra
-  pesoPluma: text("peso_pluma").notNull(), // Peso da pluma em KG (manual)
-  qtdFardinhos: integer("qtd_fardinhos").notNull().default(0), // Quantidade de fardinhos (opcional, default 0)
+  numeroLote: integer("numero_lote").notNull(), // Número sequencial do lote na safra (até 130)
+  classificacaoId: varchar("classificacao_id").references(() => classificacoesLote.id), // Classificação de peso
+  pesoPluma: text("peso_pluma").notNull(), // Peso da pluma em KG (calculado: qtdFardinhos * pesoFardinho)
+  qtdFardinhos: integer("qtd_fardinhos").notNull().default(0), // Quantidade de fardinhos no lote
   dataProcessamento: timestamp("data_processamento").notNull().defaultNow(),
   observacao: text("observacao"), // Observação opcional
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -107,11 +119,14 @@ export const lotes = pgTable("lotes", {
   updatedBy: text("updated_by"), // Último usuário que atualizou
 });
 
-// Registro de fardinhos (separado dos lotes de pluma)
+// Registro de fardinhos (vinculado a um lote)
+// Cada fardinho tem um peso e pertence a um lote específico
 export const fardinhos = pgTable("fardinhos", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   safra: text("safra").notNull(),
+  loteId: varchar("lote_id").references(() => lotes.id, { onDelete: "cascade" }), // Lote a que pertence
   quantidade: integer("quantidade").notNull(), // Quantidade de fardinhos registrados
+  pesoUnitario: text("peso_unitario").notNull().default("0"), // Peso de cada fardinho em KG
   dataRegistro: timestamp("data_registro").notNull().defaultNow(),
   observacao: text("observacao"), // Observação opcional
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -269,17 +284,29 @@ export const upsertRendimentoTalhaoSchema = z.object({
 export type UpsertRendimentoTalhao = z.infer<typeof upsertRendimentoTalhaoSchema>;
 export type RendimentoTalhao = typeof rendimentoTalhao.$inferSelect;
 
-// Lotes schemas (apenas peso da pluma)
+// Classificação de lotes schemas
+export const createClassificacaoLoteSchema = z.object({
+  nome: z.string().min(1, "Nome é obrigatório"),
+  pesoKg: z.string().min(1, "Peso é obrigatório"),
+  descricao: z.string().optional(),
+});
+
+export type CreateClassificacaoLote = z.infer<typeof createClassificacaoLoteSchema>;
+export type ClassificacaoLote = typeof classificacoesLote.$inferSelect;
+
+// Lotes schemas (peso da pluma calculado automaticamente: fardinhos * peso)
 export const createLoteSchema = z.object({
   safra: z.string().min(1, "Safra é obrigatória"),
-  pesoPluma: z.string().min(1, "Peso da pluma é obrigatório"),
-  qtdFardinhos: z.number().optional().default(0), // Opcional, agora fardinhos são registrados separadamente
+  classificacaoId: z.string().optional(), // Classificação de peso do lote
+  pesoPluma: z.string().optional(), // Calculado automaticamente se não fornecido
+  qtdFardinhos: z.number().optional().default(0), // Quantidade de fardinhos no lote
   dataProcessamento: z.string().optional(),
   observacao: z.string().optional(),
 });
 
 export const updateLoteSchema = z.object({
-  pesoPluma: z.string().min(1, "Peso da pluma é obrigatório").optional(),
+  classificacaoId: z.string().optional(),
+  pesoPluma: z.string().optional(),
   qtdFardinhos: z.number().optional(),
   dataProcessamento: z.string().optional(),
   observacao: z.string().optional(),
@@ -292,13 +319,17 @@ export type Lote = typeof lotes.$inferSelect;
 // Fardinhos schemas
 export const createFardinhoSchema = z.object({
   safra: z.string().min(1, "Safra é obrigatória"),
+  loteId: z.string().min(1, "Lote é obrigatório"), // Lote a que pertence
   quantidade: z.number().min(1, "Quantidade deve ser maior que 0"),
+  pesoUnitario: z.string().min(1, "Peso unitário é obrigatório"), // Peso de cada fardinho
   dataRegistro: z.string().optional(),
   observacao: z.string().optional(),
 });
 
 export const updateFardinhoSchema = z.object({
+  loteId: z.string().optional(),
   quantidade: z.number().min(1, "Quantidade deve ser maior que 0").optional(),
+  pesoUnitario: z.string().optional(),
   observacao: z.string().optional(),
 });
 

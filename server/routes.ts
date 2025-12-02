@@ -22,6 +22,7 @@ import {
   updateSafraSchema,
   batchCreateTalhoesSafraSchema,
   createTalhaoSafraSchema,
+  createClassificacaoLoteSchema,
 } from "@shared/schema";
 import { parseShapefileFromBuffers, parseGeoJSON } from "./shapefile-parser";
 import multer from "multer";
@@ -676,6 +677,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'shipments': 'carregamentos',
         'processing': 'beneficiamento',
         'inventory': 'inventario',
+        'lotes-classificacao': 'lotes-classificacao',
         'custom': 'personalizado',
       };
       const reportName = reportNames[reportType] || 'relatorio';
@@ -732,6 +734,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'shipments': 'carregamentos',
         'processing': 'beneficiamento',
         'inventory': 'inventario',
+        'lotes-classificacao': 'lotes-classificacao',
         'custom': 'personalizado',
       };
       const reportName = reportNames[reportType] || 'relatorio';
@@ -1007,7 +1010,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ========== FARDINHOS ENDPOINTS (SEPARADO DOS LOTES) ==========
+  // ========== CLASSIFICAÇÕES DE LOTE ENDPOINTS ==========
+
+  // Get all classificações de lote
+  app.get("/api/classificacoes-lote", authenticateToken, async (req, res) => {
+    try {
+      const classificacoes = await storage.getAllClassificacoesLote();
+      res.json(classificacoes);
+    } catch (error) {
+      console.error("Error fetching classificacoes:", error);
+      res.status(500).json({ error: "Erro ao buscar classificações" });
+    }
+  });
+
+  // Create classificação de lote
+  app.post("/api/classificacoes-lote", authenticateToken, authorizeRoles("algodoeira", "admin", "superadmin"), async (req, res) => {
+    try {
+      const data = createClassificacaoLoteSchema.parse(req.body);
+      const userId = req.user?.userId || "unknown-user";
+      const classificacao = await storage.createClassificacaoLote(data, userId);
+      res.status(201).json(classificacao);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Dados inválidos",
+          details: error.errors,
+        });
+      }
+      console.error("Error creating classificacao:", error);
+      res.status(500).json({ error: "Erro ao criar classificação" });
+    }
+  });
+
+  // Delete classificação de lote
+  app.delete("/api/classificacoes-lote/:id", authenticateToken, authorizeRoles("admin", "superadmin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteClassificacaoLote(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting classificacao:", error);
+      res.status(500).json({ error: "Erro ao deletar classificação" });
+    }
+  });
+
+  // ========== FARDINHOS ENDPOINTS (VINCULADO A LOTES) ==========
 
   // Get all fardinhos by safra
   app.get("/api/fardinhos/:safra", authenticateToken, async (req, res) => {
@@ -1030,6 +1077,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching total fardinhos:", error);
       res.status(500).json({ error: "Erro ao buscar total de fardinhos" });
+    }
+  });
+
+  // Get fardinhos by lote
+  app.get("/api/fardinhos/lote/:loteId", authenticateToken, async (req, res) => {
+    try {
+      const { loteId } = req.params;
+      const fardinhos = await storage.getFardinhosByLote(loteId);
+      res.json(fardinhos);
+    } catch (error) {
+      console.error("Error fetching fardinhos by lote:", error);
+      res.status(500).json({ error: "Erro ao buscar fardinhos do lote" });
     }
   });
 

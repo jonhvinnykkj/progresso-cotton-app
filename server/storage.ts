@@ -33,10 +33,12 @@ import {
   type TalhaoSafra,
   type CreateTalhaoSafra,
   type BatchCreateTalhoesSafra,
+  type ClassificacaoLote,
+  type CreateClassificacaoLote,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
-import { users as usersTable, bales as balesTable, settings as settingsTable, talhaoCounters as talhaoCountersTable, notifications as notificationsTable, producaoTalhao as producaoTalhaoTable, carregamentos as carregamentosTable, rendimentoTalhao as rendimentoTalhaoTable, lotes as lotesTable, fardinhos as fardinhosTable, perdas as perdasTable, talhoesInfo as talhoesInfoTable, safras as safrasTable, talhoesSafra as talhoesSafraTable } from "@shared/schema";
+import { users as usersTable, bales as balesTable, settings as settingsTable, talhaoCounters as talhaoCountersTable, notifications as notificationsTable, producaoTalhao as producaoTalhaoTable, carregamentos as carregamentosTable, rendimentoTalhao as rendimentoTalhaoTable, lotes as lotesTable, fardinhos as fardinhosTable, perdas as perdasTable, talhoesInfo as talhoesInfoTable, safras as safrasTable, talhoesSafra as talhoesSafraTable, classificacoesLote as classificacoesLoteTable } from "@shared/schema";
 import { eq, sql, inArray } from "drizzle-orm";
 import { hashPassword } from "./auth";
 
@@ -1060,8 +1062,9 @@ export class PostgresStorage implements IStorage {
         .values({
           safra: data.safra,
           numeroLote,
-          pesoPluma: data.pesoPluma,
-          qtdFardinhos: data.qtdFardinhos,
+          classificacaoId: data.classificacaoId || null,
+          pesoPluma: data.pesoPluma || "0", // Será recalculado quando adicionar fardinhos
+          qtdFardinhos: data.qtdFardinhos || 0,
           dataProcessamento,
           observacao: data.observacao || null,
           createdAt: now,
@@ -1091,6 +1094,9 @@ export class PostgresStorage implements IStorage {
       }
       if (data.qtdFardinhos !== undefined) {
         updates.qtdFardinhos = data.qtdFardinhos;
+      }
+      if (data.classificacaoId !== undefined) {
+        updates.classificacaoId = data.classificacaoId;
       }
       if (data.dataProcessamento !== undefined) {
         updates.dataProcessamento = new Date(data.dataProcessamento);
@@ -1125,7 +1131,64 @@ export class PostgresStorage implements IStorage {
     }
   }
 
-  // Fardinhos methods (separado dos lotes)
+  // Classificação de lotes methods
+  async getAllClassificacoesLote(): Promise<ClassificacaoLote[]> {
+    try {
+      const result = await db
+        .select()
+        .from(classificacoesLoteTable)
+        .orderBy(sql`CAST(${classificacoesLoteTable.pesoKg} AS DECIMAL) ASC`);
+      return result;
+    } catch (error) {
+      console.warn('⚠️ classificacoes_lote table may not exist:', error);
+      return [];
+    }
+  }
+
+  async getClassificacaoLoteById(id: string): Promise<ClassificacaoLote | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(classificacoesLoteTable)
+        .where(eq(classificacoesLoteTable.id, id))
+        .limit(1);
+      return result[0];
+    } catch (error) {
+      console.warn('⚠️ classificacoes_lote table may not exist:', error);
+      return undefined;
+    }
+  }
+
+  async createClassificacaoLote(data: CreateClassificacaoLote, userId: string): Promise<ClassificacaoLote> {
+    try {
+      const now = new Date();
+      const result = await db
+        .insert(classificacoesLoteTable)
+        .values({
+          nome: data.nome,
+          pesoKg: data.pesoKg,
+          descricao: data.descricao || null,
+          createdAt: now,
+          createdBy: userId,
+        })
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error creating classificacao lote:', error);
+      throw error;
+    }
+  }
+
+  async deleteClassificacaoLote(id: string): Promise<void> {
+    try {
+      await db.delete(classificacoesLoteTable).where(eq(classificacoesLoteTable.id, id));
+    } catch (error) {
+      console.error('❌ Error deleting classificacao lote:', error);
+      throw new Error('Erro ao deletar classificação de lote');
+    }
+  }
+
+  // Fardinhos methods (vinculado a lotes)
   async getAllFardinhosBySafra(safra: string): Promise<Fardinho[]> {
     try {
       const result = await db
@@ -1151,13 +1214,18 @@ export class PostgresStorage implements IStorage {
         .insert(fardinhosTable)
         .values({
           safra: data.safra,
+          loteId: data.loteId,
           quantidade: data.quantidade,
+          pesoUnitario: data.pesoUnitario,
           dataRegistro,
           observacao: data.observacao || null,
           createdAt: now,
           createdBy: userId,
         })
         .returning();
+
+      // Atualizar peso pluma do lote automaticamente
+      await this.recalcularPesoPlumaLote(data.loteId);
 
       console.log('Fardinho created:', result[0]);
       return result[0];
@@ -1169,8 +1237,19 @@ export class PostgresStorage implements IStorage {
 
   async updateFardinho(id: string, data: UpdateFardinho): Promise<Fardinho> {
     try {
+      // Buscar fardinho antes de atualizar para ter o loteId
+      const fardinhoAtual = await db
+        .select()
+        .from(fardinhosTable)
+        .where(eq(fardinhosTable.id, id))
+        .limit(1);
+
+      if (!fardinhoAtual[0]) throw new Error('Fardinho não encontrado');
+
       const updateData: Record<string, unknown> = {};
       if (data.quantidade !== undefined) updateData.quantidade = data.quantidade;
+      if (data.pesoUnitario !== undefined) updateData.pesoUnitario = data.pesoUnitario;
+      if (data.loteId !== undefined) updateData.loteId = data.loteId;
       if (data.observacao !== undefined) updateData.observacao = data.observacao;
 
       const result = await db
@@ -1180,6 +1259,16 @@ export class PostgresStorage implements IStorage {
         .returning();
 
       if (!result[0]) throw new Error('Fardinho não encontrado');
+
+      // Recalcular peso do lote antigo
+      if (fardinhoAtual[0].loteId) {
+        await this.recalcularPesoPlumaLote(fardinhoAtual[0].loteId);
+      }
+      // Recalcular peso do novo lote se mudou
+      if (data.loteId && data.loteId !== fardinhoAtual[0].loteId) {
+        await this.recalcularPesoPlumaLote(data.loteId);
+      }
+
       return result[0];
     } catch (error) {
       console.error('❌ Error updating fardinho:', error);
@@ -1189,10 +1278,71 @@ export class PostgresStorage implements IStorage {
 
   async deleteFardinho(id: string): Promise<void> {
     try {
+      // Buscar fardinho antes de deletar para ter o loteId
+      const fardinho = await db
+        .select()
+        .from(fardinhosTable)
+        .where(eq(fardinhosTable.id, id))
+        .limit(1);
+
       await db.delete(fardinhosTable).where(eq(fardinhosTable.id, id));
+
+      // Recalcular peso do lote após deletar
+      if (fardinho[0]?.loteId) {
+        await this.recalcularPesoPlumaLote(fardinho[0].loteId);
+      }
     } catch (error) {
       console.error('❌ Error deleting fardinho:', error);
       throw new Error('Erro ao deletar fardinho');
+    }
+  }
+
+  // Recalcular peso pluma do lote baseado nos fardinhos
+  async recalcularPesoPlumaLote(loteId: string): Promise<void> {
+    try {
+      // Buscar todos os fardinhos do lote
+      const fardinhos = await db
+        .select()
+        .from(fardinhosTable)
+        .where(eq(fardinhosTable.loteId, loteId));
+
+      // Calcular peso total: soma de (quantidade * pesoUnitario)
+      let pesoTotal = 0;
+      let qtdTotal = 0;
+      for (const f of fardinhos) {
+        const peso = parseFloat(f.pesoUnitario) || 0;
+        pesoTotal += f.quantidade * peso;
+        qtdTotal += f.quantidade;
+      }
+
+      // Atualizar lote com peso pluma calculado
+      await db
+        .update(lotesTable)
+        .set({
+          pesoPluma: pesoTotal.toFixed(2),
+          qtdFardinhos: qtdTotal,
+          updatedAt: new Date(),
+        })
+        .where(eq(lotesTable.id, loteId));
+
+      console.log(`Lote ${loteId} recalculado: ${qtdTotal} fardinhos, ${pesoTotal.toFixed(2)} kg`);
+    } catch (error) {
+      console.error('❌ Error recalculating lote peso:', error);
+    }
+  }
+
+  // Buscar fardinhos por lote
+  async getFardinhosByLote(loteId: string): Promise<Fardinho[]> {
+    try {
+      const result = await db
+        .select()
+        .from(fardinhosTable)
+        .where(eq(fardinhosTable.loteId, loteId))
+        .orderBy(sql`${fardinhosTable.dataRegistro} DESC`);
+      return result;
+    } catch (error) {
+      console.warn('⚠️ Error fetching fardinhos by lote:', error);
+      return [];
     }
   }
 

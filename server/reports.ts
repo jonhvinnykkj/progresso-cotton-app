@@ -52,7 +52,7 @@ async function getLogoBase64(): Promise<string | null> {
 }
 
 // Report types
-type ReportType = "safra-summary" | "productivity" | "shipments" | "processing" | "inventory" | "custom";
+type ReportType = "safra-summary" | "productivity" | "shipments" | "processing" | "inventory" | "lotes-classificacao" | "custom";
 
 interface ReportFilters {
   startDate?: string;
@@ -894,7 +894,238 @@ function generateInventoryPDF(data: ReportData, filters: ReportFilters, logoBase
   return Buffer.from(doc.output("arraybuffer"));
 }
 
+// Cores para classificação
+const primaryYellow = [234, 179, 8];
+
+function generateLotesClassificacaoPDF(data: ReportData, filters: ReportFilters, logoBase64: string | null): Buffer {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const margin = 15;
+
+  addHeader(doc, filters.safra || '24/25', 'Lotes por Classificação - Peso Bruto', logoBase64);
+
+  let currentY = 48;
+
+  // Agrupar fardinhos por lote
+  const lotesFardinhos = new Map<string, { qtd: number; pesoLiquido: number; loteNum: number }>();
+
+  for (const lote of data.lotes) {
+    lotesFardinhos.set(lote.id, {
+      qtd: lote.qtdFardinhos || 0,
+      pesoLiquido: parseFloat(lote.pesoPluma) || 0,
+      loteNum: lote.numeroLote,
+    });
+  }
+
+  // Adicionar dados dos fardinhos
+  for (const fardinho of data.fardinhos) {
+    if (fardinho.loteId && lotesFardinhos.has(fardinho.loteId)) {
+      const loteData = lotesFardinhos.get(fardinho.loteId)!;
+      loteData.qtd += fardinho.quantidade;
+      loteData.pesoLiquido += fardinho.quantidade * parseFloat(fardinho.pesoUnitario || "0");
+    }
+  }
+
+  // Calcular totais
+  let totalFardinhos = 0;
+  let totalPesoLiquido = 0;
+  let totalPesoBruto = 0;
+
+  const lotesData: any[] = [];
+
+  for (const lote of data.lotes) {
+    const loteInfo = lotesFardinhos.get(lote.id) || { qtd: 0, pesoLiquido: 0, loteNum: lote.numeroLote };
+    const pesoLiquido = parseFloat(lote.pesoPluma) || 0;
+    const pesoBruto = pesoLiquido * 1.8; // Peso bruto = 1.8 * líquido
+
+    totalFardinhos += lote.qtdFardinhos || 0;
+    totalPesoLiquido += pesoLiquido;
+    totalPesoBruto += pesoBruto;
+
+    lotesData.push({
+      numeroLote: lote.numeroLote,
+      qtdFardinhos: lote.qtdFardinhos || 0,
+      pesoLiquido,
+      pesoBruto,
+      dataProcessamento: lote.dataProcessamento,
+      observacao: lote.observacao,
+    });
+  }
+
+  // KPIs
+  const cardWidth = 65;
+  const cardHeight = 38;
+  const cardGap = 8;
+
+  drawKpiCard(doc, margin, currentY, cardWidth, cardHeight, 'Total de Lotes',
+    data.lotes.length.toString(), `até 130 lotes por safra`, primaryYellow);
+
+  drawKpiCard(doc, margin + cardWidth + cardGap, currentY, cardWidth, cardHeight, 'Total Fardinhos',
+    totalFardinhos.toLocaleString('pt-BR'), 'unidades', primaryGreen);
+
+  drawKpiCard(doc, margin + (cardWidth + cardGap) * 2, currentY, cardWidth, cardHeight, 'Peso Líquido',
+    (totalPesoLiquido / 1000).toFixed(1) + 't', `${totalPesoLiquido.toLocaleString('pt-BR')} kg`, primaryCyan);
+
+  drawKpiCard(doc, margin + (cardWidth + cardGap) * 3, currentY, cardWidth, cardHeight, 'Peso Bruto',
+    (totalPesoBruto / 1000).toFixed(1) + 't', `1.8 × líquido`, primaryOrange);
+
+  currentY += cardHeight + 12;
+
+  // Tabela de lotes com peso bruto
+  doc.setTextColor(black[0], black[1], black[2]);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Lotes por Classificação de Peso', margin, currentY);
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+  doc.text('Peso Bruto = 1.8 × Peso Líquido', margin + 80, currentY);
+  currentY += 4;
+
+  const tableData = lotesData.map((l) => [
+    `Lote ${l.numeroLote}`,
+    l.qtdFardinhos.toString(),
+    l.pesoLiquido.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' kg',
+    l.pesoBruto.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' kg',
+    format(new Date(l.dataProcessamento), "dd/MM/yyyy", { locale: ptBR }),
+    l.observacao || '-',
+  ]);
+
+  // Adicionar linha de totais
+  tableData.push([
+    'TOTAL',
+    totalFardinhos.toString(),
+    totalPesoLiquido.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' kg',
+    totalPesoBruto.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' kg',
+    '',
+    '',
+  ]);
+
+  autoTable(doc, {
+    startY: currentY,
+    head: [['Lote', 'Fardinhos', 'Peso Líquido', 'Peso Bruto (1.8×)', 'Data', 'Observação']],
+    body: tableData,
+    theme: 'striped',
+    headStyles: {
+      fillColor: [primaryYellow[0], primaryYellow[1], primaryYellow[2]],
+      textColor: [0, 0, 0],
+      fontStyle: 'bold',
+      fontSize: 8,
+      cellPadding: 3,
+    },
+    styles: {
+      fontSize: 7,
+      cellPadding: 2,
+      textColor: [black[0], black[1], black[2]],
+    },
+    alternateRowStyles: {
+      fillColor: [lightGray[0], lightGray[1], lightGray[2]],
+    },
+    columnStyles: {
+      0: { fontStyle: 'bold' },
+      1: { halign: 'center' },
+      2: { halign: 'right' },
+      3: { halign: 'right', fontStyle: 'bold' },
+      4: { halign: 'center' },
+    },
+    didParseCell: function(cellData) {
+      // Destacar linha de totais
+      if (cellData.row.index === tableData.length - 1 && cellData.cell.section === 'body') {
+        cellData.cell.styles.fontStyle = 'bold';
+        cellData.cell.styles.fillColor = [primaryYellow[0], primaryYellow[1], primaryYellow[2]];
+        cellData.cell.styles.textColor = [0, 0, 0];
+      }
+    },
+    margin: { left: margin, right: margin },
+  });
+
+  addFooter(doc);
+
+  return Buffer.from(doc.output("arraybuffer"));
+}
+
 // ==================== EXCEL GENERATORS ====================
+
+function generateLotesClassificacaoExcel(data: ReportData, filters: ReportFilters): Buffer {
+  const workbook = XLSX.utils.book_new();
+
+  // Calcular totais
+  let totalFardinhos = 0;
+  let totalPesoLiquido = 0;
+  let totalPesoBruto = 0;
+
+  const lotesData = data.lotes.map((lote) => {
+    const pesoLiquido = parseFloat(lote.pesoPluma) || 0;
+    const pesoBruto = pesoLiquido * 1.8;
+
+    totalFardinhos += lote.qtdFardinhos || 0;
+    totalPesoLiquido += pesoLiquido;
+    totalPesoBruto += pesoBruto;
+
+    return {
+      lote: `Lote ${lote.numeroLote}`,
+      qtdFardinhos: lote.qtdFardinhos || 0,
+      pesoLiquido,
+      pesoBruto,
+      data: format(new Date(lote.dataProcessamento), "dd/MM/yyyy", { locale: ptBR }),
+      observacao: lote.observacao || '',
+    };
+  });
+
+  const sheetData = [
+    ["RELATÓRIO DE LOTES POR CLASSIFICAÇÃO - SAFRA " + (filters.safra || "")],
+    ["Gerado em:", format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })],
+    [""],
+    ["FÓRMULA: Peso Bruto = 1.8 × Peso Líquido"],
+    [""],
+    ["RESUMO"],
+    ["Total de Lotes:", data.lotes.length],
+    ["Total de Fardinhos:", totalFardinhos],
+    ["Peso Líquido Total:", totalPesoLiquido.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + " kg"],
+    ["Peso Bruto Total:", totalPesoBruto.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + " kg"],
+    [""],
+    ["DETALHAMENTO POR LOTE"],
+    ["Lote", "Qtd Fardinhos", "Peso Líquido (kg)", "Peso Bruto (kg)", "Data", "Observação"],
+    ...lotesData.map(l => [
+      l.lote,
+      l.qtdFardinhos,
+      l.pesoLiquido,
+      l.pesoBruto,
+      l.data,
+      l.observacao,
+    ]),
+    [""],
+    ["TOTAL", totalFardinhos, totalPesoLiquido, totalPesoBruto, "", ""],
+  ];
+
+  const sheet = XLSX.utils.aoa_to_sheet(sheetData);
+  sheet['!cols'] = [{ wch: 12 }, { wch: 14 }, { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 30 }];
+  XLSX.utils.book_append_sheet(workbook, sheet, "Lotes Classificação");
+
+  // Aba com fardinhos detalhados
+  const fardinhosData = [
+    ["FARDINHOS DETALHADOS"],
+    [""],
+    ["Lote", "Quantidade", "Peso Unitário (kg)", "Peso Total (kg)", "Data", "Observação"],
+    ...data.fardinhos.map(f => {
+      const lote = data.lotes.find(l => l.id === f.loteId);
+      return [
+        lote ? `Lote ${lote.numeroLote}` : '-',
+        f.quantidade,
+        parseFloat(f.pesoUnitario || "0"),
+        f.quantidade * parseFloat(f.pesoUnitario || "0"),
+        format(new Date(f.dataRegistro), "dd/MM/yyyy", { locale: ptBR }),
+        f.observacao || '',
+      ];
+    }),
+  ];
+
+  const fardinhosSheet = XLSX.utils.aoa_to_sheet(fardinhosData);
+  fardinhosSheet['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 30 }];
+  XLSX.utils.book_append_sheet(workbook, fardinhosSheet, "Fardinhos Detalhados");
+
+  return Buffer.from(XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }));
+}
 
 function generateSafraSummaryExcel(data: ReportData, filters: ReportFilters): Buffer {
   const talhoesMap = buildTalhoesMap(data.talhoesInfo);
@@ -1134,6 +1365,8 @@ export async function generatePDF(
       return generateProcessingPDF(data, filters, logoBase64);
     case 'inventory':
       return generateInventoryPDF(data, filters, logoBase64);
+    case 'lotes-classificacao':
+      return generateLotesClassificacaoPDF(data, filters, logoBase64);
     default:
       return generateInventoryPDF(data, filters, logoBase64);
   }
@@ -1166,6 +1399,8 @@ export function generateExcel(
       return generateProcessingExcel(data, filters);
     case 'inventory':
       return generateInventoryExcel(data, filters);
+    case 'lotes-classificacao':
+      return generateLotesClassificacaoExcel(data, filters);
     default:
       return generateInventoryExcel(data, filters);
   }
